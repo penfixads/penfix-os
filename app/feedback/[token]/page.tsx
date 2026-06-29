@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, Component, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useParams, useSearchParams } from 'next/navigation'
 
@@ -21,11 +21,29 @@ const SERVICES = [
 const BEST_AREAS = ['Quality', 'Speed', 'Price', 'Communication', 'Design', 'Packaging', 'Customer Service']
 const IMPROVE_AREAS = ['Quality', 'Speed', 'Price', 'Communication', 'Design', 'Packaging', 'Customer Service']
 
+class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
+  state = { error: null }
+  static getDerivedStateFromError(e: Error) { return { error: e.message } }
+  render() {
+    if (this.state.error) return (
+      <div style={{ minHeight: '100vh', background: '#fdf8ee', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', fontFamily: 'sans-serif' }}>
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ color: '#7B1C1C', fontWeight: 700, marginBottom: '0.5rem' }}>Something went wrong</p>
+          <p style={{ color: '#777', fontSize: '0.85rem' }}>{this.state.error}</p>
+        </div>
+      </div>
+    )
+    return this.props.children
+  }
+}
+
 export default function FeedbackPageWrapper() {
   return (
-    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#fdf8ee' }} />}>
-      <FeedbackPage />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<div style={{ minHeight: '100vh', background: '#fdf8ee' }} />}>
+        <FeedbackPage />
+      </Suspense>
+    </ErrorBoundary>
   )
 }
 
