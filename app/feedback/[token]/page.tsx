@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useParams, useSearchParams } from 'next/navigation'
 
@@ -21,7 +21,15 @@ const SERVICES = [
 const BEST_AREAS = ['Quality', 'Speed', 'Price', 'Communication', 'Design', 'Packaging', 'Customer Service']
 const IMPROVE_AREAS = ['Quality', 'Speed', 'Price', 'Communication', 'Design', 'Packaging', 'Customer Service']
 
-export default function FeedbackPage() {
+export default function FeedbackPageWrapper() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#fdf8ee' }} />}>
+      <FeedbackPage />
+    </Suspense>
+  )
+}
+
+function FeedbackPage() {
   const params = useParams()
   const searchParams = useSearchParams()
   const token = params.token as string
