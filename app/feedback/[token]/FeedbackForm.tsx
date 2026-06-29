@@ -110,9 +110,11 @@ export default function FeedbackForm() {
   return (
     <div style={BG}>
       {/* Header */}
-      <div style={{ background: 'rgba(123,28,28,0.92)', backdropFilter: 'blur(4px)', padding: '0.85rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-        <Image src="/penfixtwhhite.png" alt="Penfix" width={36} height={36} style={{ objectFit: 'contain' }} priority />
-        <span style={{ color: '#fff', fontSize: '18px', fontWeight: 600, letterSpacing: '0.01em' }}>Client Feedback</span>
+      <div style={{ background: 'rgba(123,28,28,0.92)', backdropFilter: 'blur(4px)', padding: '0.85rem 1.25rem' }}>
+        <div style={{ maxWidth: 540, margin: '0 auto', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <Image src="/penfixtwhhite.png" alt="Penfix" width={30} height={30} style={{ objectFit: 'contain' }} priority />
+          <span style={{ color: '#fff', fontSize: '18px', fontWeight: 600, letterSpacing: '0.01em' }}>Client Feedback</span>
+        </div>
       </div>
 
       <div style={{ padding: '2rem 1.25rem 3rem' }}>
