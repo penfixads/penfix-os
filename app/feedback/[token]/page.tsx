@@ -73,7 +73,7 @@ export default function FeedbackPage() {
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#F5C842" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <h1 style={{ color: '#7B1C1C', fontSize: '1.8rem', fontWeight: 700, marginBottom: '0.5rem', textAlign: 'center' }}>Thank you, {name}!</h1>
-        <p style={{ color: '#555', fontSize: '1rem', textAlign: 'center', maxWidth: 380 }}>Your feedback means a lot to us. We'll keep improving to serve you better.</p>
+        <p style={{ color: '#555', fontSize: '1rem', textAlign: 'center', maxWidth: 380 }}>Your feedback means a lot to us. We&apos;ll keep improving to serve you better.</p>
         <div style={{ marginTop: '2rem', color: '#F5C842', fontWeight: 700, fontSize: '1.1rem', letterSpacing: 1 }}>PENFIX</div>
       </div>
     )
@@ -89,7 +89,7 @@ export default function FeedbackPage() {
 
       <form onSubmit={handleSubmit} style={{ maxWidth: 520, margin: '0 auto', padding: '2rem 1.25rem 3rem' }}>
         <h2 style={{ color: '#7B1C1C', fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.25rem' }}>How did we do?</h2>
-        <p style={{ color: '#777', fontSize: '0.9rem', marginBottom: '1.75rem' }}>We'd love your honest feedback on your recent order.</p>
+        <p style={{ color: '#777', fontSize: '0.9rem', marginBottom: '1.75rem' }}>We&apos;d love your honest feedback on your recent order.</p>
 
         {/* Read-only fields */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
