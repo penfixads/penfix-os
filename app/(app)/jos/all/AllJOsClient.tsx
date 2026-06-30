@@ -49,7 +49,7 @@ export default function AllJOsClient({ jobOrders }: Props) {
         ].map(c => (
           <div key={c.label} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.65rem 0.85rem', border: '1px solid #EDE0CC' }}>
             <div style={{ color: '#aaa', fontSize: '0.65rem' }}>{c.label}</div>
-            <div style={{ color: c.warn ? '#e74c3c' : '#fff', fontWeight: 700, fontSize: '0.9rem' }}>{c.value}</div>
+            <div style={{ color: c.warn ? '#e74c3c' : '#333', fontWeight: 700, fontSize: '0.9rem' }}>{c.value}</div>
           </div>
         ))}
       </div>
