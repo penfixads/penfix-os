@@ -178,8 +178,16 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
     const { data: allItems } = await supabase.from('job_order_items').select('computed_line_total').eq('job_order_id', joId)
     const newTotal = (allItems || []).reduce((s: number, i: any) => s + (i.computed_line_total || 0), 0)
     await supabase.from('job_orders').update({ grand_total: newTotal }).eq('job_order_id', joId)
+    // Update local state immediately — no page refresh needed
+    setJobOrders(prev => prev.map(j => {
+      if (j.job_order_id !== joId) return j
+      return {
+        ...j,
+        grand_total: newTotal,
+        job_order_items: [...(j.job_order_items || []), { item_id: itemId, computed_line_total: item.computed_line_total }],
+      }
+    }))
     setAddingItemToJO(null)
-    router.refresh()
   }
 
   function addPayment() {
