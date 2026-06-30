@@ -62,7 +62,19 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
   const [payCashback, setPayCashback] = useState(0)
 
   const selectedClient = clients.find(c => c.client_id === selectedClientId)
-  const earnedRewards = selectedClient?.earned_rewards || 0
+  const [rewardsBalance, setRewardsBalance] = useState(0)
+
+  useEffect(() => {
+    if (!selectedClientId) { setRewardsBalance(0); return }
+    const supabase = createSupabaseBrowserClient()
+    supabase.from('rewards_ledger').select('type, amount').eq('client_id', selectedClientId).then(({ data }) => {
+      const earned = (data || []).filter(r => r.type === 'earned').reduce((s, r) => s + (r.amount || 0), 0)
+      const redeemed = (data || []).filter(r => r.type === 'redeemed').reduce((s, r) => s + (r.amount || 0), 0)
+      setRewardsBalance(Math.max(0, earned - redeemed))
+    })
+  }, [selectedClientId])
+
+  const earnedRewards = rewardsBalance
   const grandTotal = items.reduce((s, i) => s + (i.computed_line_total || 0), 0) - discount
   const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0)
   const cashbackDiscount = payments.reduce((s, p) => s + (p.cashback || 0), 0)
@@ -161,6 +173,18 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
         if (payErr) throw payErr
       }
 
+      // Record redeemed rewards if cashback was applied
+      if (cashbackDiscount > 0) {
+        await supabase.from('rewards_ledger').insert({
+          ledger_id: `REDM-${joId}`,
+          client_id: selectedClientId,
+          job_order_id: joId,
+          type: 'redeemed',
+          amount: cashbackDiscount,
+          notes: `Cashback redeemed on JO ${joId}`,
+        })
+      }
+
       // Add new JO to local state immediately — no page reload needed
       const newJO = {
         job_order_id: joId,
@@ -240,7 +264,19 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
     return 'Below 50% Downpayment'
   })()
   const editClient = clients.find(c => c.client_id === editingJO?.client_id)
-  const editEarnedRewards = editClient?.earned_rewards || 0
+  const [editRewardsBalance, setEditRewardsBalance] = useState(0)
+
+  useEffect(() => {
+    if (!editingJO?.client_id) { setEditRewardsBalance(0); return }
+    const supabase = createSupabaseBrowserClient()
+    supabase.from('rewards_ledger').select('type, amount').eq('client_id', editingJO.client_id).then(({ data }) => {
+      const earned = (data || []).filter(r => r.type === 'earned').reduce((s, r) => s + (r.amount || 0), 0)
+      const redeemed = (data || []).filter(r => r.type === 'redeemed').reduce((s, r) => s + (r.amount || 0), 0)
+      setEditRewardsBalance(Math.max(0, earned - redeemed))
+    })
+  }, [editingJO?.client_id])
+
+  const editEarnedRewards = editRewardsBalance
 
   async function openEditJO(jo: any) {
     setEditingJO(jo)
@@ -335,6 +371,19 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
         is_fully_paid: editPaymentStatus === 'Fully Paid',
         balance_due: editBalance,
       }).eq('job_order_id', joId)
+
+      // Record redeemed rewards if new cashback was applied
+      const newCashback = editPayments.filter(p => !p._existing && (p.cashback || 0) > 0).reduce((s, p) => s + p.cashback, 0)
+      if (newCashback > 0) {
+        await supabase.from('rewards_ledger').insert({
+          ledger_id: `REDM-${joId}-${Date.now()}`,
+          client_id: editingJO.client_id,
+          job_order_id: joId,
+          type: 'redeemed',
+          amount: newCashback,
+          notes: `Cashback redeemed on JO ${joId}`,
+        })
+      }
 
       // Update local state
       setJobOrders(prev => prev.map(j => {
