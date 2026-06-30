@@ -25,10 +25,9 @@ function LoginForm() {
     setLoading(true)
     const supabase = createSupabaseBrowserClient()
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
-    setLoading(false)
-    if (authError) { setError(authError.message); return }
-    router.push(next)
-    router.refresh()
+    if (authError) { setLoading(false); setError(authError.message); return }
+    // Hard navigation so the server picks up the freshly-set session cookie
+    window.location.href = next
   }
 
   async function handleForgotPassword(e: React.FormEvent) {
