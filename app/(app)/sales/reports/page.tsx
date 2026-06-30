@@ -1,8 +1,43 @@
-export default function SalesReportsPage() {
+import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { getCurrentUser } from '@/lib/user'
+import { redirect } from 'next/navigation'
+import SalesReportsClient from './SalesReportsClient'
+
+export default async function SalesReportsPage() {
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+  if (user.role !== 'Admin' && user.role !== 'Treasury') redirect('/jos/active')
+
+  const supabase = createSupabaseServerClient()
+
+  // Pull last 365 days of payments and JOs
+  const yearAgo = new Date()
+  yearAgo.setFullYear(yearAgo.getFullYear() - 1)
+  const since = yearAgo.toISOString().split('T')[0]
+
+  const { data: payments } = await supabase
+    .from('payments')
+    .select('payment_date, amount, payment_method')
+    .gte('payment_date', since)
+    .order('payment_date')
+
+  const { data: jobOrders } = await supabase
+    .from('job_orders')
+    .select('date_time_received, grand_total, received_by, payment_status')
+    .gte('date_time_received', `${since}T00:00:00`)
+    .order('date_time_received')
+
+  const { data: expenses } = await supabase
+    .from('expenses')
+    .select('expense_date, date, amount')
+    .gte('expense_date', since)
+    .order('expense_date')
+
   return (
-    <div>
-      <h1 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.5rem' }}>Sales Reports</h1>
-      <p style={{ color: '#888', fontSize: '0.85rem' }}>Weekly, monthly and yearly sales reports</p>
-    </div>
+    <SalesReportsClient
+      payments={payments || []}
+      jobOrders={jobOrders || []}
+      expenses={expenses || []}
+    />
   )
 }
