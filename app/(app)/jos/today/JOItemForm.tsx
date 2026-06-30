@@ -105,12 +105,17 @@ export default function JOItemForm({ categories, subcategories, onSave, onClose 
 
         <div style={field}>
           <label style={lbl}>Subcategory / Item <span style={{ color: '#e74c3c' }}>*</span></label>
-          <select value={subcategoryId} onChange={e => {
-            setSubcategoryId(e.target.value)
-            const sub = subcategories.find(s => s.subcategory_id === e.target.value)
-            if (sub) { setPricingModel(sub.pricing_model || ''); setBasePrice(String(sub.base_price || '')) }
-          }} style={inp}>
-            <option value="">-- Select Item --</option>
+          <select
+            value={subcategoryId}
+            disabled={!categoryId}
+            onChange={e => {
+              setSubcategoryId(e.target.value)
+              const sub = subcategories.find(s => s.subcategory_id === e.target.value)
+              if (sub) { setPricingModel(sub.pricing_model || ''); setBasePrice(String(sub.base_price || '')) }
+            }}
+            style={{ ...inp, background: !categoryId ? '#f0ece3' : '#fff', color: !categoryId ? '#999' : '#1a1a1a' }}
+          >
+            <option value="">{categoryId ? `-- Select Item (${filteredSubs.length} available) --` : '-- Select a Category first --'}</option>
             {filteredSubs.map(s => <option key={s.subcategory_id} value={s.subcategory_id}>{s.subcategory_name}</option>)}
           </select>
         </div>
