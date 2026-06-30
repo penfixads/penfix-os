@@ -101,7 +101,7 @@ export default function FeedbackForm() {
           </div>
           <h1 style={{ color: '#7B1C1C', fontSize: '1.8rem', fontWeight: 700, marginBottom: '0.5rem' }}>Thank you, {name}!</h1>
           <p style={{ color: '#555', fontSize: '1rem', maxWidth: 340, margin: '0 auto' }}>Your feedback means a lot to us. We&apos;ll keep improving to serve you better.</p>
-          <Image src="/penfixtwhhite.png" alt="Penfix" width={120} height={60} style={{ objectFit: 'contain', marginTop: '2rem', filter: 'invert(1) sepia(1) saturate(3) hue-rotate(340deg)', opacity: 0.85 }} />
+          <Image src="/penfixtwhhite.png" alt="Penfix" width={120} height={60} style={{ objectFit: 'contain', marginTop: '2rem', filter: 'invert(11%) sepia(63%) saturate(1200%) hue-rotate(330deg) brightness(80%)', opacity: 1 }} />
         </div>
       </div>
     )
