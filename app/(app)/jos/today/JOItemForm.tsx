@@ -40,7 +40,14 @@ export default function JOItemForm({ categories, subcategories, onSave, onClose 
   const [jobStatus] = useState('Received')
   const [discount, setDiscount] = useState('0')
 
-  const filteredSubs = subcategories.filter(s => !categoryId || s.category_id === categoryId)
+  const filteredSubs = subcategories.filter(s => !categoryId || String(s.category_id) === String(categoryId))
+
+  // Debug: log to browser console to verify data
+  if (typeof window !== 'undefined' && categoryId) {
+    console.log('[JOItemForm] categoryId:', categoryId)
+    console.log('[JOItemForm] sample subcategory category_ids:', subcategories.slice(0, 5).map(s => s.category_id))
+    console.log('[JOItemForm] filteredSubs count:', filteredSubs.length)
+  }
 
   const selectedSub = subcategories.find(s => s.subcategory_id === subcategoryId)
   const effectivePricing = pricingModel || selectedSub?.pricing_model || ''
