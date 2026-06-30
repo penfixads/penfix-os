@@ -5,7 +5,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Public routes — no auth required
-  if (pathname.startsWith('/feedback') || pathname.startsWith('/login')) {
+  if (pathname.startsWith('/feedback') || pathname.startsWith('/login') || pathname.startsWith('/reset-password')) {
     return NextResponse.next()
   }
 
