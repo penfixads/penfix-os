@@ -104,7 +104,7 @@ export default function AddClientModal({ onSave, onClose }: Props) {
 
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={onClose} style={{ flex: 1, background: '#eee', color: '#333', border: 'none', borderRadius: 8, padding: '0.7rem', cursor: 'pointer' }}>Cancel</button>
-          <button onClick={handleSave} disabled={saving} style={{ flex: 2, background: saving ? '#5a1010' : '#7A1828', color: '#fff', border: 'none', borderRadius: 8, padding: '0.7rem', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
+          <button onClick={handleSave} disabled={saving} style={{ flex: 2, background: '#7A1828', color: '#fff', border: 'none', borderRadius: 8, padding: '0.7rem', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
             {saving ? 'Saving…' : 'Save Client'}
           </button>
         </div>

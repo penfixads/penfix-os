@@ -390,7 +390,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
             {/* Actions */}
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => { resetForm(); setShowForm(false) }} style={{ flex: 1, background: '#f0f0f0', color: '#1a1a1a', border: 'none', borderRadius: 8, padding: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
-              <button onClick={handleSave} disabled={saving} style={{ flex: 2, background: saving ? '#7A1828' : '#7A1828', color: '#C9A84C', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.75rem', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700 }}>
+              <button onClick={handleSave} disabled={saving} style={{ flex: 2, background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.75rem', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700 }}>
                 {saving ? 'Saving…' : 'Save Job Order'}
               </button>
             </div>
