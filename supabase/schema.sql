@@ -1,273 +1,266 @@
 -- ============================================================
--- PENFIX OS — Full Database Schema
--- Supabase (PostgreSQL)
+-- PENFIX OS — Job Order System Schema
+-- Run this in Supabase SQL Editor
 -- ============================================================
 
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+create extension if not exists "uuid-ossp";
 
--- ============================================================
--- LOOKUP / REFERENCE TABLES
--- ============================================================
-
-CREATE TABLE IF NOT EXISTS categories (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS subcategories (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  category_id UUID REFERENCES categories(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  pricing_model TEXT CHECK (pricing_model IN ('area', 'per_piece', 'per_set')) NOT NULL,
-  base_price NUMERIC(10,2) NOT NULL DEFAULT 0,
-  min_qty INT DEFAULT 1,
-  materials TEXT,
-  job_flow TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS process_types (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL,
-  description TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS process_type_sop (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  process_type_id UUID REFERENCES process_types(id) ON DELETE CASCADE,
-  step_order INT NOT NULL,
-  step_name TEXT NOT NULL,
-  visible_to_client BOOLEAN DEFAULT FALSE,
-  is_terminal BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS raw_materials (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL,
-  unit TEXT,
-  cost_per_unit NUMERIC(10,2) DEFAULT 0,
-  wastage_percent NUMERIC(5,2) DEFAULT 0,
-  sheet_area NUMERIC(10,4),
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ============================================================
 -- USERS
--- ============================================================
-
-CREATE TABLE IF NOT EXISTS users_crm (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  full_name TEXT NOT NULL,
-  email TEXT UNIQUE,
-  role TEXT CHECK (role IN ('admin', 'ga', 'fabricator', 'toolkeeper', 'hr')) NOT NULL,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+create table if not exists users (
+  id uuid primary key default uuid_generate_v4(),
+  user_email text unique not null,
+  name text not null,
+  role text not null check (role in ('Admin', 'Frontdesk', 'Treasury', 'Production')),
+  is_active boolean default true,
+  created_at timestamptz default now()
 );
 
-CREATE TABLE IF NOT EXISTS users_tools (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  full_name TEXT NOT NULL,
-  email TEXT UNIQUE,
-  role TEXT CHECK (role IN ('admin', 'toolkeeper', 'fabricator')) NOT NULL,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ============================================================
 -- CLIENTS
--- ============================================================
-
-CREATE TABLE IF NOT EXISTS clients (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  full_name TEXT NOT NULL,
-  phone TEXT,
-  email TEXT,
-  messenger TEXT,
-  viber TEXT,
-  whatsapp TEXT,
-  address TEXT,
-  rewards_balance NUMERIC(10,2) DEFAULT 0,
-  credit_line_status BOOLEAN DEFAULT FALSE,
-  is_for_billing BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+create table if not exists clients (
+  client_id text primary key,
+  client_type text check (client_type in ('Individual', 'Company')),
+  company_name text,
+  client_name text not null,
+  contact_number text,
+  email text,
+  messenger text,
+  viber text,
+  whatsapp text,
+  address text,
+  credit_line_status boolean default false,
+  earned_rewards numeric(10,2) default 0,
+  claimed_rewards numeric(10,2) default 0,
+  created_at timestamptz default now()
 );
 
--- ============================================================
+-- CATEGORIES
+create table if not exists categories (
+  category_id text primary key,
+  category_name text not null,
+  description text,
+  is_active boolean default true
+);
+
+-- SUBCATEGORIES
+create table if not exists subcategories (
+  subcategory_id text primary key,
+  subcategory_name text not null,
+  category_id text references categories(category_id),
+  subcategory_type text,
+  description text,
+  thickness text,
+  color text,
+  print_type text,
+  pricing_model text not null check (pricing_model in (
+    'per_piece','area','dimension','per_set','fixed',
+    'area_cube','per_sheet','per_minute','starts_with','per_lettersqft'
+  )),
+  base_price numeric(10,2) default 0,
+  unit text,
+  job_flow text,
+  min_qty numeric default 1,
+  accepted_units text,
+  require_specs boolean default false,
+  spec_fields text,
+  roll_widths_ft text,
+  active boolean default true,
+  tags text,
+  material_options text,
+  print_quality text,
+  pass_options text,
+  image_link text,
+  installation_surcharge numeric(10,2)
+);
+
 -- JOB ORDERS
--- ============================================================
-
-CREATE TABLE IF NOT EXISTS job_orders (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  jo_number TEXT UNIQUE NOT NULL, -- JO-MMDDYYYY-SEQ
-  client_id UUID REFERENCES clients(id) ON DELETE RESTRICT,
-  ga_id UUID REFERENCES users_crm(id) ON DELETE SET NULL,
-  status TEXT CHECK (status IN ('pending', 'in_production', 'ready_for_pickup', 'released', 'cancelled')) DEFAULT 'pending',
-  dp_status TEXT CHECK (dp_status IN ('paid', 'override_pending', 'override_approved', 'override_rejected', 'billing')) DEFAULT 'paid',
-  override_reason TEXT,
-  override_approved_by UUID REFERENCES users_crm(id),
-  override_approved_at TIMESTAMPTZ,
-  total_amount NUMERIC(10,2) DEFAULT 0,
-  total_paid NUMERIC(10,2) DEFAULT 0,
-  balance NUMERIC(10,2) GENERATED ALWAYS AS (total_amount - total_paid) STORED,
-  is_rush BOOLEAN DEFAULT FALSE,
-  is_discounted BOOLEAN DEFAULT FALSE,
-  notes TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+create table if not exists job_orders (
+  job_order_id text primary key,
+  user_email text,
+  client_id text references clients(client_id),
+  date_time_received timestamptz default now(),
+  payment_status text check (payment_status in (
+    'Pending Payment','Downpayment Received','Below 50% Downpayment',
+    'Fully Paid','For Billing'
+  )),
+  grand_total numeric(10,2) default 0,
+  total_amount_paid numeric(10,2) default 0,
+  discount numeric(10,2) default 0,
+  cashback_discount numeric(10,2) default 0,
+  balance_due numeric(10,2) generated always as (grand_total - total_amount_paid - discount - cashback_discount) stored,
+  received_by text,
+  request_override text,
+  override_status text check (override_status in ('Pending','Approved','Rejected')),
+  is_for_billing boolean default false,
+  is_fully_paid boolean default false,
+  created_at timestamptz default now()
 );
 
-CREATE TABLE IF NOT EXISTS job_order_items (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  job_order_id UUID REFERENCES job_orders(id) ON DELETE CASCADE,
-  subcategory_id UUID REFERENCES subcategories(id) ON DELETE RESTRICT,
-  description TEXT,
-  width NUMERIC(8,2),
-  height NUMERIC(8,2),
-  quantity INT DEFAULT 1,
-  unit_price NUMERIC(10,2) DEFAULT 0,
-  total_price NUMERIC(10,2) DEFAULT 0,
-  sop_stage TEXT,
-  status TEXT CHECK (status IN ('pending', 'in_layout', 'for_client_review', 'layout_approved', 'in_production', 'done')) DEFAULT 'pending',
-  layout_proof_url TEXT,
-  layout_approved_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+-- JOB ORDER ITEMS
+create table if not exists job_order_items (
+  item_id text primary key,
+  job_order_id text references job_orders(job_order_id) on delete cascade,
+  category_id text references categories(category_id),
+  subcategory_id text references subcategories(subcategory_id),
+  item_preview text,
+  pricing_model text,
+  base_price numeric(10,2) default 0,
+  width numeric(10,3),
+  height numeric(10,3),
+  depth numeric(10,3),
+  accepted_unit text,
+  quantity integer default 1,
+  print_quality text,
+  total_area numeric(10,4),
+  no_of_mins numeric(10,2),
+  sqft numeric(10,4),
+  letter_count integer,
+  discount numeric(10,2) default 0,
+  computed_line_total numeric(10,2) default 0,
+  date_needed date,
+  time_needed time,
+  date_time_needed timestamptz,
+  priority text check (priority in ('LOW','HIGH','URGENT')),
+  job_status text not null default 'Received' check (job_status in (
+    'Received','For Layout/Vectoring','For Production',
+    'Ready For Pickup/Delivery/Installation','Done','Cancelled'
+  )),
+  notes text,
+  proponents text,
+  date_time_received timestamptz default now(),
+  production_specs text,
+  overlap_warning text
 );
 
--- ============================================================
 -- PAYMENTS
--- ============================================================
-
-CREATE TABLE IF NOT EXISTS payments (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  job_order_id UUID REFERENCES job_orders(id) ON DELETE CASCADE,
-  amount NUMERIC(10,2) NOT NULL,
-  method TEXT CHECK (method IN ('cash', 'gcash', 'bank_transfer', 'rewards')) NOT NULL,
-  reference_number TEXT,
-  collected_by UUID REFERENCES users_crm(id),
-  daily_summary_id UUID, -- FK added after daily_sales_summary
-  rewards_used NUMERIC(10,2) DEFAULT 0,
-  rewards_earned NUMERIC(10,2) DEFAULT 0,
-  notes TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+create table if not exists payments (
+  payment_id text primary key,
+  summary_id text,
+  job_order_id text references job_orders(job_order_id) on delete cascade,
+  client_id text references clients(client_id),
+  grand_total numeric(10,2),
+  amount numeric(10,2) not null,
+  payment_method text check (payment_method in (
+    'Cash','G-Cash','Maya','Bank Transfer via BPI Acct.',
+    'Bank Transfer via BDO Acct.','Cheque'
+  )),
+  payment_date date default current_date,
+  recorded_by text,
+  remarks text,
+  created_at timestamptz default now()
 );
 
--- ============================================================
--- DAILY SALES
--- ============================================================
-
-CREATE TABLE IF NOT EXISTS daily_sales_summary (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  summary_date DATE UNIQUE NOT NULL,
-  total_cash NUMERIC(10,2) DEFAULT 0,
-  total_ewallet NUMERIC(10,2) DEFAULT 0,
-  total_bank_transfer NUMERIC(10,2) DEFAULT 0,
-  total_expenses NUMERIC(10,2) DEFAULT 0,
-  expected_cash_on_hand NUMERIC(10,2) DEFAULT 0,
-  actual_cash_on_hand NUMERIC(10,2) DEFAULT 0,
-  cash_variance NUMERIC(10,2) GENERATED ALWAYS AS (actual_cash_on_hand - expected_cash_on_hand) STORED,
-  prepared_by UUID REFERENCES users_crm(id),
-  notes TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+-- DAILY SALES SUMMARY
+create table if not exists daily_sales_summary (
+  summary_id text primary key,
+  date date unique not null,
+  initial_fund numeric(10,2) default 0,
+  cash numeric(10,2) default 0,
+  ewallet_bank numeric(10,2) default 0,
+  total_sales numeric(10,2) default 0,
+  total_expenses numeric(10,2) default 0,
+  expected_cash_on_hand numeric(10,2) default 0,
+  cash_on_hand numeric(10,2) default 0,
+  remitted_cash numeric(10,2) default 0,
+  excess_deficit numeric(10,2) default 0,
+  next_day_fund numeric(10,2) default 0,
+  remark text,
+  created_at timestamptz default now()
 );
 
--- Add FK from payments to daily_sales_summary now that it exists
-ALTER TABLE payments
-  ADD CONSTRAINT fk_payments_daily_summary
-  FOREIGN KEY (daily_summary_id) REFERENCES daily_sales_summary(id) ON DELETE SET NULL;
-
-CREATE TABLE IF NOT EXISTS expenses (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  daily_summary_id UUID REFERENCES daily_sales_summary(id) ON DELETE CASCADE,
-  description TEXT NOT NULL,
-  amount NUMERIC(10,2) NOT NULL,
-  category TEXT,
-  recorded_by UUID REFERENCES users_crm(id),
-  created_at TIMESTAMPTZ DEFAULT NOW()
+-- EXPENSES
+create table if not exists expenses (
+  expense_id uuid primary key default uuid_generate_v4(),
+  summary_id text references daily_sales_summary(summary_id) on delete cascade,
+  date date,
+  expense_name text not null,
+  amount numeric(10,2) not null,
+  created_at timestamptz default now()
 );
 
--- ============================================================
--- CLIENT TRACKING (Rewards History)
--- ============================================================
-
-CREATE TABLE IF NOT EXISTS client_tracking (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  client_id UUID REFERENCES clients(id) ON DELETE CASCADE,
-  job_order_id UUID REFERENCES job_orders(id) ON DELETE SET NULL,
-  type TEXT CHECK (type IN ('earned', 'redeemed', 'expired', 'adjusted')) NOT NULL,
-  amount NUMERIC(10,2) NOT NULL,
-  balance_after NUMERIC(10,2) NOT NULL,
-  notes TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+-- REWARDS REDEMPTIONS
+create table if not exists rewards_redemptions (
+  redemption_id uuid primary key default uuid_generate_v4(),
+  client_id text references clients(client_id),
+  job_order_id text references job_orders(job_order_id),
+  amount_redeemed numeric(10,2) not null,
+  redemption_date date default current_date,
+  created_at timestamptz default now()
 );
 
--- ============================================================
--- TOOLS INVENTORY
--- ============================================================
-
-CREATE TABLE IF NOT EXISTS tools (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL,
-  description TEXT,
-  specifications TEXT,
-  photo_url TEXT,
-  qty_available INT DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+-- RAW MATERIALS (future COGS/quote pricing)
+create table if not exists raw_materials (
+  media_id text primary key,
+  name text not null,
+  description text,
+  price_unit text,
+  size_options text,
+  material_options text,
+  base_price numeric(10,2),
+  currency text default 'PHP',
+  price_note text,
+  sheet_area_sqft numeric(10,4),
+  raw_price_per_sqft numeric(10,4),
+  default_wastage_pct numeric(5,2),
+  active boolean default true
 );
 
-CREATE TABLE IF NOT EXISTS tools_inventory (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  tool_id UUID REFERENCES tools(id) ON DELETE CASCADE,
-  qty_owned INT DEFAULT 0,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+-- PROCESS TYPES
+create table if not exists process_types (
+  process_type_id text primary key,
+  process_type_name text not null,
+  description text,
+  is_active boolean default true
 );
 
-CREATE TABLE IF NOT EXISTS tools_logs (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  tool_id UUID REFERENCES tools(id) ON DELETE CASCADE,
-  requested_by UUID REFERENCES users_tools(id),
-  approved_by UUID REFERENCES users_tools(id),
-  status TEXT CHECK (status IN ('pending', 'approved', 'rejected', 'returned')) DEFAULT 'pending',
-  qty INT DEFAULT 1,
-  borrowed_at TIMESTAMPTZ,
-  returned_at TIMESTAMPTZ,
-  notes TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+-- PROCESS TYPE SOP
+create table if not exists process_type_sop (
+  sop_id text primary key,
+  process_type_id text references process_types(process_type_id),
+  status_name text,
+  sequence integer,
+  is_active boolean default true,
+  is_terminal boolean default false,
+  visible_to_client boolean default false,
+  description text
 );
 
--- ============================================================
 -- INDEXES
--- ============================================================
+create index if not exists idx_job_orders_client on job_orders(client_id);
+create index if not exists idx_job_orders_date on job_orders(date_time_received);
+create index if not exists idx_job_order_items_jo on job_order_items(job_order_id);
+create index if not exists idx_job_order_items_status on job_order_items(job_status);
+create index if not exists idx_job_order_items_date_needed on job_order_items(date_time_needed);
+create index if not exists idx_payments_jo on payments(job_order_id);
+create index if not exists idx_payments_date on payments(payment_date);
+create index if not exists idx_expenses_summary on expenses(summary_id);
+create index if not exists idx_subcategories_category on subcategories(category_id);
 
-CREATE INDEX IF NOT EXISTS idx_job_orders_client ON job_orders(client_id);
-CREATE INDEX IF NOT EXISTS idx_job_orders_status ON job_orders(status);
-CREATE INDEX IF NOT EXISTS idx_job_orders_created ON job_orders(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_job_order_items_jo ON job_order_items(job_order_id);
-CREATE INDEX IF NOT EXISTS idx_payments_jo ON payments(job_order_id);
-CREATE INDEX IF NOT EXISTS idx_client_tracking_client ON client_tracking(client_id);
-CREATE INDEX IF NOT EXISTS idx_tools_logs_tool ON tools_logs(tool_id);
-CREATE INDEX IF NOT EXISTS idx_daily_sales_date ON daily_sales_summary(summary_date DESC);
+-- ROW LEVEL SECURITY
+alter table users enable row level security;
+alter table clients enable row level security;
+alter table categories enable row level security;
+alter table subcategories enable row level security;
+alter table job_orders enable row level security;
+alter table job_order_items enable row level security;
+alter table payments enable row level security;
+alter table daily_sales_summary enable row level security;
+alter table expenses enable row level security;
+alter table rewards_redemptions enable row level security;
+alter table raw_materials enable row level security;
+alter table process_types enable row level security;
+alter table process_type_sop enable row level security;
 
--- ============================================================
--- UPDATED_AT TRIGGER
--- ============================================================
-
-CREATE OR REPLACE FUNCTION update_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_job_orders_updated
-  BEFORE UPDATE ON job_orders
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
-CREATE TRIGGER trg_job_order_items_updated
-  BEFORE UPDATE ON job_order_items
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+-- Authenticated users have full access (role-based logic handled in app layer)
+create policy "auth_users_users" on users for select using (auth.role() = 'authenticated');
+create policy "auth_users_clients" on clients for all using (auth.role() = 'authenticated');
+create policy "auth_users_categories" on categories for all using (auth.role() = 'authenticated');
+create policy "auth_users_subcategories" on subcategories for all using (auth.role() = 'authenticated');
+create policy "auth_users_job_orders" on job_orders for all using (auth.role() = 'authenticated');
+create policy "auth_users_job_order_items" on job_order_items for all using (auth.role() = 'authenticated');
+create policy "auth_users_payments" on payments for all using (auth.role() = 'authenticated');
+create policy "auth_users_daily_summary" on daily_sales_summary for all using (auth.role() = 'authenticated');
+create policy "auth_users_expenses" on expenses for all using (auth.role() = 'authenticated');
+create policy "auth_users_redemptions" on rewards_redemptions for all using (auth.role() = 'authenticated');
+create policy "auth_users_raw_materials" on raw_materials for select using (auth.role() = 'authenticated');
+create policy "auth_users_process_types" on process_types for select using (auth.role() = 'authenticated');
+create policy "auth_users_sop" on process_type_sop for select using (auth.role() = 'authenticated');
