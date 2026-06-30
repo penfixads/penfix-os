@@ -26,6 +26,14 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 0.01em;
 }
 
+/* Money/currency values — use class="money" */
+.money {
+  color: #333 !important;
+  font-weight: 700;
+}
+.money-red { color: #c0392b !important; font-weight: 700; }
+.money-green { color: #27ae60 !important; font-weight: 700; }
+
 /* Bibliotech-style uppercase label — use class="label-caps" */
 .label-caps {
   font-family: var(--font-inter), 'Inter', sans-serif;
