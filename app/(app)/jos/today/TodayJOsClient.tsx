@@ -164,7 +164,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
     if (!confirm(`Delete job order ${joId}? This cannot be undone.`)) return
     const supabase = createSupabaseBrowserClient()
     await supabase.from('job_orders').delete().eq('job_order_id', joId)
-    router.refresh()
+    setJobOrders(prev => prev.filter(j => j.job_order_id !== joId))
   }
 
   async function handleAddItemToExistingJO(joId: string, item: any) {
