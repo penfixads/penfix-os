@@ -48,7 +48,7 @@ export default function PendingApprovalClient({ jobOrders, currentUser }: Props)
   return (
     <div>
       <div style={{ marginBottom: '1.25rem' }}>
-        <h1 style={{ color: '#7B1C1C', fontSize: '1.4rem', fontWeight: 700 }}>Pending Approval</h1>
+        <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Pending Approval</h1>
         <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>
           {jobOrders.length} JO(s) awaiting manager approval
           {!isAdmin && <span style={{ color: '#e67e22', marginLeft: 8 }}>— view only (Admin can approve)</span>}
@@ -67,7 +67,7 @@ export default function PendingApprovalClient({ jobOrders, currentUser }: Props)
             const isActing = acting === jo.job_order_id
 
             return (
-              <div key={jo.job_order_id} style={{ background: '#f5f5f5', borderRadius: 12, padding: '1rem', border: '1px solid #3a1a00' }}>
+              <div key={jo.job_order_id} style={{ background: '#FDF5EC', borderRadius: 12, padding: '1rem', border: '1px solid #3a1a00' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.92rem' }}>{clientName}</div>
@@ -112,18 +112,18 @@ export default function PendingApprovalClient({ jobOrders, currentUser }: Props)
                           value={rejectNote[jo.job_order_id] || ''}
                           onChange={e => setRejectNote(prev => ({ ...prev, [jo.job_order_id]: e.target.value }))}
                           rows={2}
-                          style={{ background: '#f5f5f5', border: '1.5px solid #3a0000', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#1a1a1a', fontSize: '0.82rem', resize: 'none', outline: 'none' }}
+                          style={{ background: '#FDF5EC', border: '1.5px solid #3a0000', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#1a1a1a', fontSize: '0.82rem', resize: 'none', outline: 'none' }}
                         />
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button onClick={() => setShowReject(null)} style={{ flex: 1, background: '#f0f0f0', color: '#1a1a1a', border: 'none', borderRadius: 7, padding: '0.5rem', cursor: 'pointer', fontSize: '0.8rem' }}>Cancel</button>
-                          <button onClick={() => reject(jo.job_order_id)} disabled={isActing} style={{ flex: 2, background: '#5C0000', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.5rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>
+                          <button onClick={() => reject(jo.job_order_id)} disabled={isActing} style={{ flex: 2, background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.5rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>
                             {isActing ? '…' : 'Confirm Reject'}
                           </button>
                         </div>
                       </div>
                     ) : (
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => setShowReject(jo.job_order_id)} style={{ flex: 1, background: '#5a1010', border: '1px solid #7B1C1C', color: '#e74c3c', borderRadius: 8, padding: '0.55rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>
+                        <button onClick={() => setShowReject(jo.job_order_id)} style={{ flex: 1, background: '#5a1010', border: '1px solid #7A1828', color: '#e74c3c', borderRadius: 8, padding: '0.55rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>
                           Reject
                         </button>
                         <button onClick={() => approve(jo.job_order_id)} disabled={isActing} style={{ flex: 2, background: '#1a3a1a', border: '1px solid #27ae60', color: '#2ecc71', borderRadius: 8, padding: '0.55rem', cursor: isActing ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>

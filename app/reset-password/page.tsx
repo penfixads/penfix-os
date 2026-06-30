@@ -50,7 +50,7 @@ export default function ResetPasswordPage() {
       }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <Image src="/penfixtwhhite.png" alt="Penfix" width={80} height={80} style={{ objectFit: 'contain', filter: 'brightness(0) saturate(100%) invert(14%) sepia(60%) saturate(1200%) hue-rotate(330deg)' }} />
-          <h1 style={{ color: '#7B1C1C', fontSize: '1.4rem', fontWeight: 700, marginTop: '0.75rem', marginBottom: '0.25rem' }}>Penfix OS</h1>
+          <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700, marginTop: '0.75rem', marginBottom: '0.25rem' }}>Penfix OS</h1>
           <p style={{ color: '#888', fontSize: '0.85rem' }}>Set a new password</p>
         </div>
 
@@ -102,7 +102,7 @@ export default function ResetPasswordPage() {
               disabled={loading}
               style={{
                 width: '100%',
-                background: loading ? '#4a0000' : '#5C0000',
+                background: loading ? '#7A1828' : '#7A1828',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 8,

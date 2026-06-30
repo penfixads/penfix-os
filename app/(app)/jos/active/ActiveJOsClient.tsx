@@ -38,7 +38,7 @@ export default function ActiveJOsClient({ jobOrders, currentUser }: Props) {
     <div>
       {/* Header */}
       <div style={{ marginBottom: '1.25rem' }}>
-        <h1 style={{ color: '#7B1C1C', fontSize: '1.4rem', fontWeight: 700 }}>Active Job Orders</h1>
+        <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Active Job Orders</h1>
         <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{filtered.length} active JO(s)</p>
       </div>
 
@@ -49,7 +49,7 @@ export default function ActiveJOsClient({ jobOrders, currentUser }: Props) {
           { label: 'Total Grand Total', value: formatPeso(totalGrand) },
           { label: 'Total Balance Due', value: formatPeso(totalBalance), warn: totalBalance > 0 },
         ].map(stat => (
-          <div key={stat.label} style={{ background: '#f5f5f5', borderRadius: 10, padding: '0.75rem 1rem', border: '1px solid #ebebeb' }}>
+          <div key={stat.label} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.75rem 1rem', border: '1px solid #EDE0CC' }}>
             <div style={{ color: '#999', fontSize: '0.7rem', marginBottom: 4 }}>{stat.label}</div>
             <div style={{ color: stat.warn ? '#e74c3c' : '#fff', fontWeight: 700, fontSize: '1rem' }}>{stat.value}</div>
           </div>
@@ -63,12 +63,12 @@ export default function ActiveJOsClient({ jobOrders, currentUser }: Props) {
           placeholder="Search client or JO ID..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ background: '#f5f5f5', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.85rem', color: '#1a1a1a', fontSize: '0.82rem', flex: 1, minWidth: 180, outline: 'none' }}
+          style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.85rem', color: '#1a1a1a', fontSize: '0.82rem', flex: 1, minWidth: 180, outline: 'none' }}
         />
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          style={{ background: '#f5f5f5', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }}
+          style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }}
         >
           {statuses.map(s => <option key={s} value={s}>{s === 'all' ? 'All Statuses' : s}</option>)}
         </select>
@@ -90,7 +90,7 @@ export default function ActiveJOsClient({ jobOrders, currentUser }: Props) {
             const statusColor = STATUS_COLORS[jo.payment_status] || '#555'
 
             return (
-              <div key={jo.job_order_id} style={{ background: '#f5f5f5', borderRadius: 10, padding: '0.85rem 1rem', border: `1px solid ${isOverdue ? '#3a0000' : '#2a2a2a'}` }}>
+              <div key={jo.job_order_id} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.85rem 1rem', border: `1px solid ${isOverdue ? '#3a0000' : '#2a2a2a'}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.9rem' }}>{clientName}</div>

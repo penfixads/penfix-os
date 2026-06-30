@@ -96,10 +96,10 @@ export default function FeedbackForm() {
     return (
       <div style={{ ...BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
         <div style={{ ...CARD, textAlign: 'center', padding: '3rem 2rem' }}>
-          <div style={{ background: '#7B1C1C', borderRadius: '50%', width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+          <div style={{ background: '#7A1828', borderRadius: '50%', width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#F5C842" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <h1 style={{ color: '#7B1C1C', fontSize: '1.8rem', fontWeight: 700, marginBottom: '0.5rem' }}>Thank you, {name}!</h1>
+          <h1 style={{ color: '#7A1828', fontSize: '1.8rem', fontWeight: 700, marginBottom: '0.5rem' }}>Thank you, {name}!</h1>
           <p style={{ color: '#555', fontSize: '1rem', maxWidth: 340, margin: '0 auto' }}>Your feedback means a lot to us. We&apos;ll keep improving to serve you better.</p>
           <Image src="/penfixtwhhite.png" alt="Penfix" width={120} height={60} style={{ objectFit: 'contain', marginTop: '2rem', filter: 'invert(11%) sepia(63%) saturate(1200%) hue-rotate(330deg) brightness(80%)', opacity: 1 }} />
         </div>
@@ -119,7 +119,7 @@ export default function FeedbackForm() {
 
       <div style={{ padding: '2rem 1.25rem 3rem' }}>
         <form onSubmit={handleSubmit} style={CARD}>
-          <h2 style={{ color: '#7B1C1C', fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.25rem' }}>How did we do?</h2>
+          <h2 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.25rem' }}>How did we do?</h2>
           <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1.75rem' }}>We&apos;d love your honest feedback on your recent order.</p>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -152,7 +152,7 @@ export default function FeedbackForm() {
 
           <div style={{ marginBottom: '1.5rem' }}>
             <label style={labelStyle}>What did we do best? <span style={{ color: '#aaa', fontWeight: 400 }}>(optional)</span></label>
-            <ChipGroup options={BEST_AREAS} selected={bestAreas} onToggle={v => toggleChip(bestAreas, setBestAreas, v)} color="#7B1C1C" />
+            <ChipGroup options={BEST_AREAS} selected={bestAreas} onToggle={v => toggleChip(bestAreas, setBestAreas, v)} color="#7A1828" />
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
@@ -176,7 +176,7 @@ export default function FeedbackForm() {
 
           {error && <p style={{ color: '#c00', fontSize: '0.875rem', marginBottom: '1rem' }}>{error}</p>}
 
-          <button type="submit" disabled={submitting} style={{ width: '100%', background: submitting ? '#b26060' : '#7B1C1C', color: '#fff', border: 'none', borderRadius: 8, padding: '0.85rem', fontSize: '1rem', fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer', letterSpacing: 0.5 }}>
+          <button type="submit" disabled={submitting} style={{ width: '100%', background: submitting ? '#b26060' : '#7A1828', color: '#fff', border: 'none', borderRadius: 8, padding: '0.85rem', fontSize: '1rem', fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer', letterSpacing: 0.5 }}>
             {submitting ? 'Submitting…' : 'Submit Feedback'}
           </button>
         </form>
@@ -219,7 +219,7 @@ function RadioGroup({ options, value, onChange, name }: { options: string[]; val
       {options.map(opt => {
         const active = value === opt
         return (
-          <label key={opt} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '0.4rem 0.9rem', borderRadius: 20, border: `1.5px solid ${active ? '#7B1C1C' : '#ccc'}`, background: active ? '#7B1C1C' : '#fff', color: active ? '#fff' : '#555', fontSize: '0.875rem', fontWeight: active ? 600 : 400 }}>
+          <label key={opt} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '0.4rem 0.9rem', borderRadius: 20, border: `1.5px solid ${active ? '#7A1828' : '#ccc'}`, background: active ? '#7A1828' : '#fff', color: active ? '#fff' : '#555', fontSize: '0.875rem', fontWeight: active ? 600 : 400 }}>
             <input type="radio" name={name} value={opt} checked={active} onChange={() => onChange(opt)} style={{ display: 'none' }} />
             {opt}
           </label>

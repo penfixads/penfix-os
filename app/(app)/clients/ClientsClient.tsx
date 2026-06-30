@@ -85,10 +85,10 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
         <div>
-          <h1 style={{ color: '#7B1C1C', fontSize: '1.4rem', fontWeight: 700 }}>Clients</h1>
+          <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Clients</h1>
           <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{filtered.length} of {clients.length} clients</p>
         </div>
-        <button onClick={openAdd} style={{ background: '#5C0000', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.6rem 1.2rem', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
+        <button onClick={openAdd} style={{ background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.6rem 1.2rem', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
           + New Client
         </button>
       </div>
@@ -96,9 +96,9 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
       {/* Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: '1rem' }}>
         <input type="text" placeholder="Search name or ID…" value={search} onChange={e => setSearch(e.target.value)}
-          style={{ flex: 1, background: '#f5f5f5', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }} />
+          style={{ flex: 1, background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }} />
         <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
-          style={{ background: '#f5f5f5', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }}>
+          style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }}>
           <option value="all">All Types</option>
           <option value="Individual">Individual</option>
           <option value="Company">Company</option>
@@ -111,7 +111,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
           const totalSales = (c.job_orders || []).reduce((s: number, j: any) => s + (j.grand_total || 0), 0)
           const totalJOs = c.job_orders?.length || 0
           return (
-            <div key={c.client_id} style={{ background: '#f5f5f5', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #ebebeb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+            <div key={c.client_id} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #EDE0CC', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.88rem' }}>{c.client_name || c.company_name}</span>
@@ -134,7 +134,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
       {/* Form Modal */}
       {showForm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: '#f5f5f5', borderRadius: 14, width: '100%', maxWidth: 400, padding: '1.5rem' }}>
+          <div style={{ background: '#FDF5EC', borderRadius: 14, width: '100%', maxWidth: 400, padding: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <h3 style={{ color: '#1a1a1a', fontWeight: 700 }}>{editing ? 'Edit Client' : 'New Client'}</h3>
               <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', color: '#999', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
@@ -145,7 +145,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
               <div style={{ display: 'flex', gap: 8 }}>
                 {(['Individual','Company'] as const).map(t => (
                   <button key={t} onClick={() => setClientType(t)}
-                    style={{ flex: 1, padding: '0.45rem', borderRadius: 7, border: '1.5px solid', borderColor: clientType === t ? '#7B1C1C' : '#333', background: clientType === t ? '#7B1C1C' : 'transparent', color: '#1a1a1a', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem' }}>
+                    style={{ flex: 1, padding: '0.45rem', borderRadius: 7, border: '1.5px solid', borderColor: clientType === t ? '#7A1828' : '#333', background: clientType === t ? '#7A1828' : 'transparent', color: '#1a1a1a', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem' }}>
                     {t}
                   </button>
                 ))}
@@ -175,7 +175,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
               <input type="text" value={address} onChange={e => setAddress(e.target.value)} style={inp} />
             </div>
             <div style={{ ...field, display: 'flex', gap: 10, alignItems: 'center' }}>
-              <input type="checkbox" checked={creditLine} onChange={e => setCreditLine(e.target.checked)} style={{ accentColor: '#7B1C1C', width: 16, height: 16 }} />
+              <input type="checkbox" checked={creditLine} onChange={e => setCreditLine(e.target.checked)} style={{ accentColor: '#7A1828', width: 16, height: 16 }} />
               <label style={{ ...lbl, marginBottom: 0, cursor: 'pointer' }}>Credit Line Client</label>
             </div>
 
@@ -183,7 +183,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
 
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => setShowForm(false)} style={{ flex: 1, background: '#f0f0f0', color: '#1a1a1a', border: 'none', borderRadius: 8, padding: '0.7rem', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleSave} disabled={saving} style={{ flex: 2, background: saving ? '#4a0000' : '#5C0000', color: '#C9A84C', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
+              <button onClick={handleSave} disabled={saving} style={{ flex: 2, background: saving ? '#7A1828' : '#7A1828', color: '#C9A84C', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
                 {saving ? 'Saving…' : editing ? 'Update Client' : 'Add Client'}
               </button>
             </div>
@@ -196,4 +196,4 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
 
 const field: React.CSSProperties = { marginBottom: '0.85rem' }
 const lbl: React.CSSProperties = { display: 'block', color: '#999', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.3rem' }
-const inp: React.CSSProperties = { width: '100%', background: '#f5f5f5', border: '1.5px solid #d0d0d0', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#1a1a1a', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none' }
+const inp: React.CSSProperties = { width: '100%', background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#1a1a1a', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none' }

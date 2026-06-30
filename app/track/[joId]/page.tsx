@@ -54,7 +54,7 @@ export default async function TrackPage({ params }: { params: { joId: string } }
           <Image src="/penfixtwhhite.png" alt="Penfix" width={40} height={40} style={{ objectFit: 'contain' }} />
           <div>
             <div style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>PENFIX OS</div>
-            <div style={{ color: '#7B1C1C', fontSize: '0.7rem' }}>Job Order Tracker</div>
+            <div style={{ color: '#7A1828', fontSize: '0.7rem' }}>Job Order Tracker</div>
           </div>
         </div>
 
@@ -110,7 +110,7 @@ export default async function TrackPage({ params }: { params: { joId: string } }
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
                             <div style={{
                               width: 14, height: 14, borderRadius: '50%',
-                              background: isCurrent ? '#7B1C1C' : isCompleted ? '#27ae60' : '#2a2a2a',
+                              background: isCurrent ? '#7A1828' : isCompleted ? '#27ae60' : '#2a2a2a',
                               border: `2px solid ${isCurrent ? '#c0392b' : isCompleted ? '#27ae60' : '#3a3a3a'}`,
                               marginTop: 2,
                             }} />
@@ -121,7 +121,7 @@ export default async function TrackPage({ params }: { params: { joId: string } }
                           <div style={{ paddingBottom: i < steps.length - 1 ? '0.4rem' : 0 }}>
                             <div style={{ color: isCurrent ? '#fff' : isCompleted ? '#aaa' : '#555', fontSize: '0.78rem', fontWeight: isCurrent ? 700 : 400 }}>
                               {step.status_name}
-                              {isCurrent && <span style={{ color: '#7B1C1C', marginLeft: 6, fontSize: '0.68rem' }}>← current</span>}
+                              {isCurrent && <span style={{ color: '#7A1828', marginLeft: 6, fontSize: '0.68rem' }}>← current</span>}
                             </div>
                             {step.description && (
                               <div style={{ color: '#555', fontSize: '0.68rem', marginTop: 1 }}>{step.description}</div>

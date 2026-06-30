@@ -198,7 +198,7 @@ export default function JOItemForm({ categories, subcategories, onSave, onClose 
 
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={onClose} style={{ flex: 1, background: '#2a2a2a', color: '#fff', border: 'none', borderRadius: 8, padding: '0.7rem', cursor: 'pointer' }}>Cancel</button>
-          <button onClick={handleSave} disabled={!subcategoryId} style={{ flex: 2, background: subcategoryId ? '#7B1C1C' : '#333', color: '#fff', border: 'none', borderRadius: 8, padding: '0.7rem', fontWeight: 700, cursor: subcategoryId ? 'pointer' : 'not-allowed' }}>
+          <button onClick={handleSave} disabled={!subcategoryId} style={{ flex: 2, background: subcategoryId ? '#7A1828' : '#333', color: '#fff', border: 'none', borderRadius: 8, padding: '0.7rem', fontWeight: 700, cursor: subcategoryId ? 'pointer' : 'not-allowed' }}>
             Add Item
           </button>
         </div>

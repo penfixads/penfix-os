@@ -159,7 +159,7 @@ export default function ProductionClient({ items, sopSteps, currentUser }: Props
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <h1 style={{ color: '#7B1C1C', fontSize: '1.4rem', fontWeight: 700 }}>Fabricator&apos;s Production Panel</h1>
+          <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Fabricator&apos;s Production Panel</h1>
           <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>
             {productionItems.length} item(s) in production
             {pendingCount > 0 && <span style={{ color: '#e67e22', marginLeft: 8 }}>· {pendingCount} awaiting payment/approval</span>}
@@ -170,7 +170,7 @@ export default function ProductionClient({ items, sopSteps, currentUser }: Props
           placeholder="Search client, JO, item..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ background: '#f5f5f5', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.85rem', color: '#1a1a1a', fontSize: '0.82rem', width: 220, outline: 'none' }}
+          style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.85rem', color: '#1a1a1a', fontSize: '0.82rem', width: 220, outline: 'none' }}
         />
       </div>
 
@@ -195,7 +195,7 @@ export default function ProductionClient({ items, sopSteps, currentUser }: Props
                   const isAdvancing = advancing === item.item_id
 
                   return (
-                    <div key={item.item_id} style={{ background: '#f5f5f5', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #ebebeb' }}>
+                    <div key={item.item_id} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #EDE0CC' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.88rem' }}>{clientName}</div>
@@ -246,7 +246,7 @@ export default function ProductionClient({ items, sopSteps, currentUser }: Props
                           })}
                           <button
                             onClick={() => markCancelled(item.item_id)}
-                            style={{ background: 'none', border: '1px solid #3a0000', color: '#7B1C1C', fontSize: '0.72rem', padding: '0.35rem 0.7rem', borderRadius: 6, cursor: 'pointer', marginLeft: 'auto' }}
+                            style={{ background: 'none', border: '1px solid #3a0000', color: '#7A1828', fontSize: '0.72rem', padding: '0.35rem 0.7rem', borderRadius: 6, cursor: 'pointer', marginLeft: 'auto' }}
                           >
                             Cancel
                           </button>

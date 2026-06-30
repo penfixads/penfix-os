@@ -50,7 +50,7 @@ export default function AddClientModal({ onSave, onClose }: Props) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <div style={{ background: '#FDF6E3', borderRadius: 14, width: '100%', maxWidth: 400, padding: '1.5rem' }}>
+      <div style={{ background: '#FDF5EC', borderRadius: 14, width: '100%', maxWidth: 400, padding: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <h3 style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>Add New Client</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
@@ -61,7 +61,7 @@ export default function AddClientModal({ onSave, onClose }: Props) {
           <div style={{ display: 'flex', gap: 8 }}>
             {(['Individual', 'Company'] as const).map(t => (
               <button key={t} type="button" onClick={() => setClientType(t)}
-                style={{ flex: 1, padding: '0.45rem', borderRadius: 7, border: '1.5px solid', borderColor: clientType === t ? '#7B1C1C' : '#333', background: clientType === t ? '#7B1C1C' : 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem' }}>
+                style={{ flex: 1, padding: '0.45rem', borderRadius: 7, border: '1.5px solid', borderColor: clientType === t ? '#7A1828' : '#333', background: clientType === t ? '#7A1828' : 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem' }}>
                 {t}
               </button>
             ))}
@@ -96,7 +96,7 @@ export default function AddClientModal({ onSave, onClose }: Props) {
         </div>
 
         <div style={{ ...field, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <input type="checkbox" id="creditLine" checked={creditLine} onChange={e => setCreditLine(e.target.checked)} style={{ accentColor: '#7B1C1C', width: 16, height: 16 }} />
+          <input type="checkbox" id="creditLine" checked={creditLine} onChange={e => setCreditLine(e.target.checked)} style={{ accentColor: '#7A1828', width: 16, height: 16 }} />
           <label htmlFor="creditLine" style={{ ...lbl, marginBottom: 0, cursor: 'pointer' }}>Credit Line Client</label>
         </div>
 
@@ -104,7 +104,7 @@ export default function AddClientModal({ onSave, onClose }: Props) {
 
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={onClose} style={{ flex: 1, background: '#2a2a2a', color: '#fff', border: 'none', borderRadius: 8, padding: '0.7rem', cursor: 'pointer' }}>Cancel</button>
-          <button onClick={handleSave} disabled={saving} style={{ flex: 2, background: saving ? '#5a1010' : '#7B1C1C', color: '#fff', border: 'none', borderRadius: 8, padding: '0.7rem', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
+          <button onClick={handleSave} disabled={saving} style={{ flex: 2, background: saving ? '#5a1010' : '#7A1828', color: '#fff', border: 'none', borderRadius: 8, padding: '0.7rem', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
             {saving ? 'Saving…' : 'Save Client'}
           </button>
         </div>

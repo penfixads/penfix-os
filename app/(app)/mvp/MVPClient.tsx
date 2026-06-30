@@ -41,7 +41,7 @@ export default function MVPClient({ jobOrders, payments, today }: Props) {
   return (
     <div>
       <div style={{ marginBottom: '1.25rem' }}>
-        <h1 style={{ color: '#7B1C1C', fontSize: '1.4rem', fontWeight: 700 }}>Daily MVP</h1>
+        <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Daily MVP</h1>
         <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{dateLabel}</p>
       </div>
 
@@ -52,7 +52,7 @@ export default function MVPClient({ jobOrders, payments, today }: Props) {
           { label: "Total Sales", value: formatPeso(totalSales) },
           { label: "Total Collected", value: formatPeso(totalCollected) },
         ].map(c => (
-          <div key={c.label} style={{ background: '#f5f5f5', borderRadius: 10, padding: '0.75rem 1rem', border: '1px solid #ebebeb', textAlign: 'center' }}>
+          <div key={c.label} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.75rem 1rem', border: '1px solid #EDE0CC', textAlign: 'center' }}>
             <div style={{ color: '#999', fontSize: '0.68rem', marginBottom: 4 }}>{c.label}</div>
             <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.95rem' }}>{c.value}</div>
           </div>
@@ -71,7 +71,7 @@ export default function MVPClient({ jobOrders, payments, today }: Props) {
                 background: isTop ? '#1a0a00' : '#1a1a1a',
                 borderRadius: 12,
                 padding: '1rem 1.25rem',
-                border: `1px solid ${isTop ? '#7B1C1C' : '#2a2a2a'}`,
+                border: `1px solid ${isTop ? '#7A1828' : '#2a2a2a'}`,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '1rem',

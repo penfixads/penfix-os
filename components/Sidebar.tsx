@@ -48,7 +48,7 @@ export default function Sidebar({ role, name }: Props) {
     <aside style={{
       width: 240,
       minHeight: '100vh',
-      background: '#5C0000',
+      background: '#7A1828',
       display: 'flex',
       flexDirection: 'column',
       borderRight: '1px solid #3a0000',
@@ -79,7 +79,7 @@ export default function Sidebar({ role, name }: Props) {
               className="nav-link"
               style={{
                 color: active ? '#fff' : '#aaa',
-                background: active ? '#7B1C1C' : 'transparent',
+                background: active ? '#7A1828' : 'transparent',
                 borderLeft: active ? '3px solid #c0392b' : '3px solid transparent',
               }}
             >
@@ -92,7 +92,7 @@ export default function Sidebar({ role, name }: Props) {
       {/* User + Sign out */}
       <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid #3a0000' }}>
         <div style={{ color: '#fff', fontSize: '0.78rem', fontWeight: 600 }}>{name}</div>
-        <div style={{ color: '#7B1C1C', fontSize: '0.68rem', marginBottom: '0.5rem' }}>{role}</div>
+        <div style={{ color: '#7A1828', fontSize: '0.68rem', marginBottom: '0.5rem' }}>{role}</div>
         <button
           onClick={handleSignOut}
           style={{ background: 'none', border: '1px solid #3a0000', color: '#aaa', fontSize: '0.72rem', padding: '0.3rem 0.75rem', borderRadius: 6, cursor: 'pointer', width: '100%' }}

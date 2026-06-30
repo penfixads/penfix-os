@@ -72,13 +72,13 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
   return (
     <div>
       <div style={{ marginBottom: '1.25rem' }}>
-        <h1 style={{ color: '#7B1C1C', fontSize: '1.4rem', fontWeight: 700 }}>Sales Reports</h1>
+        <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Sales Reports</h1>
         <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>Last 12 months</p>
       </div>
 
       {/* Chart */}
       {report.length > 0 && (
-        <div style={{ background: '#f5f5f5', borderRadius: 12, padding: '1rem', border: '1px solid #ebebeb', marginBottom: '1.25rem' }}>
+        <div style={{ background: '#FDF5EC', borderRadius: 12, padding: '1rem', border: '1px solid #EDE0CC', marginBottom: '1.25rem' }}>
           <div style={{ color: '#999', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.75rem' }}>Overview</div>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={[...report].reverse().map(([key, r]) => ({
@@ -91,7 +91,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
               <XAxis dataKey="name" tick={{ fill: '#666', fontSize: 10 }} />
               <YAxis tick={{ fill: '#666', fontSize: 10 }} tickFormatter={v => `₱${(v/1000).toFixed(0)}k`} />
               <Tooltip
-                contentStyle={{ background: '#f5f5f5', border: '1px solid #d0d0d0', borderRadius: 8, fontSize: '0.78rem' }}
+                contentStyle={{ background: '#FDF5EC', border: '1px solid #d0d0d0', borderRadius: 8, fontSize: '0.78rem' }}
                 labelStyle={{ color: '#1a1a1a', fontWeight: 700 }}
                 formatter={(value: number) => formatPeso(value)}
               />
@@ -108,7 +108,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
       <div style={{ display: 'flex', gap: 8, marginBottom: '1.25rem' }}>
         {(['weekly', 'monthly', 'yearly'] as Period[]).map(p => (
           <button key={p} onClick={() => setPeriod(p)}
-            style={{ padding: '0.5rem 1.5rem', borderRadius: 999, background: period === p ? '#5C0000' : 'transparent', color: period === p ? '#fff' : '#4a0000', border: period === p ? '2px solid #C9A84C' : '1.5px solid #4a0000', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', textTransform: 'capitalize' }}>
+            style={{ padding: '0.5rem 1.5rem', borderRadius: 999, background: period === p ? '#7A1828' : 'transparent', color: period === p ? '#fff' : '#7A1828', border: period === p ? '2px solid #C9A84C' : '1.5px solid #7A1828', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', textTransform: 'capitalize' }}>
             {p}
           </button>
         ))}
@@ -122,7 +122,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
           { label: 'Total Collections', value: formatPeso(grandCollections) },
           { label: 'Total Expenses', value: formatPeso(grandExpenses), warn: true },
         ].map(c => (
-          <div key={c.label} style={{ background: '#f5f5f5', borderRadius: 10, padding: '0.75rem', border: '1px solid #ebebeb' }}>
+          <div key={c.label} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.75rem', border: '1px solid #EDE0CC' }}>
             <div style={{ color: '#aaa', fontSize: '0.68rem' }}>{c.label}</div>
             <div style={{ color: c.warn ? '#e74c3c' : '#1a1a1a', fontWeight: 700, fontSize: '0.95rem', marginTop: 2 }}>{c.value}</div>
           </div>
@@ -135,7 +135,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
           const netCash = r.collections - r.expenses
           const maxVal = Math.max(r.sales, 1)
           return (
-            <div key={key} style={{ background: '#f5f5f5', borderRadius: 12, padding: '1rem', border: '1px solid #ebebeb' }}>
+            <div key={key} style={{ background: '#FDF5EC', borderRadius: 12, padding: '1rem', border: '1px solid #EDE0CC' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
                 <div>
                   <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.9rem' }}>{periodLabel(key, period)}</div>

@@ -10,12 +10,12 @@ export default function PageSkeleton({ title }: { title?: string }) {
       )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: '1.25rem' }}>
         {[1,2,3].map(i => (
-          <div key={i} style={{ background: '#ebebeb', borderRadius: 10, height: 64 }} />
+          <div key={i} style={{ background: '#EDE0CC', borderRadius: 10, height: 64 }} />
         ))}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
         {[1,2,3,4,5].map(i => (
-          <div key={i} style={{ background: '#ebebeb', borderRadius: 10, height: 80 }} />
+          <div key={i} style={{ background: '#EDE0CC', borderRadius: 10, height: 80 }} />
         ))}
       </div>
     </div>

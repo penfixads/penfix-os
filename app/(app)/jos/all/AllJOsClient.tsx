@@ -36,7 +36,7 @@ export default function AllJOsClient({ jobOrders }: Props) {
   return (
     <div>
       <div style={{ marginBottom: '1.25rem' }}>
-        <h1 style={{ color: '#7B1C1C', fontSize: '1.4rem', fontWeight: 700 }}>All Job Orders</h1>
+        <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>All Job Orders</h1>
         <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{filtered.length} of {jobOrders.length} JOs shown</p>
       </div>
 
@@ -47,7 +47,7 @@ export default function AllJOsClient({ jobOrders }: Props) {
           { label: 'Grand Total', value: formatPeso(totalGrand) },
           { label: 'Balance Due', value: formatPeso(totalBal), warn: totalBal > 0 },
         ].map(c => (
-          <div key={c.label} style={{ background: '#f5f5f5', borderRadius: 10, padding: '0.65rem 0.85rem', border: '1px solid #ebebeb' }}>
+          <div key={c.label} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.65rem 0.85rem', border: '1px solid #EDE0CC' }}>
             <div style={{ color: '#aaa', fontSize: '0.65rem' }}>{c.label}</div>
             <div style={{ color: c.warn ? '#e74c3c' : '#fff', fontWeight: 700, fontSize: '0.9rem' }}>{c.value}</div>
           </div>
@@ -77,7 +77,7 @@ export default function AllJOsClient({ jobOrders }: Props) {
             const hasBalance = (jo.balance_due || 0) > 0
 
             return (
-              <div key={jo.job_order_id} style={{ background: '#f5f5f5', borderRadius: 10, padding: '0.75rem 1rem', border: '1px solid #ebebeb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+              <div key={jo.job_order_id} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.75rem 1rem', border: '1px solid #EDE0CC', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.85rem' }}>{clientName}</span>
@@ -108,4 +108,4 @@ export default function AllJOsClient({ jobOrders }: Props) {
   )
 }
 
-const inp: React.CSSProperties = { flex: 1, minWidth: 140, background: '#f5f5f5', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }
+const inp: React.CSSProperties = { flex: 1, minWidth: 140, background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }

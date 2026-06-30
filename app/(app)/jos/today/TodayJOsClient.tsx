@@ -173,10 +173,10 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
         <div>
-          <h1 style={{ color: '#7B1C1C', fontSize: '1.4rem', fontWeight: 700 }}>Today&apos;s Received JOs</h1>
+          <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Today&apos;s Received JOs</h1>
           <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true) }} style={{ background: '#5C0000', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.6rem 1.2rem', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
+        <button onClick={() => { resetForm(); setShowForm(true) }} style={{ background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.6rem 1.2rem', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
           + New JO
         </button>
       </div>
@@ -191,7 +191,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
             const deadline = jo.job_order_items?.[0]?.date_time_needed
             const hasBalance = jo.balance_due > 0
             return (
-              <div key={jo.job_order_id} style={{ background: '#f5f5f5', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #ebebeb' }}>
+              <div key={jo.job_order_id} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #EDE0CC' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
                     <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.9rem' }}>{clientName}</div>
@@ -209,7 +209,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                       {formatPeso(jo.grand_total || 0)}
                     </div>
                     <div style={{ color: '#777', fontSize: '0.72rem' }}>Bal: {formatPeso(jo.balance_due || 0)}</div>
-                    <div style={{ color: '#7B1C1C', fontSize: '0.68rem', marginTop: 2 }}>{jo.payment_status}</div>
+                    <div style={{ color: '#7A1828', fontSize: '0.68rem', marginTop: 2 }}>{jo.payment_status}</div>
                   </div>
                 </div>
               </div>
@@ -221,10 +221,10 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
       {/* New JO Modal */}
       {showForm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
-          <div style={{ background: '#f5f5f5', borderRadius: 14, width: '100%', maxWidth: 560, padding: '1.5rem', marginTop: '1rem' }}>
+          <div style={{ background: '#FDF5EC', borderRadius: 14, width: '100%', maxWidth: 560, padding: '1.5rem', marginTop: '1rem' }}>
             {/* Modal header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h2 style={{ color: '#7B1C1C', fontSize: '1.1rem', fontWeight: 700 }}>New Job Order</h2>
+              <h2 style={{ color: '#7A1828', fontSize: '1.1rem', fontWeight: 700 }}>New Job Order</h2>
               <button onClick={() => { resetForm(); setShowForm(false) }} style={{ background: 'none', border: 'none', color: '#999', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
 
@@ -256,7 +256,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                         key={c.client_id}
                         onClick={() => { setSelectedClientId(c.client_id); setClientSearch(c.client_name || c.company_name); setShowClientDropdown(false) }}
                         style={{ padding: '0.6rem 0.85rem', cursor: 'pointer', color: '#1a1a1a', fontSize: '0.85rem', borderBottom: '1px solid #f0f0f0' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = '#f5f5f5')}
+                        onMouseEnter={e => (e.currentTarget.style.background = '#FDF5EC')}
                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                       >
                         <div style={{ fontWeight: 600 }}>{c.client_name || c.company_name}</div>
@@ -265,7 +265,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                     ))}
                     <div
                       onClick={() => { setShowClientDropdown(false); setShowAddClient(true) }}
-                      style={{ padding: '0.6rem 0.85rem', cursor: 'pointer', color: '#7B1C1C', fontSize: '0.85rem', fontWeight: 600, borderTop: '1px solid #f0f0f0' }}
+                      style={{ padding: '0.6rem 0.85rem', cursor: 'pointer', color: '#7A1828', fontSize: '0.85rem', fontWeight: 600, borderTop: '1px solid #f0f0f0' }}
                       onMouseEnter={e => (e.currentTarget.style.background = '#fdf0f0')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
@@ -287,7 +287,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
               <div style={{ display: 'flex', gap: 8 }}>
                 {['N', 'Y'].map(v => (
                   <button key={v} type="button" onClick={() => setIsForBilling(v === 'Y')}
-                    style={{ flex: 1, padding: '0.5rem', borderRadius: 7, border: '1.5px solid', borderColor: (v === 'Y') === isForBilling ? '#7B1C1C' : '#333', background: (v === 'Y') === isForBilling ? '#7B1C1C' : 'transparent', color: '#1a1a1a', cursor: 'pointer', fontWeight: 600 }}>
+                    style={{ flex: 1, padding: '0.5rem', borderRadius: 7, border: '1.5px solid', borderColor: (v === 'Y') === isForBilling ? '#7A1828' : '#333', background: (v === 'Y') === isForBilling ? '#7A1828' : 'transparent', color: '#1a1a1a', cursor: 'pointer', fontWeight: 600 }}>
                     {v}
                   </button>
                 ))}
@@ -313,20 +313,20 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                   ))}
                 </div>
               )}
-              <button type="button" onClick={() => setShowItemForm(true)} style={{ width: '100%', background: '#f0f0f0', border: '1px dashed #444', color: '#7B1C1C', fontWeight: 700, padding: '0.6rem', borderRadius: 8, cursor: 'pointer' }}>
+              <button type="button" onClick={() => setShowItemForm(true)} style={{ width: '100%', background: '#f0f0f0', border: '1px dashed #444', color: '#7A1828', fontWeight: 700, padding: '0.6rem', borderRadius: 8, cursor: 'pointer' }}>
                 + Add Item
               </button>
             </div>
 
             {/* Totals */}
-            <div style={{ background: '#f5f5f5', borderRadius: 8, padding: '0.75rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ background: '#FDF5EC', borderRadius: 8, padding: '0.75rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
               <div style={totalRowStyle}><span>Grand Total</span><span>{formatPeso(grandTotal)}</span></div>
               <div style={totalRowStyle}><span>Discount</span>
                 <input type="number" value={discount} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} style={{ ...inputStyle, width: 100, padding: '0.2rem 0.5rem', textAlign: 'right' }} />
               </div>
               <div style={totalRowStyle}><span>Total Paid</span><span>{formatPeso(totalPaid)}</span></div>
               <div style={totalRowStyle}><span>Balance Due</span><span style={{ color: balanceDue > 0 ? '#e74c3c' : '#2ecc71', fontWeight: 700 }}>{formatPeso(balanceDue)}</span></div>
-              <div style={totalRowStyle}><span>Status</span><span style={{ color: '#7B1C1C', fontWeight: 600, fontSize: '0.8rem' }}>{paymentStatus}</span></div>
+              <div style={totalRowStyle}><span>Status</span><span style={{ color: '#7A1828', fontWeight: 600, fontSize: '0.8rem' }}>{paymentStatus}</span></div>
             </div>
 
             {/* Payments */}
@@ -365,12 +365,12 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                     </div>
                   )}
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={addPayment} style={{ flex: 1, background: '#5C0000', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.5rem', cursor: 'pointer', fontWeight: 700 }}>Add</button>
+                    <button onClick={addPayment} style={{ flex: 1, background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.5rem', cursor: 'pointer', fontWeight: 700 }}>Add</button>
                     <button onClick={() => setShowPaymentForm(false)} style={{ flex: 1, background: '#333', color: '#1a1a1a', border: 'none', borderRadius: 7, padding: '0.5rem', cursor: 'pointer' }}>Cancel</button>
                   </div>
                 </div>
               ) : (
-                <button type="button" onClick={() => setShowPaymentForm(true)} style={{ width: '100%', background: '#f0f0f0', border: '1px dashed #444', color: '#7B1C1C', fontWeight: 700, padding: '0.6rem', borderRadius: 8, cursor: 'pointer' }}>
+                <button type="button" onClick={() => setShowPaymentForm(true)} style={{ width: '100%', background: '#f0f0f0', border: '1px dashed #444', color: '#7A1828', fontWeight: 700, padding: '0.6rem', borderRadius: 8, cursor: 'pointer' }}>
                   + Add Payment
                 </button>
               )}
@@ -390,7 +390,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
             {/* Actions */}
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => { resetForm(); setShowForm(false) }} style={{ flex: 1, background: '#f0f0f0', color: '#1a1a1a', border: 'none', borderRadius: 8, padding: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
-              <button onClick={handleSave} disabled={saving} style={{ flex: 2, background: saving ? '#4a0000' : '#5C0000', color: '#C9A84C', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.75rem', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700 }}>
+              <button onClick={handleSave} disabled={saving} style={{ flex: 2, background: saving ? '#7A1828' : '#7A1828', color: '#C9A84C', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.75rem', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700 }}>
                 {saving ? 'Saving…' : 'Save Job Order'}
               </button>
             </div>
@@ -426,6 +426,6 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
 
 const fieldStyle: React.CSSProperties = { marginBottom: '1rem' }
 const labelStyle: React.CSSProperties = { display: 'block', color: '#999', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.35rem' }
-const inputStyle: React.CSSProperties = { width: '100%', background: '#f5f5f5', border: '1.5px solid #d0d0d0', borderRadius: 7, padding: '0.55rem 0.75rem', color: '#1a1a1a', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none' }
+const inputStyle: React.CSSProperties = { width: '100%', background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 7, padding: '0.55rem 0.75rem', color: '#1a1a1a', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none' }
 const chipStyle: React.CSSProperties = { display: 'inline-block', background: '#f0f0f0', color: '#1a1a1a', borderRadius: 20, padding: '0.3rem 0.85rem', fontSize: '0.8rem' }
 const totalRowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#ccc', fontSize: '0.82rem' }
