@@ -98,7 +98,7 @@ function LoginForm() {
                 </p>
               )}
               <button type="submit" disabled={loading} style={{
-                width: '100%', background: loading ? '#2a0000' : '#1a0000', color: '#C9A84C', border: '2px solid #C9A84C',
+                width: '100%', background: loading ? '#4a0000' : '#5C0000', color: '#C9A84C', border: '2px solid #C9A84C',
                 border: 'none', borderRadius: 8, padding: '0.85rem', fontSize: '1rem',
                 fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', letterSpacing: 0.5,
               }}>
@@ -173,7 +173,7 @@ function LoginForm() {
               disabled={loading}
               style={{
                 width: '100%',
-                background: loading ? '#2a0000' : '#1a0000',
+                background: loading ? '#4a0000' : '#5C0000',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 8,

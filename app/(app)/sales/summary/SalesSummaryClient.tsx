@@ -147,7 +147,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, s
       <div style={{ background: '#f5f5f5', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem', border: '1px solid #ebebeb' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
           <div style={{ color: '#666', fontWeight: 700, fontSize: '0.8rem' }}>Expenses (EXPCASH)</div>
-          <button onClick={() => setShowExpenseForm(v => !v)} style={{ background: '#1a0000', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.3rem 0.7rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700 }}>+ Add</button>
+          <button onClick={() => setShowExpenseForm(v => !v)} style={{ background: '#5C0000', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.3rem 0.7rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700 }}>+ Add</button>
         </div>
 
         {showExpenseForm && (
@@ -170,7 +170,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, s
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => setShowExpenseForm(false)} style={{ flex: 1, background: '#f0f0f0', color: '#1a1a1a', border: 'none', borderRadius: 7, padding: '0.5rem', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={addExpense} disabled={savingExp} style={{ flex: 2, background: '#1a0000', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.5rem', fontWeight: 700, cursor: 'pointer' }}>
+              <button onClick={addExpense} disabled={savingExp} style={{ flex: 2, background: '#5C0000', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.5rem', fontWeight: 700, cursor: 'pointer' }}>
                 {savingExp ? '…' : 'Save Expense'}
               </button>
             </div>
@@ -213,7 +213,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, s
           placeholder="Notes for the day, reminders, reconciliation notes..."
           style={{ ...inp, resize: 'vertical', marginBottom: 8 }}
         />
-        <button onClick={saveRemark} disabled={savingRemark} style={{ background: '#1a0000', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.5rem 1rem', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}>
+        <button onClick={saveRemark} disabled={savingRemark} style={{ background: '#5C0000', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.5rem 1rem', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}>
           {savingRemark ? 'Saving…' : 'Save Remark'}
         </button>
       </div>

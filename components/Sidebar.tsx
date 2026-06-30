@@ -48,7 +48,7 @@ export default function Sidebar({ role, name }: Props) {
     <aside style={{
       width: 240,
       minHeight: '100vh',
-      background: '#1a0000',
+      background: '#5C0000',
       display: 'flex',
       flexDirection: 'column',
       borderRight: '1px solid #3a0000',

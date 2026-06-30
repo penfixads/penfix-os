@@ -102,7 +102,7 @@ export default function ResetPasswordPage() {
               disabled={loading}
               style={{
                 width: '100%',
-                background: loading ? '#2a0000' : '#1a0000',
+                background: loading ? '#4a0000' : '#5C0000',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 8,
