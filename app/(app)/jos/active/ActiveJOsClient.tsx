@@ -51,7 +51,7 @@ export default function ActiveJOsClient({ jobOrders, currentUser }: Props) {
         ].map(stat => (
           <div key={stat.label} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.75rem 1rem', border: '1px solid #EDE0CC' }}>
             <div style={{ color: '#999', fontSize: '0.7rem', marginBottom: 4 }}>{stat.label}</div>
-            <div style={{ color: stat.warn ? '#e74c3c' : '#fff', fontWeight: 700, fontSize: '1rem' }}>{stat.value}</div>
+            <div style={{ color: stat.warn ? '#e74c3c' : '#333', fontWeight: 700, fontSize: '1rem' }}>{stat.value}</div>
           </div>
         ))}
       </div>
