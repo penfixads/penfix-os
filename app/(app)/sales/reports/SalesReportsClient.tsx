@@ -2,6 +2,9 @@
 
 import { useState, useMemo } from 'react'
 import { formatPeso } from '@/lib/jo-helpers'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts'
 
 interface Props { payments: any[]; jobOrders: any[]; expenses: any[] }
 
@@ -72,6 +75,34 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
         <h1 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 700 }}>Sales Reports</h1>
         <p style={{ color: '#888', fontSize: '0.8rem', marginTop: 2 }}>Last 12 months</p>
       </div>
+
+      {/* Chart */}
+      {report.length > 0 && (
+        <div style={{ background: '#1a1a1a', borderRadius: 12, padding: '1rem', border: '1px solid #2a2a2a', marginBottom: '1.25rem' }}>
+          <div style={{ color: '#aaa', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.75rem' }}>Overview</div>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={[...report].reverse().map(([key, r]) => ({
+              name: periodLabel(key, period),
+              Sales: Math.round(r.sales),
+              Collections: Math.round(r.collections),
+              Expenses: Math.round(r.expenses),
+            }))} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
+              <XAxis dataKey="name" tick={{ fill: '#666', fontSize: 10 }} />
+              <YAxis tick={{ fill: '#666', fontSize: 10 }} tickFormatter={v => `₱${(v/1000).toFixed(0)}k`} />
+              <Tooltip
+                contentStyle={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8, fontSize: '0.78rem' }}
+                labelStyle={{ color: '#fff', fontWeight: 700 }}
+                formatter={(value: number) => formatPeso(value)}
+              />
+              <Legend wrapperStyle={{ fontSize: '0.75rem', color: '#aaa' }} />
+              <Bar dataKey="Sales" fill="#2980b9" radius={[3,3,0,0]} />
+              <Bar dataKey="Collections" fill="#27ae60" radius={[3,3,0,0]} />
+              <Bar dataKey="Expenses" fill="#e74c3c" radius={[3,3,0,0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Period toggle */}
       <div style={{ display: 'flex', gap: 8, marginBottom: '1.25rem' }}>
