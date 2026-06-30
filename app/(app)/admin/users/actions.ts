@@ -1,0 +1,76 @@
+'use server'
+
+import { createSupabaseAdminClient } from '@/lib/supabase-admin'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { getCurrentUser } from '@/lib/user'
+
+async function assertAdmin() {
+  const user = await getCurrentUser()
+  if (!user || user.role !== 'Admin') throw new Error('Unauthorized')
+}
+
+export async function createUser(formData: {
+  name: string
+  email: string
+  password: string
+  role: string
+}) {
+  await assertAdmin()
+  const admin = createSupabaseAdminClient()
+
+  const { data: authData, error: authErr } = await admin.auth.admin.createUser({
+    email: formData.email,
+    password: formData.password,
+    email_confirm: true,
+  })
+  if (authErr) throw new Error(authErr.message)
+
+  const supabase = createSupabaseServerClient()
+  const { error: dbErr } = await supabase.from('users').insert({
+    user_email: formData.email,
+    name: formData.name,
+    role: formData.role,
+    is_active: true,
+  })
+  if (dbErr) {
+    await admin.auth.admin.deleteUser(authData.user.id)
+    throw new Error(dbErr.message)
+  }
+
+  return { success: true }
+}
+
+export async function updateUserRole(email: string, role: string) {
+  await assertAdmin()
+  const supabase = createSupabaseServerClient()
+  const { error } = await supabase.from('users').update({ role }).eq('user_email', email)
+  if (error) throw new Error(error.message)
+  return { success: true }
+}
+
+export async function toggleUserActive(email: string, is_active: boolean) {
+  await assertAdmin()
+  const admin = createSupabaseAdminClient()
+  const supabase = createSupabaseServerClient()
+
+  const { data: authUsers } = await admin.auth.admin.listUsers()
+  const authUser = authUsers?.users.find(u => u.email === email)
+  if (authUser) {
+    await admin.auth.admin.updateUserById(authUser.id, { ban_duration: is_active ? 'none' : '876600h' })
+  }
+
+  const { error } = await supabase.from('users').update({ is_active }).eq('user_email', email)
+  if (error) throw new Error(error.message)
+  return { success: true }
+}
+
+export async function resetUserPassword(email: string, newPassword: string) {
+  await assertAdmin()
+  const admin = createSupabaseAdminClient()
+  const { data: authUsers } = await admin.auth.admin.listUsers()
+  const authUser = authUsers?.users.find(u => u.email === email)
+  if (!authUser) throw new Error('User not found in auth')
+  const { error } = await admin.auth.admin.updateUserById(authUser.id, { password: newPassword })
+  if (error) throw new Error(error.message)
+  return { success: true }
+}
