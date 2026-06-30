@@ -102,7 +102,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, s
         ].map(card => (
           <div key={card.label} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.75rem 1rem', border: '1px solid #EDE0CC' }}>
             <div style={{ color: '#999', fontSize: '0.7rem', marginBottom: 4 }}>{card.label}</div>
-            <div style={{ color: card.warn ? '#e74c3c' : card.good !== undefined ? (card.good ? '#27ae60' : '#e74c3c') : '#333', fontWeight: 700, fontSize: '1rem' }}>
+            <div className={card.warn ? 'money-red' : card.good !== undefined ? (card.good ? 'money-green' : 'money-red') : 'money'} style={{ fontWeight: 700, fontSize: '1rem' }}>
               {card.unit ? `${card.value} ${card.unit}` : card.value}
             </div>
           </div>
