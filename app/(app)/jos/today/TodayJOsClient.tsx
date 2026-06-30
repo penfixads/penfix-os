@@ -150,9 +150,26 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
         await supabase.from('clients').update({ earned_rewards: newRewards }).eq('client_id', selectedClientId)
       }
 
+      // Add new JO to local state immediately — no page reload needed
+      const newJO = {
+        job_order_id: joId,
+        clients: { client_name: selectedClient?.client_name, company_name: selectedClient?.company_name },
+        job_order_items: items.map((item, i) => ({
+          item_id: generateItemId(joId, i + 1),
+          job_status: 'Received',
+          computed_line_total: item.computed_line_total,
+        })),
+        grand_total: grandTotal,
+        total_amount_paid: totalPaid,
+        balance_due: grandTotal - totalPaid - cashbackDiscount,
+        payment_status: paymentStatus,
+        date_time_received: now.toISOString(),
+        received_by: currentUser.name,
+        is_for_billing: isForBilling,
+      }
+      setJobOrders(prev => [newJO, ...prev])
       resetForm()
       setShowForm(false)
-      router.refresh()
     } catch (e: any) {
       setError(e.message || 'Failed to save job order.')
     } finally {
