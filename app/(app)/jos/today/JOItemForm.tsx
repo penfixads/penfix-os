@@ -89,7 +89,7 @@ export default function JOItemForm({ categories, subcategories, onSave, onClose 
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 200, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
-      <div style={{ background: '#1a1a1a', borderRadius: 14, width: '100%', maxWidth: 480, padding: '1.5rem', marginTop: '1rem' }}>
+      <div style={{ background: '#FDF5EC', borderRadius: 14, width: '100%', maxWidth: 480, padding: '1.5rem', marginTop: '1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <h3 style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>Add Job Order Item</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
@@ -197,7 +197,7 @@ export default function JOItemForm({ categories, subcategories, onSave, onClose 
         )}
 
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={onClose} style={{ flex: 1, background: '#2a2a2a', color: '#fff', border: 'none', borderRadius: 8, padding: '0.7rem', cursor: 'pointer' }}>Cancel</button>
+          <button onClick={onClose} style={{ flex: 1, background: '#eee', color: '#333', border: 'none', borderRadius: 8, padding: '0.7rem', cursor: 'pointer' }}>Cancel</button>
           <button onClick={handleSave} disabled={!subcategoryId} style={{ flex: 2, background: subcategoryId ? '#7A1828' : '#333', color: '#fff', border: 'none', borderRadius: 8, padding: '0.7rem', fontWeight: 700, cursor: subcategoryId ? 'pointer' : 'not-allowed' }}>
             Add Item
           </button>
@@ -209,4 +209,4 @@ export default function JOItemForm({ categories, subcategories, onSave, onClose 
 
 const field: React.CSSProperties = { marginBottom: '0.85rem' }
 const lbl: React.CSSProperties = { display: 'block', color: '#aaa', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.3rem' }
-const inp: React.CSSProperties = { width: '100%', background: '#111', border: '1.5px solid #333', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#fff', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none' }
+const inp: React.CSSProperties = { width: '100%', background: '#fff', border: '1.5px solid #d0c9b0', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#1a1a1a', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none' }
