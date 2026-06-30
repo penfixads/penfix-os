@@ -226,15 +226,8 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                       </div>
                     )}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ color: hasBalance ? '#e74c3c' : '#2ecc71', fontWeight: 700, fontSize: '0.9rem' }}>
-                        {formatPeso(jo.grand_total || 0)}
-                      </div>
-                      <div style={{ color: '#777', fontSize: '0.72rem' }}>Bal: {formatPeso(jo.balance_due || 0)}</div>
-                      <div style={{ color: '#7A1828', fontSize: '0.68rem', marginTop: 2 }}>{jo.payment_status}</div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center' }}>
                       <button title="Add Item" onClick={() => setAddingItemToJO(jo.job_order_id)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7A1828', padding: 2, display: 'flex', alignItems: 'center' }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
@@ -243,6 +236,13 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c', padding: 2, display: 'flex', alignItems: 'center' }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                       </button>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ color: hasBalance ? '#e74c3c' : '#2ecc71', fontWeight: 700, fontSize: '0.9rem' }}>
+                        {formatPeso(jo.grand_total || 0)}
+                      </div>
+                      <div style={{ color: '#777', fontSize: '0.72rem' }}>Bal: {formatPeso(jo.balance_due || 0)}</div>
+                      <div style={{ color: '#7A1828', fontSize: '0.68rem', marginTop: 2 }}>{jo.payment_status}</div>
                     </div>
                   </div>
                 </div>
