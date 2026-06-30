@@ -116,14 +116,14 @@ export default function PendingApprovalClient({ jobOrders, currentUser }: Props)
                         />
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button onClick={() => setShowReject(null)} style={{ flex: 1, background: '#f0f0f0', color: '#1a1a1a', border: 'none', borderRadius: 7, padding: '0.5rem', cursor: 'pointer', fontSize: '0.8rem' }}>Cancel</button>
-                          <button onClick={() => reject(jo.job_order_id)} disabled={isActing} style={{ flex: 2, background: '#1a0000', color: '#C9A84C', border: '2px solid #C9A84C', borderRadius: 7, padding: '0.5rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>
+                          <button onClick={() => reject(jo.job_order_id)} disabled={isActing} style={{ flex: 2, background: '#7B1C1C', color: '#fff', border: 'none', borderRadius: 999, borderRadius: 7, padding: '0.5rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>
                             {isActing ? '…' : 'Confirm Reject'}
                           </button>
                         </div>
                       </div>
                     ) : (
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => setShowReject(jo.job_order_id)} style={{ flex: 1, background: '#2a0000', border: '1px solid #7B1C1C', color: '#e74c3c', borderRadius: 8, padding: '0.55rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>
+                        <button onClick={() => setShowReject(jo.job_order_id)} style={{ flex: 1, background: '#5a1010', border: '1px solid #7B1C1C', color: '#e74c3c', borderRadius: 8, padding: '0.55rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>
                           Reject
                         </button>
                         <button onClick={() => approve(jo.job_order_id)} disabled={isActing} style={{ flex: 2, background: '#1a3a1a', border: '1px solid #27ae60', color: '#2ecc71', borderRadius: 8, padding: '0.55rem', cursor: isActing ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>

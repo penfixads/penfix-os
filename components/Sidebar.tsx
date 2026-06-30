@@ -59,7 +59,7 @@ export default function Sidebar({ role, name }: Props) {
         <Image src="/penfixtwhhite.png" alt="Penfix" width={36} height={36} style={{ objectFit: 'contain' }} />
         <div>
           <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.85rem', letterSpacing: 1 }}>PENFIX OS</div>
-          <div style={{ color: '#7B1C1C', fontSize: '0.65rem', letterSpacing: 0.5 }}>Job Orders</div>
+          <div style={{ color: '#aaa', fontSize: '0.65rem', letterSpacing: 0.5 }}>Job Orders</div>
         </div>
       </div>
 

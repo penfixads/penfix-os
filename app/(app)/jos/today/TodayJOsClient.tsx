@@ -176,7 +176,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
           <h1 style={{ color: '#1a1a1a', fontSize: '1.4rem', fontWeight: 700 }}>Today&apos;s Received JOs</h1>
           <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true) }} style={{ background: '#1a0000', color: '#C9A84C', border: '2px solid #C9A84C', borderRadius: 8, padding: '0.6rem 1.2rem', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
+        <button onClick={() => { resetForm(); setShowForm(true) }} style={{ background: '#7B1C1C', color: '#fff', border: 'none', borderRadius: 999, borderRadius: 8, padding: '0.6rem 1.2rem', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
           + New JO
         </button>
       </div>
@@ -358,7 +358,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                     </div>
                   )}
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={addPayment} style={{ flex: 1, background: '#1a0000', color: '#C9A84C', border: '2px solid #C9A84C', borderRadius: 7, padding: '0.5rem', cursor: 'pointer', fontWeight: 700 }}>Add</button>
+                    <button onClick={addPayment} style={{ flex: 1, background: '#7B1C1C', color: '#fff', border: 'none', borderRadius: 999, borderRadius: 7, padding: '0.5rem', cursor: 'pointer', fontWeight: 700 }}>Add</button>
                     <button onClick={() => setShowPaymentForm(false)} style={{ flex: 1, background: '#333', color: '#1a1a1a', border: 'none', borderRadius: 7, padding: '0.5rem', cursor: 'pointer' }}>Cancel</button>
                   </div>
                 </div>
