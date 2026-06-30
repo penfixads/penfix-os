@@ -1,7 +1,6 @@
 ﻿'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
@@ -11,8 +10,8 @@ interface Props {
   currentUser: AppUser
 }
 
-export default function PendingApprovalClient({ jobOrders, currentUser }: Props) {
-  const router = useRouter()
+export default function PendingApprovalClient({ jobOrders: initialJOs, currentUser }: Props) {
+  const [jos, setJos] = useState(initialJOs)
   const [acting, setActing] = useState<string | null>(null)
   const [rejectNote, setRejectNote] = useState<Record<string, string>>({})
   const [showReject, setShowReject] = useState<string | null>(null)
@@ -24,7 +23,7 @@ export default function PendingApprovalClient({ jobOrders, currentUser }: Props)
     try {
       const supabase = createSupabaseBrowserClient()
       await supabase.from('job_orders').update({ override_status: 'Approved' }).eq('job_order_id', joId)
-      router.refresh()
+      setJos(prev => prev.filter(j => j.job_order_id !== joId))
     } finally {
       setActing(null)
     }
@@ -39,7 +38,7 @@ export default function PendingApprovalClient({ jobOrders, currentUser }: Props)
         override_reject_note: rejectNote[joId] || null,
       }).eq('job_order_id', joId)
       setShowReject(null)
-      router.refresh()
+      setJos(prev => prev.filter(j => j.job_order_id !== joId))
     } finally {
       setActing(null)
     }
@@ -50,16 +49,16 @@ export default function PendingApprovalClient({ jobOrders, currentUser }: Props)
       <div style={{ marginBottom: '1.25rem' }}>
         <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Pending Approval</h1>
         <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>
-          {jobOrders.length} JO(s) awaiting manager approval
+          {jos.length} JO(s) awaiting manager approval
           {!isAdmin && <span style={{ color: '#e67e22', marginLeft: 8 }}>— view only (Admin can approve)</span>}
         </p>
       </div>
 
-      {jobOrders.length === 0 ? (
+      {jos.length === 0 ? (
         <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No pending approvals. ✓</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-          {jobOrders.map(jo => {
+          {jos.map(jo => {
             const clientName = jo.clients?.client_name || jo.clients?.company_name || jo.client_id
             const items = jo.job_order_items || []
             const totalPaid = jo.total_amount_paid || 0
