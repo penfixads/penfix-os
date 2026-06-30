@@ -50,10 +50,10 @@ export default function AddClientModal({ onSave, onClose }: Props) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <div style={{ background: '#1a1a1a', borderRadius: 14, width: '100%', maxWidth: 400, padding: '1.5rem' }}>
+      <div style={{ background: '#FDF6E3', borderRadius: 14, width: '100%', maxWidth: 400, padding: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <h3 style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>Add New Client</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
         </div>
 
         <div style={field}>
@@ -114,5 +114,5 @@ export default function AddClientModal({ onSave, onClose }: Props) {
 }
 
 const field: React.CSSProperties = { marginBottom: '0.85rem' }
-const lbl: React.CSSProperties = { display: 'block', color: '#aaa', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.3rem' }
-const inp: React.CSSProperties = { width: '100%', background: '#111', border: '1.5px solid #333', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#fff', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none' }
+const lbl: React.CSSProperties = { display: 'block', color: '#888', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.3rem' }
+const inp: React.CSSProperties = { width: '100%', background: '#fff', border: '1.5px solid #d0c9b0', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#1a1a1a', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none' }
