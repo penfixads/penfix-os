@@ -116,7 +116,7 @@ export default function PendingApprovalClient({ jobOrders, currentUser }: Props)
                         />
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button onClick={() => setShowReject(null)} style={{ flex: 1, background: '#f0f0f0', color: '#1a1a1a', border: 'none', borderRadius: 7, padding: '0.5rem', cursor: 'pointer', fontSize: '0.8rem' }}>Cancel</button>
-                          <button onClick={() => reject(jo.job_order_id)} disabled={isActing} style={{ flex: 2, background: '#1a0000', color: '#C9A84C', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.5rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>
+                          <button onClick={() => reject(jo.job_order_id)} disabled={isActing} style={{ flex: 2, background: '#1a0000', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.5rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>
                             {isActing ? '…' : 'Confirm Reject'}
                           </button>
                         </div>
