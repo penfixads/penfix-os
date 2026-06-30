@@ -96,7 +96,7 @@ export default function FeedbackForm() {
     return (
       <div style={{ ...BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
         <div style={{ ...CARD, textAlign: 'center', padding: '3rem 2rem' }}>
-          <div style={{ background: '#7B1C1C', borderRadius: '50%', width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+          <div style={{ background: '#1a0000', borderRadius: '50%', width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#F5C842" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
           <h1 style={{ color: '#7B1C1C', fontSize: '1.8rem', fontWeight: 700, marginBottom: '0.5rem' }}>Thank you, {name}!</h1>

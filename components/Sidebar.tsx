@@ -56,7 +56,7 @@ export default function Sidebar({ role, name }: Props) {
     }}>
       {/* Logo */}
       <div style={{ padding: '1.25rem 1rem', borderBottom: '1px solid #3a0000', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-        <Image src="/penfixtwhhite.png" alt="Penfix" width={36} height={36} style={{ objectFit: 'contain', filter: 'brightness(0) saturate(100%) invert(100%)' }} />
+        <Image src="/penfixtwhhite.png" alt="Penfix" width={36} height={36} style={{ objectFit: 'contain' }} />
         <div>
           <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.85rem', letterSpacing: 1 }}>PENFIX OS</div>
           <div style={{ color: '#7B1C1C', fontSize: '0.65rem', letterSpacing: 0.5 }}>Job Orders</div>

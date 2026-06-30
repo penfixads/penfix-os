@@ -88,7 +88,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
           <h1 style={{ color: '#1a1a1a', fontSize: '1.4rem', fontWeight: 700 }}>Clients</h1>
           <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{filtered.length} of {clients.length} clients</p>
         </div>
-        <button onClick={openAdd} style={{ background: '#7B1C1C', color: '#1a1a1a', border: 'none', borderRadius: 8, padding: '0.6rem 1.2rem', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
+        <button onClick={openAdd} style={{ background: '#1a0000', color: '#C9A84C', border: '2px solid #C9A84C', borderRadius: 8, padding: '0.6rem 1.2rem', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
           + New Client
         </button>
       </div>
