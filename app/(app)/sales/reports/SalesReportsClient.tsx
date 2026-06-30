@@ -124,7 +124,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
         ].map(c => (
           <div key={c.label} style={{ background: '#f5f5f5', borderRadius: 10, padding: '0.75rem', border: '1px solid #ebebeb' }}>
             <div style={{ color: '#aaa', fontSize: '0.68rem' }}>{c.label}</div>
-            <div style={{ color: c.warn ? '#e74c3c' : '#fff', fontWeight: 700, fontSize: '0.95rem', marginTop: 2 }}>{c.value}</div>
+            <div style={{ color: c.warn ? '#e74c3c' : '#1a1a1a', fontWeight: 700, fontSize: '0.95rem', marginTop: 2 }}>{c.value}</div>
           </div>
         ))}
       </div>
