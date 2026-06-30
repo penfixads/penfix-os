@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -60,20 +60,20 @@ export default function DispatchClient({ items, currentUser }: Props) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <h1 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 700 }}>Ready for Dispatch</h1>
-          <p style={{ color: '#888', fontSize: '0.8rem', marginTop: 2 }}>{filtered.length} item(s) ready</p>
+          <h1 style={{ color: '#1a1a1a', fontSize: '1.4rem', fontWeight: 700 }}>Ready for Dispatch</h1>
+          <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{filtered.length} item(s) ready</p>
         </div>
         <input
           type="text"
           placeholder="Search..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ background: '#1a1a1a', border: '1.5px solid #333', borderRadius: 8, padding: '0.5rem 0.85rem', color: '#fff', fontSize: '0.82rem', width: 200, outline: 'none' }}
+          style={{ background: '#ffffff', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.85rem', color: '#1a1a1a', fontSize: '0.82rem', width: 200, outline: 'none' }}
         />
       </div>
 
       {filtered.length === 0 ? (
-        <div style={{ color: '#555', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No items ready for dispatch.</div>
+        <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No items ready for dispatch.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {filtered.map(item => {
@@ -84,20 +84,20 @@ export default function DispatchClient({ items, currentUser }: Props) {
             const isMarking = marking === item.item_id
 
             return (
-              <div key={item.item_id} style={{ background: '#1a1a1a', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #2a2a2a' }}>
+              <div key={item.item_id} style={{ background: '#ffffff', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #e5e5e5' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.88rem' }}>{clientName}</div>
-                    <div style={{ color: '#666', fontSize: '0.72rem', marginTop: 1 }}>{jo?.job_order_id} · {item.item_id}</div>
-                    <div style={{ color: '#aaa', fontSize: '0.8rem', marginTop: 3 }}>{item.subcategories?.subcategory_name}</div>
+                    <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.88rem' }}>{clientName}</div>
+                    <div style={{ color: '#999', fontSize: '0.72rem', marginTop: 1 }}>{jo?.job_order_id} · {item.item_id}</div>
+                    <div style={{ color: '#999', fontSize: '0.8rem', marginTop: 3 }}>{item.subcategories?.subcategory_name}</div>
                     {item.production_specs && <div style={{ color: '#777', fontSize: '0.73rem', marginTop: 2 }}>{item.production_specs}</div>}
-                    {c?.contact_number && <div style={{ color: '#888', fontSize: '0.72rem', marginTop: 2 }}>📞 {c.contact_number}</div>}
+                    {c?.contact_number && <div style={{ color: '#777', fontSize: '0.72rem', marginTop: 2 }}>📞 {c.contact_number}</div>}
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: '0.82rem', fontWeight: 700, color: hasBalance ? '#e74c3c' : '#2ecc71' }}>
                       {hasBalance ? `Bal: ${formatPeso(jo?.balance_due)}` : 'Fully Paid'}
                     </div>
-                    <div style={{ color: '#555', fontSize: '0.7rem' }}>{jo?.payment_status}</div>
+                    <div style={{ color: '#aaa', fontSize: '0.7rem' }}>{jo?.payment_status}</div>
                     <div style={{ marginTop: 4, padding: '0.2rem 0.5rem', borderRadius: 12, background: '#1a4a1a', color: '#2ecc71', fontSize: '0.68rem', fontWeight: 700 }}>
                       {item.job_status}
                     </div>

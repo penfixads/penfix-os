@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -159,8 +159,8 @@ export default function ProductionClient({ items, sopSteps, currentUser }: Props
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <h1 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 700 }}>Fabricator&apos;s Production Panel</h1>
-          <p style={{ color: '#888', fontSize: '0.8rem', marginTop: 2 }}>
+          <h1 style={{ color: '#1a1a1a', fontSize: '1.4rem', fontWeight: 700 }}>Fabricator&apos;s Production Panel</h1>
+          <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>
             {productionItems.length} item(s) in production
             {pendingCount > 0 && <span style={{ color: '#e67e22', marginLeft: 8 }}>· {pendingCount} awaiting payment/approval</span>}
           </p>
@@ -170,12 +170,12 @@ export default function ProductionClient({ items, sopSteps, currentUser }: Props
           placeholder="Search client, JO, item..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ background: '#1a1a1a', border: '1.5px solid #333', borderRadius: 8, padding: '0.5rem 0.85rem', color: '#fff', fontSize: '0.82rem', width: 220, outline: 'none' }}
+          style={{ background: '#ffffff', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.85rem', color: '#1a1a1a', fontSize: '0.82rem', width: 220, outline: 'none' }}
         />
       </div>
 
       {productionItems.length === 0 ? (
-        <div style={{ color: '#555', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No items in production queue.</div>
+        <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No items in production queue.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {sortedStatuses.map(status => (
@@ -183,7 +183,7 @@ export default function ProductionClient({ items, sopSteps, currentUser }: Props
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.6rem' }}>
                 <div style={{ width: 10, height: 10, borderRadius: '50%', background: STATUS_COLORS[status] || '#555' }} />
                 <span style={{ color: '#ccc', fontWeight: 700, fontSize: '0.85rem' }}>{status}</span>
-                <span style={{ color: '#555', fontSize: '0.75rem' }}>({grouped[status].length})</span>
+                <span style={{ color: '#aaa', fontSize: '0.75rem' }}>({grouped[status].length})</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 {grouped[status].map(item => {
@@ -195,12 +195,12 @@ export default function ProductionClient({ items, sopSteps, currentUser }: Props
                   const isAdvancing = advancing === item.item_id
 
                   return (
-                    <div key={item.item_id} style={{ background: '#1a1a1a', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #2a2a2a' }}>
+                    <div key={item.item_id} style={{ background: '#ffffff', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #e5e5e5' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                         <div style={{ flex: 1 }}>
-                          <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.88rem' }}>{clientName}</div>
-                          <div style={{ color: '#666', fontSize: '0.72rem', marginTop: 1 }}>{jo?.job_order_id} · {item.item_id}</div>
-                          <div style={{ color: '#aaa', fontSize: '0.8rem', marginTop: 3 }}>{item.subcategories?.subcategory_name}</div>
+                          <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.88rem' }}>{clientName}</div>
+                          <div style={{ color: '#999', fontSize: '0.72rem', marginTop: 1 }}>{jo?.job_order_id} · {item.item_id}</div>
+                          <div style={{ color: '#999', fontSize: '0.8rem', marginTop: 3 }}>{item.subcategories?.subcategory_name}</div>
                           {item.production_specs && (
                             <div style={{ color: '#777', fontSize: '0.73rem', marginTop: 2 }}>{item.production_specs}</div>
                           )}
@@ -210,12 +210,12 @@ export default function ProductionClient({ items, sopSteps, currentUser }: Props
                             </div>
                           )}
                           {item.remarks && (
-                            <div style={{ color: '#888', fontSize: '0.71rem', marginTop: 2, fontStyle: 'italic' }}>"{item.remarks}"</div>
+                            <div style={{ color: '#777', fontSize: '0.71rem', marginTop: 2, fontStyle: 'italic' }}>"{item.remarks}"</div>
                           )}
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.88rem' }}>{formatPeso(item.computed_line_total || 0)}</div>
-                          <div style={{ color: '#555', fontSize: '0.68rem' }}>qty: {item.quantity || 1}</div>
+                          <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.88rem' }}>{formatPeso(item.computed_line_total || 0)}</div>
+                          <div style={{ color: '#aaa', fontSize: '0.68rem' }}>qty: {item.quantity || 1}</div>
                         </div>
                       </div>
 

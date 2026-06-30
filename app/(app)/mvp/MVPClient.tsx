@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { formatPeso } from '@/lib/jo-helpers'
 
@@ -41,8 +41,8 @@ export default function MVPClient({ jobOrders, payments, today }: Props) {
   return (
     <div>
       <div style={{ marginBottom: '1.25rem' }}>
-        <h1 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 700 }}>Daily MVP</h1>
-        <p style={{ color: '#888', fontSize: '0.8rem', marginTop: 2 }}>{dateLabel}</p>
+        <h1 style={{ color: '#1a1a1a', fontSize: '1.4rem', fontWeight: 700 }}>Daily MVP</h1>
+        <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{dateLabel}</p>
       </div>
 
       {/* Day totals */}
@@ -52,16 +52,16 @@ export default function MVPClient({ jobOrders, payments, today }: Props) {
           { label: "Total Sales", value: formatPeso(totalSales) },
           { label: "Total Collected", value: formatPeso(totalCollected) },
         ].map(c => (
-          <div key={c.label} style={{ background: '#1a1a1a', borderRadius: 10, padding: '0.75rem 1rem', border: '1px solid #2a2a2a', textAlign: 'center' }}>
-            <div style={{ color: '#666', fontSize: '0.68rem', marginBottom: 4 }}>{c.label}</div>
-            <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.95rem' }}>{c.value}</div>
+          <div key={c.label} style={{ background: '#ffffff', borderRadius: 10, padding: '0.75rem 1rem', border: '1px solid #e5e5e5', textAlign: 'center' }}>
+            <div style={{ color: '#999', fontSize: '0.68rem', marginBottom: 4 }}>{c.label}</div>
+            <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.95rem' }}>{c.value}</div>
           </div>
         ))}
       </div>
 
       {/* Leaderboard */}
       {ranked.length === 0 ? (
-        <div style={{ color: '#555', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No activity recorded yet today.</div>
+        <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No activity recorded yet today.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {ranked.map((ga, i) => {
@@ -86,15 +86,15 @@ export default function MVPClient({ jobOrders, payments, today }: Props) {
                   <div style={{ color: isTop ? '#fff' : '#ddd', fontWeight: 700, fontSize: isTop ? '1rem' : '0.9rem' }}>{ga.name}</div>
                   <div style={{ display: 'flex', gap: 16, marginTop: 6, flexWrap: 'wrap' }}>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ color: '#666', fontSize: '0.65rem' }}>JOs</div>
-                      <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.88rem' }}>{ga.jos}</div>
+                      <div style={{ color: '#999', fontSize: '0.65rem' }}>JOs</div>
+                      <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.88rem' }}>{ga.jos}</div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ color: '#666', fontSize: '0.65rem' }}>Sales</div>
+                      <div style={{ color: '#999', fontSize: '0.65rem' }}>Sales</div>
                       <div style={{ color: '#2ecc71', fontWeight: 700, fontSize: '0.88rem' }}>{formatPeso(ga.grandTotal)}</div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ color: '#666', fontSize: '0.65rem' }}>Collected</div>
+                      <div style={{ color: '#999', fontSize: '0.65rem' }}>Collected</div>
                       <div style={{ color: '#3498db', fontWeight: 700, fontSize: '0.88rem' }}>{formatPeso(ga.collected)}</div>
                     </div>
                   </div>

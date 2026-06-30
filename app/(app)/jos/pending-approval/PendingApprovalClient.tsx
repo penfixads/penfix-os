@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -48,15 +48,15 @@ export default function PendingApprovalClient({ jobOrders, currentUser }: Props)
   return (
     <div>
       <div style={{ marginBottom: '1.25rem' }}>
-        <h1 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 700 }}>Pending Approval</h1>
-        <p style={{ color: '#888', fontSize: '0.8rem', marginTop: 2 }}>
+        <h1 style={{ color: '#1a1a1a', fontSize: '1.4rem', fontWeight: 700 }}>Pending Approval</h1>
+        <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>
           {jobOrders.length} JO(s) awaiting manager approval
           {!isAdmin && <span style={{ color: '#e67e22', marginLeft: 8 }}>— view only (Admin can approve)</span>}
         </p>
       </div>
 
       {jobOrders.length === 0 ? (
-        <div style={{ color: '#555', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No pending approvals. ✓</div>
+        <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No pending approvals. ✓</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           {jobOrders.map(jo => {
@@ -67,22 +67,22 @@ export default function PendingApprovalClient({ jobOrders, currentUser }: Props)
             const isActing = acting === jo.job_order_id
 
             return (
-              <div key={jo.job_order_id} style={{ background: '#1a1a1a', borderRadius: 12, padding: '1rem', border: '1px solid #3a1a00' }}>
+              <div key={jo.job_order_id} style={{ background: '#ffffff', borderRadius: 12, padding: '1rem', border: '1px solid #3a1a00' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.92rem' }}>{clientName}</div>
-                    <div style={{ color: '#666', fontSize: '0.72rem', marginTop: 1 }}>{jo.job_order_id} · {items.length} item(s) · by {jo.received_by || '—'}</div>
-                    <div style={{ color: '#888', fontSize: '0.73rem', marginTop: 2 }}>
+                    <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.92rem' }}>{clientName}</div>
+                    <div style={{ color: '#999', fontSize: '0.72rem', marginTop: 1 }}>{jo.job_order_id} · {items.length} item(s) · by {jo.received_by || '—'}</div>
+                    <div style={{ color: '#777', fontSize: '0.73rem', marginTop: 2 }}>
                       Received: {new Date(jo.date_time_received).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </div>
 
                     {/* Payment progress bar */}
                     <div style={{ marginTop: 10 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <span style={{ color: '#888', fontSize: '0.72rem' }}>Paid: {formatPeso(totalPaid)} / {formatPeso(jo.grand_total || 0)}</span>
+                        <span style={{ color: '#777', fontSize: '0.72rem' }}>Paid: {formatPeso(totalPaid)} / {formatPeso(jo.grand_total || 0)}</span>
                         <span style={{ color: '#e74c3c', fontSize: '0.72rem', fontWeight: 700 }}>{pct}%</span>
                       </div>
-                      <div style={{ background: '#2a2a2a', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+                      <div style={{ background: '#f0f0f0', borderRadius: 4, height: 6, overflow: 'hidden' }}>
                         <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: pct >= 50 ? '#27ae60' : '#e74c3c', borderRadius: 4 }} />
                       </div>
                     </div>
@@ -97,7 +97,7 @@ export default function PendingApprovalClient({ jobOrders, currentUser }: Props)
                   </div>
 
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ color: '#fff', fontWeight: 700 }}>{formatPeso(jo.grand_total || 0)}</div>
+                    <div style={{ color: '#1a1a1a', fontWeight: 700 }}>{formatPeso(jo.grand_total || 0)}</div>
                     <div style={{ color: '#e74c3c', fontSize: '0.75rem' }}>Bal: {formatPeso(jo.balance_due || 0)}</div>
                   </div>
                 </div>
@@ -112,11 +112,11 @@ export default function PendingApprovalClient({ jobOrders, currentUser }: Props)
                           value={rejectNote[jo.job_order_id] || ''}
                           onChange={e => setRejectNote(prev => ({ ...prev, [jo.job_order_id]: e.target.value }))}
                           rows={2}
-                          style={{ background: '#111', border: '1.5px solid #3a0000', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#fff', fontSize: '0.82rem', resize: 'none', outline: 'none' }}
+                          style={{ background: '#ffffff', border: '1.5px solid #3a0000', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#1a1a1a', fontSize: '0.82rem', resize: 'none', outline: 'none' }}
                         />
                         <div style={{ display: 'flex', gap: 8 }}>
-                          <button onClick={() => setShowReject(null)} style={{ flex: 1, background: '#2a2a2a', color: '#fff', border: 'none', borderRadius: 7, padding: '0.5rem', cursor: 'pointer', fontSize: '0.8rem' }}>Cancel</button>
-                          <button onClick={() => reject(jo.job_order_id)} disabled={isActing} style={{ flex: 2, background: '#7B1C1C', color: '#fff', border: 'none', borderRadius: 7, padding: '0.5rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>
+                          <button onClick={() => setShowReject(null)} style={{ flex: 1, background: '#f0f0f0', color: '#1a1a1a', border: 'none', borderRadius: 7, padding: '0.5rem', cursor: 'pointer', fontSize: '0.8rem' }}>Cancel</button>
+                          <button onClick={() => reject(jo.job_order_id)} disabled={isActing} style={{ flex: 2, background: '#7B1C1C', color: '#1a1a1a', border: 'none', borderRadius: 7, padding: '0.5rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>
                             {isActing ? '…' : 'Confirm Reject'}
                           </button>
                         </div>

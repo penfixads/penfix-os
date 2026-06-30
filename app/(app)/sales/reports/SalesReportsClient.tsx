@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useMemo } from 'react'
 import { formatPeso } from '@/lib/jo-helpers'
@@ -72,14 +72,14 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
   return (
     <div>
       <div style={{ marginBottom: '1.25rem' }}>
-        <h1 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 700 }}>Sales Reports</h1>
-        <p style={{ color: '#888', fontSize: '0.8rem', marginTop: 2 }}>Last 12 months</p>
+        <h1 style={{ color: '#1a1a1a', fontSize: '1.4rem', fontWeight: 700 }}>Sales Reports</h1>
+        <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>Last 12 months</p>
       </div>
 
       {/* Chart */}
       {report.length > 0 && (
-        <div style={{ background: '#1a1a1a', borderRadius: 12, padding: '1rem', border: '1px solid #2a2a2a', marginBottom: '1.25rem' }}>
-          <div style={{ color: '#aaa', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.75rem' }}>Overview</div>
+        <div style={{ background: '#ffffff', borderRadius: 12, padding: '1rem', border: '1px solid #e5e5e5', marginBottom: '1.25rem' }}>
+          <div style={{ color: '#999', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.75rem' }}>Overview</div>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={[...report].reverse().map(([key, r]) => ({
               name: periodLabel(key, period),
@@ -91,11 +91,11 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
               <XAxis dataKey="name" tick={{ fill: '#666', fontSize: 10 }} />
               <YAxis tick={{ fill: '#666', fontSize: 10 }} tickFormatter={v => `₱${(v/1000).toFixed(0)}k`} />
               <Tooltip
-                contentStyle={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8, fontSize: '0.78rem' }}
-                labelStyle={{ color: '#fff', fontWeight: 700 }}
+                contentStyle={{ background: '#ffffff', border: '1px solid #d0d0d0', borderRadius: 8, fontSize: '0.78rem' }}
+                labelStyle={{ color: '#1a1a1a', fontWeight: 700 }}
                 formatter={(value: number) => formatPeso(value)}
               />
-              <Legend wrapperStyle={{ fontSize: '0.75rem', color: '#aaa' }} />
+              <Legend wrapperStyle={{ fontSize: '0.75rem', color: '#666' }} />
               <Bar dataKey="Sales" fill="#2980b9" radius={[3,3,0,0]} />
               <Bar dataKey="Collections" fill="#27ae60" radius={[3,3,0,0]} />
               <Bar dataKey="Expenses" fill="#e74c3c" radius={[3,3,0,0]} />
@@ -108,7 +108,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
       <div style={{ display: 'flex', gap: 8, marginBottom: '1.25rem' }}>
         {(['weekly', 'monthly', 'yearly'] as Period[]).map(p => (
           <button key={p} onClick={() => setPeriod(p)}
-            style={{ padding: '0.5rem 1.1rem', borderRadius: 8, border: '1.5px solid', borderColor: period === p ? '#7B1C1C' : '#333', background: period === p ? '#7B1C1C' : 'transparent', color: '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', textTransform: 'capitalize' }}>
+            style={{ padding: '0.5rem 1.1rem', borderRadius: 8, border: '1.5px solid', borderColor: period === p ? '#7B1C1C' : '#333', background: period === p ? '#7B1C1C' : 'transparent', color: '#1a1a1a', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', textTransform: 'capitalize' }}>
             {p}
           </button>
         ))}
@@ -122,8 +122,8 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
           { label: 'Total Collections', value: formatPeso(grandCollections) },
           { label: 'Total Expenses', value: formatPeso(grandExpenses), warn: true },
         ].map(c => (
-          <div key={c.label} style={{ background: '#1a1a1a', borderRadius: 10, padding: '0.75rem', border: '1px solid #2a2a2a' }}>
-            <div style={{ color: '#555', fontSize: '0.68rem' }}>{c.label}</div>
+          <div key={c.label} style={{ background: '#ffffff', borderRadius: 10, padding: '0.75rem', border: '1px solid #e5e5e5' }}>
+            <div style={{ color: '#aaa', fontSize: '0.68rem' }}>{c.label}</div>
             <div style={{ color: c.warn ? '#e74c3c' : '#fff', fontWeight: 700, fontSize: '0.95rem', marginTop: 2 }}>{c.value}</div>
           </div>
         ))}
@@ -135,15 +135,15 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
           const netCash = r.collections - r.expenses
           const maxVal = Math.max(r.sales, 1)
           return (
-            <div key={key} style={{ background: '#1a1a1a', borderRadius: 12, padding: '1rem', border: '1px solid #2a2a2a' }}>
+            <div key={key} style={{ background: '#ffffff', borderRadius: 12, padding: '1rem', border: '1px solid #e5e5e5' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
                 <div>
-                  <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>{periodLabel(key, period)}</div>
-                  <div style={{ color: '#666', fontSize: '0.7rem' }}>{r.joCount} JO(s)</div>
+                  <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.9rem' }}>{periodLabel(key, period)}</div>
+                  <div style={{ color: '#999', fontSize: '0.7rem' }}>{r.joCount} JO(s)</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ color: '#2ecc71', fontWeight: 700, fontSize: '0.95rem' }}>{formatPeso(r.collections)}</div>
-                  <div style={{ color: '#555', fontSize: '0.68rem' }}>collected</div>
+                  <div style={{ color: '#aaa', fontSize: '0.68rem' }}>collected</div>
                 </div>
               </div>
 
@@ -157,17 +157,17 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
                   <div key={bar.label}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
                       <span style={{ color: '#777', fontSize: '0.68rem' }}>{bar.label}</span>
-                      <span style={{ color: '#aaa', fontSize: '0.68rem' }}>{formatPeso(bar.value)}</span>
+                      <span style={{ color: '#999', fontSize: '0.68rem' }}>{formatPeso(bar.value)}</span>
                     </div>
-                    <div style={{ background: '#2a2a2a', borderRadius: 4, height: 5, overflow: 'hidden' }}>
+                    <div style={{ background: '#f0f0f0', borderRadius: 4, height: 5, overflow: 'hidden' }}>
                       <div style={{ width: `${Math.min((bar.value / maxVal) * 100, 100)}%`, height: '100%', background: bar.color, borderRadius: 4 }} />
                     </div>
                   </div>
                 ))}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem', paddingTop: '0.65rem', borderTop: '1px solid #2a2a2a' }}>
-                <span style={{ color: '#888', fontSize: '0.72rem' }}>Net Cash</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem', paddingTop: '0.65rem', borderTop: '1px solid #e5e5e5' }}>
+                <span style={{ color: '#777', fontSize: '0.72rem' }}>Net Cash</span>
                 <span style={{ color: netCash >= 0 ? '#2ecc71' : '#e74c3c', fontWeight: 700, fontSize: '0.78rem' }}>{formatPeso(netCash)}</span>
               </div>
             </div>
