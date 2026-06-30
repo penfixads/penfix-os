@@ -47,6 +47,35 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
+  // Role-based access control
+  const { data: userData } = await supabase
+    .from('users')
+    .select('role')
+    .eq('user_email', user.email)
+    .single()
+
+  const role = userData?.role as string | undefined
+
+  const ROLE_RESTRICTIONS: Record<string, string[]> = {
+    GA:        ['/jos/pending-approval', '/sales/summary', '/sales/reports'],
+    Treasury:  ['/jos/pending-approval', '/sales/reports'],
+    Fabricator:['/jos/active', '/jos/today', '/sales/summary', '/jos/pending-approval', '/mvp', '/jos/historical', '/jos/items', '/jos/all', '/clients', '/jos/dispatch', '/sales/reports'],
+  }
+
+  if (role && ROLE_RESTRICTIONS[role]) {
+    const blocked = ROLE_RESTRICTIONS[role].some(path => pathname.startsWith(path))
+    if (blocked) {
+      const defaultRoutes: Record<string, string> = {
+        GA: '/jos/today',
+        Treasury: '/jos/today',
+        Fabricator: '/production',
+      }
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = defaultRoutes[role] || '/jos/today'
+      return NextResponse.redirect(redirectUrl)
+    }
+  }
+
   return supabaseResponse
 }
 

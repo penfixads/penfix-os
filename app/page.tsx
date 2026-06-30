@@ -5,7 +5,6 @@ export default async function HomePage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  if (user.role === 'Production') redirect('/production')
-  if (user.role === 'Treasury') redirect('/sales/summary')
+  if (user.role === 'Fabricator') redirect('/production')
   redirect('/jos/active')
 }

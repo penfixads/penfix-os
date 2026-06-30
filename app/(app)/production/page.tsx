@@ -6,7 +6,7 @@ import ProductionClient from './ProductionClient'
 export default async function ProductionPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
-  if (user.role !== 'Production' && user.role !== 'Admin') redirect('/jos/active')
+  if (!['Admin', 'GA', 'Treasury', 'Fabricator'].includes(user.role)) redirect('/jos/active')
 
   const supabase = createSupabaseServerClient()
 
