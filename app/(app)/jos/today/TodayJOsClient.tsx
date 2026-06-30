@@ -234,22 +234,14 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                       <div style={{ color: '#777', fontSize: '0.72rem' }}>Bal: {formatPeso(jo.balance_due || 0)}</div>
                       <div style={{ color: '#7A1828', fontSize: '0.68rem', marginTop: 2 }}>{jo.payment_status}</div>
                     </div>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button
-                        title="Add Item"
-                        onClick={() => setAddingItemToJO(jo.job_order_id)}
-                        style={{ background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.3rem 0.75rem', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        Add Item
+                    <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                      <button title="Add Item" onClick={() => setAddingItemToJO(jo.job_order_id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7A1828', padding: 2, display: 'flex', alignItems: 'center' }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                       </button>
-                      <button
-                        title="Delete JO"
-                        onClick={() => handleDeleteJO(jo.job_order_id)}
-                        style={{ background: '#fff', color: '#e74c3c', border: '2px solid #e74c3c', borderRadius: 999, padding: '0.3rem 0.75rem', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                        Delete
+                      <button title="Delete JO" onClick={() => handleDeleteJO(jo.job_order_id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c', padding: 2, display: 'flex', alignItems: 'center' }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                       </button>
                     </div>
                   </div>
