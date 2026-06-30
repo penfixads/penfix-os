@@ -88,7 +88,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
           <h1 style={{ color: '#7B1C1C', fontSize: '1.4rem', fontWeight: 700 }}>Clients</h1>
           <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{filtered.length} of {clients.length} clients</p>
         </div>
-        <button onClick={openAdd} style={{ background: '#7B1C1C', color: '#fff', border: 'none', borderRadius: 999, padding: '0.6rem 1.2rem', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
+        <button onClick={openAdd} style={{ background: '#1a0000', color: '#C9A84C', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.6rem 1.2rem', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
           + New Client
         </button>
       </div>
@@ -183,7 +183,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
 
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => setShowForm(false)} style={{ flex: 1, background: '#f0f0f0', color: '#1a1a1a', border: 'none', borderRadius: 8, padding: '0.7rem', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleSave} disabled={saving} style={{ flex: 2, background: saving ? '#5a1010' : '#7B1C1C', color: '#fff', border: 'none', borderRadius: 999, padding: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
+              <button onClick={handleSave} disabled={saving} style={{ flex: 2, background: saving ? '#2a0000' : '#1a0000', color: '#C9A84C', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
                 {saving ? 'Saving…' : editing ? 'Update Client' : 'Add Client'}
               </button>
             </div>
