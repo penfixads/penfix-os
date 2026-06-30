@@ -58,8 +58,8 @@ export default function Sidebar({ role, name }: Props) {
       <div style={{ padding: '1.25rem 1rem', borderBottom: '1px solid #3a0000', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
         <Image src="/penfixtwhhite.png" alt="Penfix" width={36} height={36} style={{ objectFit: 'contain' }} />
         <div>
-          <div style={{ color: '#C9A84C', fontFamily: 'var(--font-cormorant), "Cormorant Garamond", serif', fontWeight: 600, fontSize: '1rem', letterSpacing: '0.18em', textTransform: 'uppercase' }}>Penfix OS</div>
-          <div style={{ color: '#C9A84C', fontFamily: 'var(--font-inter), Inter, sans-serif', fontSize: '0.58rem', letterSpacing: '0.2em', textTransform: 'uppercase', opacity: 0.75 }}>Job Orders</div>
+          <div style={{ color: '#C9A84C', fontFamily: 'var(--font-cormorant), "Cormorant Garamond", serif', fontWeight: 600, fontSize: '1.25rem', letterSpacing: '0.18em', textTransform: 'uppercase' }}>Penfix OS</div>
+          <div style={{ color: '#C9A84C', fontFamily: 'var(--font-inter), Inter, sans-serif', fontSize: '0.68rem', letterSpacing: '0.2em', textTransform: 'uppercase', opacity: 0.75 }}>Job Orders</div>
         </div>
       </div>
 
