@@ -100,12 +100,12 @@ export default function JOItemForm({ categories, onSave, onClose }: Props) {
       height: parseFloat(height) || null,
       depth: parseFloat(depth) || null,
       no_of_mins: parseFloat(noOfMins) || null,
-      letter_count: parseFloat(letterCount) || null,
+      letter_count: parseInt(letterCount) || null,
       production_specs: productionSpecs,
-      remarks,
+      notes: remarks,
       date_time_needed: dateNeeded ? new Date(dateNeeded).toISOString() : null,
       job_status: jobStatus,
-      item_discount: parseFloat(discount) || 0,
+      discount: parseFloat(discount) || 0,
       computed_line_total: lineTotal,
     })
   }
