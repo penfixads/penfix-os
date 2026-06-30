@@ -48,6 +48,24 @@ export default function DispatchClient({ items, currentUser }: Props) {
         const allDone = siblings?.every(s => s.job_status === 'Done' || s.job_status === 'Cancelled' || s.item_id === itemId)
         if (allDone) {
           await supabase.from('job_orders').update({ job_status: 'Done' }).eq('job_order_id', item.job_orders.job_order_id)
+
+          // Give rewards only when JO is fully paid AND all items done
+          const { data: jo } = await supabase
+            .from('job_orders')
+            .select('is_fully_paid, grand_total, client_id, is_for_billing')
+            .eq('job_order_id', item.job_orders.job_order_id)
+            .single()
+          if (jo?.is_fully_paid && !jo?.is_for_billing && jo?.client_id) {
+            const { data: client } = await supabase
+              .from('clients')
+              .select('earned_rewards')
+              .eq('client_id', jo.client_id)
+              .single()
+            if (client) {
+              const newRewards = (client.earned_rewards || 0) + (jo.grand_total || 0) * 0.01
+              await supabase.from('clients').update({ earned_rewards: newRewards }).eq('client_id', jo.client_id)
+            }
+          }
         }
       }
       router.refresh()

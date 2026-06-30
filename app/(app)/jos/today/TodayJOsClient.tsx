@@ -144,12 +144,6 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
         if (payErr) throw payErr
       }
 
-      // Update client earned rewards
-      if (!isForBilling) {
-        const newRewards = earnedRewards + grandTotal * 0.01
-        await supabase.from('clients').update({ earned_rewards: newRewards }).eq('client_id', selectedClientId)
-      }
-
       // Add new JO to local state immediately — no page reload needed
       const newJO = {
         job_order_id: joId,
