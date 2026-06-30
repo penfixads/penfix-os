@@ -67,7 +67,7 @@ export default function PendingApprovalClient({ jobOrders, currentUser }: Props)
             const isActing = acting === jo.job_order_id
 
             return (
-              <div key={jo.job_order_id} style={{ background: '#FDF5EC', borderRadius: 12, padding: '1rem', border: '1px solid #3a1a00' }}>
+              <div key={jo.job_order_id} style={{ background: '#FDF5EC', borderRadius: 12, padding: '1rem', border: '1px solid #EDE0CC' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.92rem' }}>{clientName}</div>
