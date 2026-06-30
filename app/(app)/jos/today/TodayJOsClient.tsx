@@ -176,7 +176,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
           <h1 style={{ color: '#7B1C1C', fontSize: '1.4rem', fontWeight: 700 }}>Today&apos;s Received JOs</h1>
           <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true) }} style={{ background: '#7B1C1C', color: '#fff', border: 'none', borderRadius: 999, borderRadius: 8, padding: '0.6rem 1.2rem', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
+        <button onClick={() => { resetForm(); setShowForm(true) }} style={{ background: '#7B1C1C', color: '#fff', border: 'none', borderRadius: 999, padding: '0.6rem 1.2rem', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
           + New JO
         </button>
       </div>
@@ -358,7 +358,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                     </div>
                   )}
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={addPayment} style={{ flex: 1, background: '#7B1C1C', color: '#fff', border: 'none', borderRadius: 999, borderRadius: 7, padding: '0.5rem', cursor: 'pointer', fontWeight: 700 }}>Add</button>
+                    <button onClick={addPayment} style={{ flex: 1, background: '#7B1C1C', color: '#fff', border: 'none', borderRadius: 999, padding: '0.5rem', cursor: 'pointer', fontWeight: 700 }}>Add</button>
                     <button onClick={() => setShowPaymentForm(false)} style={{ flex: 1, background: '#333', color: '#1a1a1a', border: 'none', borderRadius: 7, padding: '0.5rem', cursor: 'pointer' }}>Cancel</button>
                   </div>
                 </div>
@@ -383,7 +383,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
             {/* Actions */}
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => { resetForm(); setShowForm(false) }} style={{ flex: 1, background: '#f0f0f0', color: '#1a1a1a', border: 'none', borderRadius: 8, padding: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
-              <button onClick={handleSave} disabled={saving} style={{ flex: 2, background: saving ? '#5a1010' : '#7B1C1C', color: '#1a1a1a', border: 'none', borderRadius: 8, padding: '0.75rem', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700 }}>
+              <button onClick={handleSave} disabled={saving} style={{ flex: 2, background: saving ? '#5a1010' : '#7B1C1C', color: '#fff', border: 'none', borderRadius: 999, padding: '0.75rem', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700 }}>
                 {saving ? 'Saving…' : 'Save Job Order'}
               </button>
             </div>
