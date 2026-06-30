@@ -64,6 +64,10 @@ export default function Sidebar({ role, name }: Props) {
       </div>
 
       {/* Nav */}
+      <style>{`
+        .nav-link { display: block; padding: 0.55rem 1rem; font-size: 0.8rem; text-decoration: none; transition: all 0.15s; }
+        .nav-link:hover { background: rgba(255,255,255,0.08) !important; color: #fff !important; }
+      `}</style>
       <nav style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0' }}>
         {items.map(item => {
           const active = pathname === item.href || pathname.startsWith(item.href + '/')
@@ -72,15 +76,11 @@ export default function Sidebar({ role, name }: Props) {
               key={item.href}
               href={item.href}
               prefetch={true}
+              className="nav-link"
               style={{
-                display: 'block',
-                padding: '0.55rem 1rem',
-                fontSize: '0.8rem',
                 color: active ? '#fff' : '#aaa',
                 background: active ? '#7B1C1C' : 'transparent',
-                textDecoration: 'none',
                 borderLeft: active ? '3px solid #c0392b' : '3px solid transparent',
-                transition: 'all 0.15s',
               }}
             >
               {item.label}
