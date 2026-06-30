@@ -224,7 +224,7 @@ export default function JOItemForm({ categories, onSave, onClose }: Props) {
               <input type="text" value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Optional" style={inp} />
             </div>
 
-            <div style={{ background: '#111', borderRadius: 8, padding: '0.65rem 0.85rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ background: '#3a3a3a', borderRadius: 8, padding: '0.65rem 0.85rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ color: '#aaa', fontSize: '0.82rem' }}>Line Total</span>
               <span style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>{formatPeso(lineTotal)}</span>
             </div>
