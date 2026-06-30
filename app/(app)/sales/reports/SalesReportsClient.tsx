@@ -72,7 +72,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
   return (
     <div>
       <div style={{ marginBottom: '1.25rem' }}>
-        <h1 style={{ color: '#1a1a1a', fontSize: '1.4rem', fontWeight: 700 }}>Sales Reports</h1>
+        <h1 style={{ color: '#7B1C1C', fontSize: '1.4rem', fontWeight: 700 }}>Sales Reports</h1>
         <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>Last 12 months</p>
       </div>
 

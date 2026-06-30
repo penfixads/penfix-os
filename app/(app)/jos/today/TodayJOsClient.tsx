@@ -173,7 +173,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
         <div>
-          <h1 style={{ color: '#1a1a1a', fontSize: '1.4rem', fontWeight: 700 }}>Today&apos;s Received JOs</h1>
+          <h1 style={{ color: '#7B1C1C', fontSize: '1.4rem', fontWeight: 700 }}>Today&apos;s Received JOs</h1>
           <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </div>
         <button onClick={() => { resetForm(); setShowForm(true) }} style={{ background: '#7B1C1C', color: '#fff', border: 'none', borderRadius: 999, borderRadius: 8, padding: '0.6rem 1.2rem', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
@@ -224,7 +224,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
           <div style={{ background: '#f5f5f5', borderRadius: 14, width: '100%', maxWidth: 560, padding: '1.5rem', marginTop: '1rem' }}>
             {/* Modal header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h2 style={{ color: '#1a1a1a', fontSize: '1.1rem', fontWeight: 700 }}>New Job Order</h2>
+              <h2 style={{ color: '#7B1C1C', fontSize: '1.1rem', fontWeight: 700 }}>New Job Order</h2>
               <button onClick={() => { resetForm(); setShowForm(false) }} style={{ background: 'none', border: 'none', color: '#999', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
 

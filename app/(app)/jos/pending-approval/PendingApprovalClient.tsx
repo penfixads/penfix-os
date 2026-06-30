@@ -48,7 +48,7 @@ export default function PendingApprovalClient({ jobOrders, currentUser }: Props)
   return (
     <div>
       <div style={{ marginBottom: '1.25rem' }}>
-        <h1 style={{ color: '#1a1a1a', fontSize: '1.4rem', fontWeight: 700 }}>Pending Approval</h1>
+        <h1 style={{ color: '#7B1C1C', fontSize: '1.4rem', fontWeight: 700 }}>Pending Approval</h1>
         <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>
           {jobOrders.length} JO(s) awaiting manager approval
           {!isAdmin && <span style={{ color: '#e67e22', marginLeft: 8 }}>— view only (Admin can approve)</span>}

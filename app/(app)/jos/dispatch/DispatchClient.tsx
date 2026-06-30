@@ -60,7 +60,7 @@ export default function DispatchClient({ items, currentUser }: Props) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <h1 style={{ color: '#1a1a1a', fontSize: '1.4rem', fontWeight: 700 }}>Ready for Dispatch</h1>
+          <h1 style={{ color: '#7B1C1C', fontSize: '1.4rem', fontWeight: 700 }}>Ready for Dispatch</h1>
           <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{filtered.length} item(s) ready</p>
         </div>
         <input

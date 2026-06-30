@@ -36,7 +36,7 @@ export default function AllJOsClient({ jobOrders }: Props) {
   return (
     <div>
       <div style={{ marginBottom: '1.25rem' }}>
-        <h1 style={{ color: '#1a1a1a', fontSize: '1.4rem', fontWeight: 700 }}>All Job Orders</h1>
+        <h1 style={{ color: '#7B1C1C', fontSize: '1.4rem', fontWeight: 700 }}>All Job Orders</h1>
         <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{filtered.length} of {jobOrders.length} JOs shown</p>
       </div>
 
