@@ -116,7 +116,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
 
       // Insert items
       for (let i = 0; i < items.length; i++) {
-        const item = items[i]
+        const { category_name, subcategory_name, ...item } = items[i]
         const itemId = generateItemId(joId, i + 1)
         const { error: itemErr } = await supabase.from('job_order_items').insert({
           ...item,
@@ -167,8 +167,9 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
     setJobOrders(prev => prev.filter(j => j.job_order_id !== joId))
   }
 
-  async function handleAddItemToExistingJO(joId: string, item: any) {
+  async function handleAddItemToExistingJO(joId: string, rawItem: any) {
     const supabase = createSupabaseBrowserClient()
+    const { category_name, subcategory_name, ...item } = rawItem
     const { data: existingItems } = await supabase.from('job_order_items').select('item_id').eq('job_order_id', joId)
     const seq = (existingItems?.length || 0) + 1
     const itemId = generateItemId(joId, seq)
