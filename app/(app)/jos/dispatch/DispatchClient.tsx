@@ -43,7 +43,7 @@ export default function DispatchClient({ items, currentUser }: Props) {
       if (item?.job_orders?.job_order_id) {
         const { data: siblings } = await supabase
           .from('job_order_items')
-          .select('job_status')
+          .select('item_id, job_status')
           .eq('job_order_id', item.job_orders.job_order_id)
         const allDone = siblings?.every(s => s.job_status === 'Done' || s.job_status === 'Cancelled' || s.item_id === itemId)
         if (allDone) {
