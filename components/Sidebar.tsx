@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import type { UserRole } from '@/lib/user'
 
@@ -67,9 +68,10 @@ export default function Sidebar({ role, name }: Props) {
         {items.map(item => {
           const active = pathname === item.href || pathname.startsWith(item.href + '/')
           return (
-            <a
+            <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
               style={{
                 display: 'block',
                 padding: '0.55rem 1rem',
@@ -82,7 +84,7 @@ export default function Sidebar({ role, name }: Props) {
               }}
             >
               {item.label}
-            </a>
+            </Link>
           )
         })}
       </nav>
