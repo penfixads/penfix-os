@@ -68,7 +68,7 @@ export default function DispatchClient({ items, currentUser }: Props) {
           placeholder="Search..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ background: '#ffffff', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.85rem', color: '#1a1a1a', fontSize: '0.82rem', width: 200, outline: 'none' }}
+          style={{ background: '#f5f5f5', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.85rem', color: '#1a1a1a', fontSize: '0.82rem', width: 200, outline: 'none' }}
         />
       </div>
 
@@ -84,7 +84,7 @@ export default function DispatchClient({ items, currentUser }: Props) {
             const isMarking = marking === item.item_id
 
             return (
-              <div key={item.item_id} style={{ background: '#ffffff', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #e5e5e5' }}>
+              <div key={item.item_id} style={{ background: '#f5f5f5', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #ebebeb' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.88rem' }}>{clientName}</div>

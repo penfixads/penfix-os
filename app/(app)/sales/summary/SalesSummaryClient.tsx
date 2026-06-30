@@ -100,7 +100,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, s
           { label: 'Total Expenses (EXPCASH)', value: formatPeso(totalExpenses), warn: totalExpenses > 0 },
           { label: 'Net Cash', value: formatPeso(netCash), good: netCash >= 0 },
         ].map(card => (
-          <div key={card.label} style={{ background: '#ffffff', borderRadius: 10, padding: '0.75rem 1rem', border: '1px solid #e5e5e5' }}>
+          <div key={card.label} style={{ background: '#f5f5f5', borderRadius: 10, padding: '0.75rem 1rem', border: '1px solid #ebebeb' }}>
             <div style={{ color: '#999', fontSize: '0.7rem', marginBottom: 4 }}>{card.label}</div>
             <div style={{ color: card.warn ? '#e74c3c' : card.good !== undefined ? (card.good ? '#2ecc71' : '#e74c3c') : '#fff', fontWeight: 700, fontSize: '1rem' }}>
               {card.unit ? `${card.value} ${card.unit}` : card.value}
@@ -111,7 +111,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, s
 
       {/* Breakdown by payment method */}
       {Object.keys(byMethod).length > 0 && (
-        <div style={{ background: '#ffffff', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem', border: '1px solid #e5e5e5' }}>
+        <div style={{ background: '#f5f5f5', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem', border: '1px solid #ebebeb' }}>
           <div style={{ color: '#666', fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.75rem' }}>Collections by Method</div>
           {PAY_METHODS.filter(m => byMethod[m]).map(method => (
             <div key={method} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: '0.82rem' }}>
@@ -124,7 +124,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, s
 
       {/* Payment log */}
       {payments.length > 0 && (
-        <div style={{ background: '#ffffff', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem', border: '1px solid #e5e5e5' }}>
+        <div style={{ background: '#f5f5f5', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem', border: '1px solid #ebebeb' }}>
           <div style={{ color: '#666', fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.75rem' }}>Payment Log ({payments.length})</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {payments.map(p => {
@@ -144,14 +144,14 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, s
       )}
 
       {/* Expenses */}
-      <div style={{ background: '#ffffff', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem', border: '1px solid #e5e5e5' }}>
+      <div style={{ background: '#f5f5f5', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem', border: '1px solid #ebebeb' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
           <div style={{ color: '#666', fontWeight: 700, fontSize: '0.8rem' }}>Expenses (EXPCASH)</div>
           <button onClick={() => setShowExpenseForm(v => !v)} style={{ background: '#7B1C1C', color: '#1a1a1a', border: 'none', borderRadius: 6, padding: '0.3rem 0.7rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700 }}>+ Add</button>
         </div>
 
         {showExpenseForm && (
-          <div style={{ background: '#ffffff', borderRadius: 8, padding: '0.85rem', marginBottom: '0.75rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ background: '#f5f5f5', borderRadius: 8, padding: '0.85rem', marginBottom: '0.75rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', gap: 8 }}>
               <div style={{ flex: 2 }}>
                 <label style={lbl}>Description</label>
@@ -204,7 +204,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, s
       </div>
 
       {/* Remark */}
-      <div style={{ background: '#ffffff', borderRadius: 10, padding: '1rem', border: '1px solid #e5e5e5' }}>
+      <div style={{ background: '#f5f5f5', borderRadius: 10, padding: '1rem', border: '1px solid #ebebeb' }}>
         <div style={{ color: '#666', fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.6rem' }}>Remark (REM)</div>
         <textarea
           value={remark}
@@ -222,4 +222,4 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, s
 }
 
 const lbl: React.CSSProperties = { display: 'block', color: '#999', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem' }
-const inp: React.CSSProperties = { width: '100%', background: '#ffffff', border: '1.5px solid #d0d0d0', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#1a1a1a', fontSize: '0.82rem', boxSizing: 'border-box', outline: 'none' }
+const inp: React.CSSProperties = { width: '100%', background: '#f5f5f5', border: '1.5px solid #d0d0d0', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#1a1a1a', fontSize: '0.82rem', boxSizing: 'border-box', outline: 'none' }

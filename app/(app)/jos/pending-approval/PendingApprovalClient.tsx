@@ -67,7 +67,7 @@ export default function PendingApprovalClient({ jobOrders, currentUser }: Props)
             const isActing = acting === jo.job_order_id
 
             return (
-              <div key={jo.job_order_id} style={{ background: '#ffffff', borderRadius: 12, padding: '1rem', border: '1px solid #3a1a00' }}>
+              <div key={jo.job_order_id} style={{ background: '#f5f5f5', borderRadius: 12, padding: '1rem', border: '1px solid #3a1a00' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.92rem' }}>{clientName}</div>
@@ -112,7 +112,7 @@ export default function PendingApprovalClient({ jobOrders, currentUser }: Props)
                           value={rejectNote[jo.job_order_id] || ''}
                           onChange={e => setRejectNote(prev => ({ ...prev, [jo.job_order_id]: e.target.value }))}
                           rows={2}
-                          style={{ background: '#ffffff', border: '1.5px solid #3a0000', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#1a1a1a', fontSize: '0.82rem', resize: 'none', outline: 'none' }}
+                          style={{ background: '#f5f5f5', border: '1.5px solid #3a0000', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#1a1a1a', fontSize: '0.82rem', resize: 'none', outline: 'none' }}
                         />
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button onClick={() => setShowReject(null)} style={{ flex: 1, background: '#f0f0f0', color: '#1a1a1a', border: 'none', borderRadius: 7, padding: '0.5rem', cursor: 'pointer', fontSize: '0.8rem' }}>Cancel</button>

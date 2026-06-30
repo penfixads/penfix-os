@@ -191,7 +191,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
             const deadline = jo.job_order_items?.[0]?.date_time_needed
             const hasBalance = jo.balance_due > 0
             return (
-              <div key={jo.job_order_id} style={{ background: '#ffffff', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #e5e5e5' }}>
+              <div key={jo.job_order_id} style={{ background: '#f5f5f5', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #ebebeb' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
                     <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.9rem' }}>{clientName}</div>
@@ -221,7 +221,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
       {/* New JO Modal */}
       {showForm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
-          <div style={{ background: '#ffffff', borderRadius: 14, width: '100%', maxWidth: 560, padding: '1.5rem', marginTop: '1rem' }}>
+          <div style={{ background: '#f5f5f5', borderRadius: 14, width: '100%', maxWidth: 560, padding: '1.5rem', marginTop: '1rem' }}>
             {/* Modal header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <h2 style={{ color: '#1a1a1a', fontSize: '1.1rem', fontWeight: 700 }}>New Job Order</h2>
@@ -312,7 +312,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
             </div>
 
             {/* Totals */}
-            <div style={{ background: '#ffffff', borderRadius: 8, padding: '0.75rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ background: '#f5f5f5', borderRadius: 8, padding: '0.75rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
               <div style={totalRowStyle}><span>Grand Total</span><span>{formatPeso(grandTotal)}</span></div>
               <div style={totalRowStyle}><span>Discount</span>
                 <input type="number" value={discount} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} style={{ ...inputStyle, width: 100, padding: '0.2rem 0.5rem', textAlign: 'right' }} />
@@ -419,6 +419,6 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
 
 const fieldStyle: React.CSSProperties = { marginBottom: '1rem' }
 const labelStyle: React.CSSProperties = { display: 'block', color: '#999', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.35rem' }
-const inputStyle: React.CSSProperties = { width: '100%', background: '#ffffff', border: '1.5px solid #d0d0d0', borderRadius: 7, padding: '0.55rem 0.75rem', color: '#1a1a1a', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none' }
+const inputStyle: React.CSSProperties = { width: '100%', background: '#f5f5f5', border: '1.5px solid #d0d0d0', borderRadius: 7, padding: '0.55rem 0.75rem', color: '#1a1a1a', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none' }
 const chipStyle: React.CSSProperties = { display: 'inline-block', background: '#f0f0f0', color: '#1a1a1a', borderRadius: 20, padding: '0.3rem 0.85rem', fontSize: '0.8rem' }
 const totalRowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#ccc', fontSize: '0.82rem' }

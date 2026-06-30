@@ -52,7 +52,7 @@ export default function MVPClient({ jobOrders, payments, today }: Props) {
           { label: "Total Sales", value: formatPeso(totalSales) },
           { label: "Total Collected", value: formatPeso(totalCollected) },
         ].map(c => (
-          <div key={c.label} style={{ background: '#ffffff', borderRadius: 10, padding: '0.75rem 1rem', border: '1px solid #e5e5e5', textAlign: 'center' }}>
+          <div key={c.label} style={{ background: '#f5f5f5', borderRadius: 10, padding: '0.75rem 1rem', border: '1px solid #ebebeb', textAlign: 'center' }}>
             <div style={{ color: '#999', fontSize: '0.68rem', marginBottom: 4 }}>{c.label}</div>
             <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.95rem' }}>{c.value}</div>
           </div>

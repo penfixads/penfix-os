@@ -96,9 +96,9 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
       {/* Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: '1rem' }}>
         <input type="text" placeholder="Search name or ID…" value={search} onChange={e => setSearch(e.target.value)}
-          style={{ flex: 1, background: '#ffffff', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }} />
+          style={{ flex: 1, background: '#f5f5f5', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }} />
         <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
-          style={{ background: '#ffffff', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }}>
+          style={{ background: '#f5f5f5', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }}>
           <option value="all">All Types</option>
           <option value="Individual">Individual</option>
           <option value="Company">Company</option>
@@ -111,7 +111,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
           const totalSales = (c.job_orders || []).reduce((s: number, j: any) => s + (j.grand_total || 0), 0)
           const totalJOs = c.job_orders?.length || 0
           return (
-            <div key={c.client_id} style={{ background: '#ffffff', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #e5e5e5', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+            <div key={c.client_id} style={{ background: '#f5f5f5', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #ebebeb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.88rem' }}>{c.client_name || c.company_name}</span>
@@ -134,7 +134,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
       {/* Form Modal */}
       {showForm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: '#ffffff', borderRadius: 14, width: '100%', maxWidth: 400, padding: '1.5rem' }}>
+          <div style={{ background: '#f5f5f5', borderRadius: 14, width: '100%', maxWidth: 400, padding: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <h3 style={{ color: '#1a1a1a', fontWeight: 700 }}>{editing ? 'Edit Client' : 'New Client'}</h3>
               <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', color: '#999', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
@@ -196,4 +196,4 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
 
 const field: React.CSSProperties = { marginBottom: '0.85rem' }
 const lbl: React.CSSProperties = { display: 'block', color: '#999', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.3rem' }
-const inp: React.CSSProperties = { width: '100%', background: '#ffffff', border: '1.5px solid #d0d0d0', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#1a1a1a', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none' }
+const inp: React.CSSProperties = { width: '100%', background: '#f5f5f5', border: '1.5px solid #d0d0d0', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#1a1a1a', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none' }

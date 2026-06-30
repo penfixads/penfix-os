@@ -78,7 +78,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
 
       {/* Chart */}
       {report.length > 0 && (
-        <div style={{ background: '#ffffff', borderRadius: 12, padding: '1rem', border: '1px solid #e5e5e5', marginBottom: '1.25rem' }}>
+        <div style={{ background: '#f5f5f5', borderRadius: 12, padding: '1rem', border: '1px solid #ebebeb', marginBottom: '1.25rem' }}>
           <div style={{ color: '#999', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.75rem' }}>Overview</div>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={[...report].reverse().map(([key, r]) => ({
@@ -91,7 +91,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
               <XAxis dataKey="name" tick={{ fill: '#666', fontSize: 10 }} />
               <YAxis tick={{ fill: '#666', fontSize: 10 }} tickFormatter={v => `₱${(v/1000).toFixed(0)}k`} />
               <Tooltip
-                contentStyle={{ background: '#ffffff', border: '1px solid #d0d0d0', borderRadius: 8, fontSize: '0.78rem' }}
+                contentStyle={{ background: '#f5f5f5', border: '1px solid #d0d0d0', borderRadius: 8, fontSize: '0.78rem' }}
                 labelStyle={{ color: '#1a1a1a', fontWeight: 700 }}
                 formatter={(value: number) => formatPeso(value)}
               />
@@ -122,7 +122,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
           { label: 'Total Collections', value: formatPeso(grandCollections) },
           { label: 'Total Expenses', value: formatPeso(grandExpenses), warn: true },
         ].map(c => (
-          <div key={c.label} style={{ background: '#ffffff', borderRadius: 10, padding: '0.75rem', border: '1px solid #e5e5e5' }}>
+          <div key={c.label} style={{ background: '#f5f5f5', borderRadius: 10, padding: '0.75rem', border: '1px solid #ebebeb' }}>
             <div style={{ color: '#aaa', fontSize: '0.68rem' }}>{c.label}</div>
             <div style={{ color: c.warn ? '#e74c3c' : '#fff', fontWeight: 700, fontSize: '0.95rem', marginTop: 2 }}>{c.value}</div>
           </div>
@@ -135,7 +135,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
           const netCash = r.collections - r.expenses
           const maxVal = Math.max(r.sales, 1)
           return (
-            <div key={key} style={{ background: '#ffffff', borderRadius: 12, padding: '1rem', border: '1px solid #e5e5e5' }}>
+            <div key={key} style={{ background: '#f5f5f5', borderRadius: 12, padding: '1rem', border: '1px solid #ebebeb' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
                 <div>
                   <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.9rem' }}>{periodLabel(key, period)}</div>
