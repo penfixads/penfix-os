@@ -1,6 +1,7 @@
-﻿'use client'
+'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { computeLineTotal, formatPeso } from '@/lib/jo-helpers'
 
 interface Props {
@@ -23,9 +24,11 @@ const PRICING_LABELS: Record<string, string> = {
   per_lettersqft: 'Per Letter Sq Ft',
 }
 
-export default function JOItemForm({ categories, subcategories, onSave, onClose }: Props) {
+export default function JOItemForm({ categories, onSave, onClose }: Props) {
   const [categoryId, setCategoryId] = useState('')
   const [subcategoryId, setSubcategoryId] = useState('')
+  const [filteredSubs, setFilteredSubs] = useState<any[]>([])
+  const [loadingSubs, setLoadingSubs] = useState(false)
   const [pricingModel, setPricingModel] = useState('')
   const [basePrice, setBasePrice] = useState('')
   const [quantity, setQuantity] = useState('1')
@@ -40,16 +43,29 @@ export default function JOItemForm({ categories, subcategories, onSave, onClose 
   const [jobStatus] = useState('Received')
   const [discount, setDiscount] = useState('0')
 
-  const filteredSubs = subcategories.filter(s => !categoryId || String(s.category_id) === String(categoryId))
+  const supabase = createSupabaseBrowserClient()
 
-  // Debug: log to browser console to verify data
-  if (typeof window !== 'undefined' && categoryId) {
-    console.log('[JOItemForm] categoryId:', categoryId)
-    console.log('[JOItemForm] sample subcategory category_ids:', subcategories.slice(0, 5).map(s => s.category_id))
-    console.log('[JOItemForm] filteredSubs count:', filteredSubs.length)
-  }
+  useEffect(() => {
+    if (!categoryId) {
+      setFilteredSubs([])
+      return
+    }
+    setLoadingSubs(true)
+    setFilteredSubs([])
+    setSubcategoryId('')
+    supabase
+      .from('subcategories')
+      .select('subcategory_id, subcategory_name, category_id, pricing_model, base_price')
+      .eq('category_id', categoryId)
+      .eq('active', true)
+      .order('subcategory_name')
+      .then(({ data }) => {
+        setFilteredSubs(data || [])
+        setLoadingSubs(false)
+      })
+  }, [categoryId])
 
-  const selectedSub = subcategories.find(s => s.subcategory_id === subcategoryId)
+  const selectedSub = filteredSubs.find(s => s.subcategory_id === subcategoryId)
   const effectivePricing = pricingModel || selectedSub?.pricing_model || ''
   const effectivePrice = parseFloat(basePrice) || selectedSub?.base_price || 0
 
@@ -94,6 +110,13 @@ export default function JOItemForm({ categories, subcategories, onSave, onClose 
     })
   }
 
+  function getSubPlaceholder() {
+    if (!categoryId) return '-- Select a Category first --'
+    if (loadingSubs) return 'Loading items...'
+    if (filteredSubs.length === 0) return '-- No items found for this category --'
+    return `-- Select Item (${filteredSubs.length} available) --`
+  }
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 200, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
       <div style={{ background: '#FDF5EC', borderRadius: 14, width: '100%', maxWidth: 480, padding: '1.5rem', marginTop: '1rem' }}>
@@ -104,8 +127,8 @@ export default function JOItemForm({ categories, subcategories, onSave, onClose 
 
         <div style={field}>
           <label style={lbl}>Category</label>
-          <select value={categoryId} onChange={e => { setCategoryId(e.target.value); setSubcategoryId('') }} style={inp}>
-            <option value="">-- All Categories --</option>
+          <select value={categoryId} onChange={e => setCategoryId(e.target.value)} style={inp}>
+            <option value="">-- Select a Category --</option>
             {categories.map(c => <option key={c.category_id} value={c.category_id}>{c.category_name}</option>)}
           </select>
         </div>
@@ -114,15 +137,15 @@ export default function JOItemForm({ categories, subcategories, onSave, onClose 
           <label style={lbl}>Subcategory / Item <span style={{ color: '#e74c3c' }}>*</span></label>
           <select
             value={subcategoryId}
-            disabled={!categoryId}
+            disabled={!categoryId || loadingSubs}
             onChange={e => {
               setSubcategoryId(e.target.value)
-              const sub = subcategories.find(s => s.subcategory_id === e.target.value)
+              const sub = filteredSubs.find(s => s.subcategory_id === e.target.value)
               if (sub) { setPricingModel(sub.pricing_model || ''); setBasePrice(String(sub.base_price || '')) }
             }}
-            style={{ ...inp, background: !categoryId ? '#f0ece3' : '#fff', color: !categoryId ? '#999' : '#1a1a1a' }}
+            style={{ ...inp, background: (!categoryId || loadingSubs) ? '#f0ece3' : '#fff', color: (!categoryId || loadingSubs) ? '#999' : '#1a1a1a' }}
           >
-            <option value="">{categoryId ? `-- Select Item (${filteredSubs.length} available) --` : '-- Select a Category first --'}</option>
+            <option value="">{getSubPlaceholder()}</option>
             {filteredSubs.map(s => <option key={s.subcategory_id} value={s.subcategory_id}>{s.subcategory_name}</option>)}
           </select>
         </div>
