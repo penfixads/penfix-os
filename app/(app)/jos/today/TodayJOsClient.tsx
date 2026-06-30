@@ -173,7 +173,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
         <div>
-          <h1 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 700 }}>Today's Received JOs</h1>
+          <h1 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 700 }}>Today&apos;s Received JOs</h1>
           <p style={{ color: '#888', fontSize: '0.8rem', marginTop: 2 }}>{new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </div>
         <button onClick={() => { resetForm(); setShowForm(true) }} style={{ background: '#7B1C1C', color: '#fff', border: 'none', borderRadius: 8, padding: '0.6rem 1.2rem', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>

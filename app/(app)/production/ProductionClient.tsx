@@ -159,7 +159,7 @@ export default function ProductionClient({ items, sopSteps, currentUser }: Props
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <h1 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 700 }}>Fabricator's Production Panel</h1>
+          <h1 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 700 }}>Fabricator&apos;s Production Panel</h1>
           <p style={{ color: '#888', fontSize: '0.8rem', marginTop: 2 }}>
             {productionItems.length} item(s) in production
             {pendingCount > 0 && <span style={{ color: '#e67e22', marginLeft: 8 }}>· {pendingCount} awaiting payment/approval</span>}
