@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -102,7 +102,7 @@ export default function ResetPasswordPage() {
               disabled={loading}
               style={{
                 width: '100%',
-                background: loading ? '#b26060' : '#7B1C1C',
+                background: loading ? '#2a0000' : '#1a0000',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 8,

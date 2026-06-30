@@ -108,7 +108,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
       <div style={{ display: 'flex', gap: 8, marginBottom: '1.25rem' }}>
         {(['weekly', 'monthly', 'yearly'] as Period[]).map(p => (
           <button key={p} onClick={() => setPeriod(p)}
-            style={{ padding: '0.5rem 1.1rem', borderRadius: 8, border: '1.5px solid', borderColor: period === p ? '#7B1C1C' : '#333', background: period === p ? '#7B1C1C' : 'transparent', color: '#1a1a1a', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', textTransform: 'capitalize' }}>
+            style={{ padding: '0.5rem 1.1rem', borderRadius: 8, background: period === p ? '#1a0000' : 'transparent', color: period === p ? '#C9A84C' : '#555', border: period === p ? '2px solid #C9A84C' : '1.5px solid #d0d0d0', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', textTransform: 'capitalize' }}>
             {p}
           </button>
         ))}

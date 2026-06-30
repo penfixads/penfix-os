@@ -1,4 +1,4 @@
-export default function AddHistoricalRecordsPage() {
+﻿export default function AddHistoricalRecordsPage() {
   return (
     <div>
       <h1 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.5rem' }}>Add Historical Records</h1>

@@ -1,4 +1,4 @@
-import { getCurrentUser } from '@/lib/user'
+﻿import { getCurrentUser } from '@/lib/user'
 import { redirect } from 'next/navigation'
 
 export default async function HomePage() {
