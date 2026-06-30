@@ -68,7 +68,7 @@ export default function MVPClient({ jobOrders, payments, today }: Props) {
             const isTop = i === 0
             return (
               <div key={ga.name} style={{
-                background: isTop ? '#1a0a00' : '#1a1a1a',
+                background: isTop ? '#4a2800' : '#3a3a3a',
                 borderRadius: 12,
                 padding: '1rem 1.25rem',
                 border: `1px solid ${isTop ? '#7A1828' : '#2a2a2a'}`,

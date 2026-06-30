@@ -89,7 +89,7 @@ export default function PendingApprovalClient({ jobOrders, currentUser }: Props)
 
                     {/* Override reason */}
                     {jo.request_override && (
-                      <div style={{ marginTop: 10, background: '#1a0f00', borderRadius: 8, padding: '0.6rem 0.85rem', border: '1px solid #3a2a00' }}>
+                      <div style={{ marginTop: 10, background: '#3a3a3a', borderRadius: 8, padding: '0.6rem 0.85rem', border: '1px solid #555' }}>
                         <div style={{ color: '#e67e22', fontSize: '0.7rem', fontWeight: 700, marginBottom: 4 }}>OVERRIDE REASON FROM GA:</div>
                         <div style={{ color: '#ccc', fontSize: '0.8rem' }}>{jo.request_override}</div>
                       </div>

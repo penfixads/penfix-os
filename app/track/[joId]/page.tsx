@@ -59,7 +59,7 @@ export default async function TrackPage({ params }: { params: { joId: string } }
         </div>
 
         {/* JO Info */}
-        <div style={{ background: '#1a1a1a', borderRadius: 14, padding: '1.25rem', marginBottom: '1rem', border: '1px solid #2a2a2a' }}>
+        <div style={{ background: '#3a3a3a', borderRadius: 14, padding: '1.25rem', marginBottom: '1rem', border: '1px solid #2a2a2a' }}>
           <div style={{ color: '#aaa', fontSize: '0.72rem', marginBottom: 4 }}>JOB ORDER</div>
           <div style={{ color: '#fff', fontWeight: 700, fontSize: '1.1rem' }}>{jo.job_order_id}</div>
           <div style={{ color: '#ccc', fontSize: '0.85rem', marginTop: 2 }}>{clientName}</div>
@@ -80,7 +80,7 @@ export default async function TrackPage({ params }: { params: { joId: string } }
             const isDone = item.job_status === 'Done' || steps.find((s: any) => s.status_name === item.job_status)?.is_terminal
 
             return (
-              <div key={item.item_id} style={{ background: '#1a1a1a', borderRadius: 12, padding: '1rem', border: '1px solid #2a2a2a' }}>
+              <div key={item.item_id} style={{ background: '#3a3a3a', borderRadius: 12, padding: '1rem', border: '1px solid #2a2a2a' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.85rem' }}>
                   <div>
                     <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>{item.subcategories?.subcategory_name}</div>
@@ -110,12 +110,12 @@ export default async function TrackPage({ params }: { params: { joId: string } }
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
                             <div style={{
                               width: 14, height: 14, borderRadius: '50%',
-                              background: isCurrent ? '#7A1828' : isCompleted ? '#27ae60' : '#2a2a2a',
+                              background: isCurrent ? '#7A1828' : isCompleted ? '#27ae60' : '#555',
                               border: `2px solid ${isCurrent ? '#c0392b' : isCompleted ? '#27ae60' : '#3a3a3a'}`,
                               marginTop: 2,
                             }} />
                             {i < steps.length - 1 && (
-                              <div style={{ width: 2, flex: 1, minHeight: 16, background: isCompleted && currentIdx > i ? '#27ae60' : '#2a2a2a', marginTop: 2 }} />
+                              <div style={{ width: 2, flex: 1, minHeight: 16, background: isCompleted && currentIdx > i ? '#27ae60' : '#555', marginTop: 2 }} />
                             )}
                           </div>
                           <div style={{ paddingBottom: i < steps.length - 1 ? '0.4rem' : 0 }}>
