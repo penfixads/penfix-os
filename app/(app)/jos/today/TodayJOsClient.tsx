@@ -33,6 +33,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
   const [items, setItems] = useState<any[]>([])
   const [showItemForm, setShowItemForm] = useState(false)
   const [editingItem, setEditingItem] = useState<any | null>(null)
+  const [addingItemToJO, setAddingItemToJO] = useState<string | null>(null) // joId of saved JO being edited
   const [payments, setPayments] = useState<any[]>([])
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [discount, setDiscount] = useState(0)
@@ -159,6 +160,27 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
     }
   }
 
+  async function handleDeleteJO(joId: string) {
+    if (!confirm(`Delete job order ${joId}? This cannot be undone.`)) return
+    const supabase = createSupabaseBrowserClient()
+    await supabase.from('job_orders').delete().eq('job_order_id', joId)
+    router.refresh()
+  }
+
+  async function handleAddItemToExistingJO(joId: string, item: any) {
+    const supabase = createSupabaseBrowserClient()
+    const { data: existingItems } = await supabase.from('job_order_items').select('item_id').eq('job_order_id', joId)
+    const seq = (existingItems?.length || 0) + 1
+    const itemId = generateItemId(joId, seq)
+    await supabase.from('job_order_items').insert({ ...item, item_id: itemId, job_order_id: joId })
+    // Recalculate grand total
+    const { data: allItems } = await supabase.from('job_order_items').select('computed_line_total').eq('job_order_id', joId)
+    const newTotal = (allItems || []).reduce((s: number, i: any) => s + (i.computed_line_total || 0), 0)
+    await supabase.from('job_orders').update({ grand_total: newTotal }).eq('job_order_id', joId)
+    setAddingItemToJO(null)
+    router.refresh()
+  }
+
   function addPayment() {
     const amt = parseFloat(payAmount) || 0
     if (amt <= 0) return
@@ -204,12 +226,32 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                       </div>
                     )}
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ color: hasBalance ? '#e74c3c' : '#2ecc71', fontWeight: 700, fontSize: '0.9rem' }}>
-                      {formatPeso(jo.grand_total || 0)}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ color: hasBalance ? '#e74c3c' : '#2ecc71', fontWeight: 700, fontSize: '0.9rem' }}>
+                        {formatPeso(jo.grand_total || 0)}
+                      </div>
+                      <div style={{ color: '#777', fontSize: '0.72rem' }}>Bal: {formatPeso(jo.balance_due || 0)}</div>
+                      <div style={{ color: '#7A1828', fontSize: '0.68rem', marginTop: 2 }}>{jo.payment_status}</div>
                     </div>
-                    <div style={{ color: '#777', fontSize: '0.72rem' }}>Bal: {formatPeso(jo.balance_due || 0)}</div>
-                    <div style={{ color: '#7A1828', fontSize: '0.68rem', marginTop: 2 }}>{jo.payment_status}</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        title="Add Item"
+                        onClick={() => setAddingItemToJO(jo.job_order_id)}
+                        style={{ background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.3rem 0.75rem', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Add Item
+                      </button>
+                      <button
+                        title="Delete JO"
+                        onClick={() => handleDeleteJO(jo.job_order_id)}
+                        style={{ background: '#fff', color: '#e74c3c', border: '2px solid #e74c3c', borderRadius: 999, padding: '0.3rem 0.75rem', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -398,13 +440,23 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
         </div>
       )}
 
-      {/* Item Form Modal */}
+      {/* Item Form Modal (new JO) */}
       {showItemForm && (
         <JOItemForm
           categories={categories}
           subcategories={subcategories}
           onSave={(item) => { setItems(prev => [...prev, item]); setShowItemForm(false) }}
           onClose={() => setShowItemForm(false)}
+        />
+      )}
+
+      {/* Item Form Modal (existing saved JO) */}
+      {addingItemToJO && (
+        <JOItemForm
+          categories={categories}
+          subcategories={subcategories}
+          onSave={(item) => handleAddItemToExistingJO(addingItemToJO, item)}
+          onClose={() => setAddingItemToJO(null)}
         />
       )}
 
