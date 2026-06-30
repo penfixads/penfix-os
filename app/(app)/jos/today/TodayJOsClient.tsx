@@ -246,21 +246,28 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                   onFocus={() => setShowClientDropdown(true)}
                   style={inputStyle}
                 />
-                {showClientDropdown && clientSearch && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#f0f0f0', border: '1px solid #3a3a3a', borderRadius: 8, zIndex: 10, maxHeight: 200, overflowY: 'auto' }}>
+                {showClientDropdown && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, zIndex: 10, maxHeight: 220, overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                    {filteredClients.length === 0 && clientSearch && (
+                      <div style={{ padding: '0.6rem 0.85rem', color: '#999', fontSize: '0.85rem' }}>No clients found</div>
+                    )}
                     {filteredClients.map(c => (
                       <div
                         key={c.client_id}
                         onClick={() => { setSelectedClientId(c.client_id); setClientSearch(c.client_name || c.company_name); setShowClientDropdown(false) }}
-                        style={{ padding: '0.6rem 0.85rem', cursor: 'pointer', color: '#1a1a1a', fontSize: '0.85rem', borderBottom: '1px solid #333' }}
+                        style={{ padding: '0.6rem 0.85rem', cursor: 'pointer', color: '#1a1a1a', fontSize: '0.85rem', borderBottom: '1px solid #f0f0f0' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = '#f5f5f5')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                       >
-                        <div>{c.client_name || c.company_name}</div>
-                        <div style={{ color: '#777', fontSize: '0.72rem' }}>{c.client_id} {c.credit_line_status ? '· Credit Line' : ''}</div>
+                        <div style={{ fontWeight: 600 }}>{c.client_name || c.company_name}</div>
+                        <div style={{ color: '#999', fontSize: '0.72rem' }}>{c.client_id} {c.credit_line_status ? '· Credit Line' : ''}</div>
                       </div>
                     ))}
                     <div
                       onClick={() => { setShowClientDropdown(false); setShowAddClient(true) }}
-                      style={{ padding: '0.6rem 0.85rem', cursor: 'pointer', color: '#7B1C1C', fontSize: '0.85rem', fontWeight: 600 }}
+                      style={{ padding: '0.6rem 0.85rem', cursor: 'pointer', color: '#7B1C1C', fontSize: '0.85rem', fontWeight: 600, borderTop: '1px solid #f0f0f0' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#fdf0f0')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
                       + Add New Client
                     </div>
