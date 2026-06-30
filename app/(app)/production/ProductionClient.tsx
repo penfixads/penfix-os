@@ -79,10 +79,13 @@ function canPushToProduction(jo: any): boolean {
   return false
 }
 
-export default function ProductionClient({ items, sopSteps, currentUser }: Props) {
+export default function ProductionClient({ items: initialItems, sopSteps, currentUser }: Props) {
+  const [localItems, setLocalItems] = useState(initialItems)
   const [advancing, setAdvancing] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+
+  const items = localItems
 
   // Build SOP lookup
   const sopByType: Record<string, any[]> = {}
@@ -107,8 +110,9 @@ export default function ProductionClient({ items, sopSteps, currentUser }: Props
         job_status: targetStatus,
         ...(isDone ? { date_time_done: new Date().toISOString() } : {}),
       }).eq('item_id', itemId)
-      // Optimistic update — page will refresh via router but we avoid it for snappiness
-      window.location.reload()
+      setLocalItems(prev => prev.map(i =>
+        i.item_id === itemId ? { ...i, job_status: targetStatus } : i
+      ))
     } finally {
       setAdvancing(null)
     }
@@ -118,7 +122,7 @@ export default function ProductionClient({ items, sopSteps, currentUser }: Props
     if (!confirm('Mark this item as Cancelled?')) return
     const supabase = createSupabaseBrowserClient()
     await supabase.from('job_order_items').update({ job_status: 'Cancelled' }).eq('item_id', itemId)
-    window.location.reload()
+    setLocalItems(prev => prev.filter(i => i.item_id !== itemId))
   }
 
   // Filter to production-eligible items

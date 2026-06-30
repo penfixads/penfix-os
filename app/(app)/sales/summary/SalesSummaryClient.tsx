@@ -1,7 +1,6 @@
 ﻿'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
@@ -18,7 +17,6 @@ interface Props {
 const PAY_METHODS = ['Cash', 'G-Cash', 'Maya', 'Bank Transfer via BPI Acct.', 'Bank Transfer via BDO Acct.', 'Cheque']
 
 export default function SalesSummaryClient({ payments, expenses: initExpenses, summary, joCount, today, currentUser }: Props) {
-  const router = useRouter()
   const [expenses, setExpenses] = useState(initExpenses)
   const [showExpenseForm, setShowExpenseForm] = useState(false)
   const [expDesc, setExpDesc] = useState('')
@@ -51,7 +49,6 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, s
       net_cash: netCash,
     }, { onConflict: 'summary_date' })
     setSavingRemark(false)
-    router.refresh()
   }
 
   async function addExpense() {
@@ -72,7 +69,6 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, s
     setExpAmount('')
     setShowExpenseForm(false)
     setSavingExp(false)
-    router.refresh()
   }
 
   async function deleteExpense(expenseId: string) {

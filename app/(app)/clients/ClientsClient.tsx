@@ -120,7 +120,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
                 </div>
                 <div style={{ color: '#aaa', fontSize: '0.68rem', marginTop: 1 }}>{c.client_id} {c.contact_number ? `· ${c.contact_number}` : ''}</div>
                 <div style={{ color: '#999', fontSize: '0.7rem', marginTop: 2 }}>
-                  {totalJOs} JO(s) · {formatPeso(totalSales)} total sales · Rewards: {formatPeso(c.earned_rewards || 0)}
+                  {totalJOs} JO(s) · {formatPeso(totalSales)} total sales · Rewards: {formatPeso(c.rewards_balance || 0)}
                 </div>
               </div>
               <button onClick={() => openEdit(c)} style={{ background: '#f0f0f0', border: '1px solid #d0d0d0', color: '#666', borderRadius: 7, padding: '0.35rem 0.7rem', cursor: 'pointer', fontSize: '0.75rem' }}>

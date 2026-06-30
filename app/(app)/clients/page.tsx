@@ -14,5 +14,21 @@ export default async function ClientsPage() {
     .select('*, job_orders(job_order_id, grand_total, payment_status)')
     .order('client_name')
 
-  return <ClientsPageClient clients={clients || []} currentUser={user} />
+  // Compute rewards balance from ledger for each client
+  const { data: ledger } = await supabase
+    .from('rewards_ledger')
+    .select('client_id, type, amount')
+
+  const rewardsMap: Record<string, number> = {}
+  for (const row of ledger || []) {
+    if (!rewardsMap[row.client_id]) rewardsMap[row.client_id] = 0
+    rewardsMap[row.client_id] += row.type === 'earned' ? row.amount : -row.amount
+  }
+
+  const clientsWithRewards = (clients || []).map(c => ({
+    ...c,
+    rewards_balance: Math.max(0, rewardsMap[c.client_id] || 0),
+  }))
+
+  return <ClientsPageClient clients={clientsWithRewards} currentUser={user} />
 }
