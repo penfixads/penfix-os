@@ -7,6 +7,7 @@ import { generateJobOrderId, generateItemId, generateClientId, generatePaymentId
 import type { AppUser } from '@/lib/user'
 import JOItemForm from './JOItemForm'
 import AddClientModal from './AddClientModal'
+import EditJOModal from '@/components/EditJOModal'
 
 interface Props {
   jobOrders: any[]
@@ -37,20 +38,6 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
 
   // Edit JO modal state
   const [editingJO, setEditingJO] = useState<any | null>(null)
-  const [editItems, setEditItems] = useState<any[]>([])
-  const [editPayments, setEditPayments] = useState<any[]>([])
-  const [editDiscount, setEditDiscount] = useState(0)
-  const [editIsForBilling, setEditIsForBilling] = useState(false)
-  const [editLoading, setEditLoading] = useState(false)
-  const [editSaving, setEditSaving] = useState(false)
-  const [editError, setEditError] = useState('')
-  const [removedItemIds, setRemovedItemIds] = useState<string[]>([])
-  const [removedPaymentIds, setRemovedPaymentIds] = useState<string[]>([])
-  const [showEditItemForm, setShowEditItemForm] = useState(false)
-  const [showEditPayForm, setShowEditPayForm] = useState(false)
-  const [editPayAmount, setEditPayAmount] = useState('')
-  const [editPayMethod, setEditPayMethod] = useState('Cash')
-  const [editPayCashback, setEditPayCashback] = useState(0)
   const [payments, setPayments] = useState<any[]>([])
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [discount, setDiscount] = useState(0)
@@ -251,168 +238,8 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
     setShowPaymentForm(false)
   }
 
-  // Edit JO computed values
-  const editGrandTotal = editItems.reduce((s, i) => s + (i.computed_line_total || 0), 0) - editDiscount
-  const editTotalPaid = editPayments.reduce((s, p) => s + (p.amount || 0), 0)
-  const editCashback = editPayments.reduce((s, p) => s + (p.cashback || 0), 0)
-  const editBalance = editGrandTotal - editTotalPaid - editCashback
-  const editPaymentStatus = (() => {
-    if (editIsForBilling) return 'For Billing'
-    if (editTotalPaid === 0 && editCashback === 0) return 'Pending Payment'
-    if (editTotalPaid + editCashback >= editGrandTotal) return 'Fully Paid'
-    if ((editTotalPaid + editCashback) >= editGrandTotal * 0.5) return 'Downpayment Received'
-    return 'Below 50% Downpayment'
-  })()
-  const editClient = clients.find(c => c.client_id === editingJO?.client_id)
-  const [editRewardsBalance, setEditRewardsBalance] = useState(0)
-
-  useEffect(() => {
-    if (!editingJO?.client_id) { setEditRewardsBalance(0); return }
-    const supabase = createSupabaseBrowserClient()
-    supabase.from('rewards_ledger').select('type, amount').eq('client_id', editingJO.client_id).then(({ data }) => {
-      const earned = (data || []).filter(r => r.type === 'earned').reduce((s, r) => s + (r.amount || 0), 0)
-      const redeemed = (data || []).filter(r => r.type === 'redeemed').reduce((s, r) => s + (r.amount || 0), 0)
-      setEditRewardsBalance(Math.max(0, earned - redeemed))
-    })
-  }, [editingJO?.client_id])
-
-  const editEarnedRewards = editRewardsBalance
-
-  async function openEditJO(jo: any) {
-    setEditingJO(jo)
-    setEditLoading(true)
-    setEditError('')
-    setRemovedItemIds([])
-    setRemovedPaymentIds([])
-    setEditDiscount(jo.discount || 0)
-    setEditIsForBilling(jo.is_for_billing || false)
-    const supabase = createSupabaseBrowserClient()
-    const [{ data: itemsData }, { data: paysData }] = await Promise.all([
-      supabase.from('job_order_items')
-        .select('*, subcategories(subcategory_name, category_id)')
-        .eq('job_order_id', jo.job_order_id)
-        .order('item_id'),
-      supabase.from('payments')
-        .select('*')
-        .eq('job_order_id', jo.job_order_id)
-        .order('payment_date'),
-    ])
-    setEditItems((itemsData || []).map(i => ({
-      ...i,
-      subcategory_name: i.subcategories?.subcategory_name || i.item_id,
-      _existing: true,
-    })))
-    setEditPayments((paysData || []).map(p => ({
-      ...p,
-      method: p.payment_method,
-      cashback: p.cashback_amount || 0,
-      _existing: true,
-    })))
-    setEditLoading(false)
-  }
-
-  function closeEditJO() {
-    setEditingJO(null)
-    setEditItems([])
-    setEditPayments([])
-    setEditError('')
-    setShowEditItemForm(false)
-    setShowEditPayForm(false)
-  }
-
-  async function handleSaveEdit() {
-    if (!editingJO) return
-    setEditSaving(true)
-    setEditError('')
-    try {
-      const supabase = createSupabaseBrowserClient()
-      const joId = editingJO.job_order_id
-
-      // Delete removed items
-      for (const id of removedItemIds) {
-        await supabase.from('job_order_items').delete().eq('item_id', id)
-      }
-      // Delete removed payments
-      for (const id of removedPaymentIds) {
-        await supabase.from('payments').delete().eq('payment_id', id)
-      }
-      // Insert new items (those without _existing)
-      const newItems = editItems.filter(i => !i._existing)
-      const existingCount = editItems.filter(i => i._existing).length
-      for (let i = 0; i < newItems.length; i++) {
-        const { category_name, subcategory_name, _existing, subcategories, ...item } = newItems[i]
-        const itemId = generateItemId(joId, existingCount + i + 1)
-        await supabase.from('job_order_items').insert({ ...item, item_id: itemId, job_order_id: joId })
-      }
-      // Insert new payments
-      const newPays = editPayments.filter(p => !p._existing)
-      const existingPayCount = editPayments.filter(p => p._existing).length
-      for (let i = 0; i < newPays.length; i++) {
-        const payId = generatePaymentId(joId, existingPayCount + i + 1)
-        await supabase.from('payments').insert({
-          payment_id: payId,
-          job_order_id: joId,
-          client_id: editingJO.client_id,
-          grand_total: editGrandTotal,
-          amount: newPays[i].amount,
-          payment_method: newPays[i].method,
-          payment_date: new Date().toISOString().split('T')[0],
-          recorded_by: currentUser.name,
-        })
-      }
-      // Update JO totals
-      await supabase.from('job_orders').update({
-        grand_total: editGrandTotal,
-        total_amount_paid: editTotalPaid,
-        discount: editDiscount,
-        cashback_discount: editCashback,
-        payment_status: editPaymentStatus,
-        is_for_billing: editIsForBilling,
-        is_fully_paid: editPaymentStatus === 'Fully Paid',
-        balance_due: editBalance,
-      }).eq('job_order_id', joId)
-
-      // Record redeemed rewards if new cashback was applied
-      const newCashback = editPayments.filter(p => !p._existing && (p.cashback || 0) > 0).reduce((s, p) => s + p.cashback, 0)
-      if (newCashback > 0) {
-        await supabase.from('rewards_ledger').insert({
-          ledger_id: `REDM-${joId}-${Date.now()}`,
-          client_id: editingJO.client_id,
-          job_order_id: joId,
-          type: 'redeemed',
-          amount: newCashback,
-          notes: `Cashback redeemed on JO ${joId}`,
-        })
-      }
-
-      // Update local state
-      setJobOrders(prev => prev.map(j => {
-        if (j.job_order_id !== joId) return j
-        return {
-          ...j,
-          grand_total: editGrandTotal,
-          total_amount_paid: editTotalPaid,
-          balance_due: editBalance,
-          payment_status: editPaymentStatus,
-          is_for_billing: editIsForBilling,
-          job_order_items: editItems.map(i => ({ item_id: i.item_id, computed_line_total: i.computed_line_total })),
-        }
-      }))
-      closeEditJO()
-    } catch (e: any) {
-      setEditError(e.message || 'Failed to save changes.')
-    } finally {
-      setEditSaving(false)
-    }
-  }
-
-  function addEditPayment() {
-    const amt = parseFloat(editPayAmount) || 0
-    if (amt <= 0) return
-    setEditPayments(prev => [...prev, { amount: amt, method: editPayMethod, cashback: editPayCashback }])
-    setEditPayAmount('')
-    setEditPayCashback(0)
-    setShowEditPayForm(false)
+  function handleEditSave(joId: string, updates: any) {
+    setJobOrders(prev => prev.map(j => j.job_order_id !== joId ? j : { ...j, ...updates }))
   }
 
   return (
@@ -453,7 +280,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ display: 'flex', flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-                      <button title="Edit JO" onClick={() => openEditJO(jo)}
+                      <button title="Edit JO" onClick={() => setEditingJO(jo)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7A1828', padding: 2, display: 'flex', alignItems: 'center' }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       </button>
@@ -667,184 +494,15 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
         />
       )}
 
-      {/* Edit JO Modal */}
       {editingJO && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 100, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
-          <div style={{ background: '#FDF5EC', borderRadius: 14, width: '100%', maxWidth: 620, padding: '1.5rem', marginTop: '1rem' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <div>
-                <h2 style={{ color: '#7A1828', fontSize: '1.1rem', fontWeight: 700 }}>Edit Job Order</h2>
-                <div style={{ color: '#999', fontSize: '0.75rem', marginTop: 2 }}>{editingJO.job_order_id}</div>
-              </div>
-              <button onClick={closeEditJO} style={{ background: 'none', border: 'none', color: '#999', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
-            </div>
-
-            {editLoading ? (
-              <div style={{ color: '#aaa', textAlign: 'center', padding: '2rem' }}>Loading…</div>
-            ) : (
-              <>
-                {/* Client (read-only) */}
-                <div style={fieldStyle}>
-                  <label style={labelStyle}>Client</label>
-                  <div style={{ ...chipStyle, background: '#f0ece3' }}>
-                    {editClient?.client_name || editClient?.company_name || editingJO.client_id}
-                  </div>
-                  {editClient && (
-                    <div style={{ color: '#2ecc71', fontSize: '0.75rem', marginTop: 4 }}>
-                      Earned Rewards: {formatPeso(editEarnedRewards)}
-                    </div>
-                  )}
-                </div>
-
-                {/* Billing toggle */}
-                <div style={fieldStyle}>
-                  <label style={labelStyle}>Is Client Type for Billing?</label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {['N', 'Y'].map(v => (
-                      <button key={v} type="button" onClick={() => setEditIsForBilling(v === 'Y')}
-                        style={{ flex: 1, padding: '0.5rem', borderRadius: 7, border: '1.5px solid', borderColor: (v === 'Y') === editIsForBilling ? '#7A1828' : '#ccc', background: (v === 'Y') === editIsForBilling ? '#7A1828' : 'transparent', color: '#1a1a1a', cursor: 'pointer', fontWeight: 600 }}>
-                        {v}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Items table */}
-                <div style={fieldStyle}>
-                  <label style={labelStyle}>Job Order Items</label>
-                  {editItems.length > 0 && (
-                    <div style={{ overflowX: 'auto', marginBottom: 8 }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-                        <thead>
-                          <tr style={{ background: '#3a3a3a', color: '#ccc' }}>
-                            <th style={th}>Item / Service</th>
-                            <th style={{ ...th, textAlign: 'center' }}>Qty</th>
-                            <th style={{ ...th, textAlign: 'right' }}>Line Total</th>
-                            <th style={{ ...th, width: 32 }}></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {editItems.map((item, i) => (
-                            <tr key={item.item_id || i} style={{ borderBottom: '1px solid #EDE0CC' }}>
-                              <td style={td}>
-                                <div style={{ fontWeight: 600, color: '#1a1a1a' }}>{item.subcategory_name}</div>
-                                {item.production_specs && <div style={{ color: '#888', fontSize: '0.7rem', marginTop: 1 }}>{item.production_specs}</div>}
-                                {item.notes && <div style={{ color: '#aaa', fontSize: '0.68rem' }}>{item.notes}</div>}
-                              </td>
-                              <td style={{ ...td, textAlign: 'center', color: '#555' }}>{item.quantity || 1}</td>
-                              <td style={{ ...td, textAlign: 'right', fontWeight: 700, color: '#1a1a1a' }}>{formatPeso(item.computed_line_total)}</td>
-                              <td style={{ ...td, textAlign: 'center' }}>
-                                <button onClick={() => {
-                                  if (item._existing) setRemovedItemIds(prev => [...prev, item.item_id])
-                                  setEditItems(prev => prev.filter((_, j) => j !== i))
-                                }} style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: '1rem', lineHeight: 1 }}>✕</button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                  <button type="button" onClick={() => setShowEditItemForm(true)}
-                    style={{ width: '100%', background: '#f0f0f0', border: '1px dashed #aaa', color: '#7A1828', fontWeight: 700, padding: '0.55rem', borderRadius: 8, cursor: 'pointer', fontSize: '0.82rem' }}>
-                    + Add Item
-                  </button>
-                </div>
-
-                {/* Totals */}
-                <div style={{ background: '#fff', border: '1px solid #EDE0CC', borderRadius: 8, padding: '0.75rem', marginBottom: '1rem' }}>
-                  <div style={totalRowStyle}><span>Grand Total</span><span style={{ fontWeight: 700, color: '#1a1a1a' }}>{formatPeso(editGrandTotal)}</span></div>
-                  <div style={{ ...totalRowStyle, marginTop: 6 }}>
-                    <span>Discount</span>
-                    <input type="number" value={editDiscount} onChange={e => setEditDiscount(parseFloat(e.target.value) || 0)}
-                      style={{ ...inputStyle, width: 100, padding: '0.2rem 0.5rem', textAlign: 'right' }} />
-                  </div>
-                  <div style={{ ...totalRowStyle, marginTop: 6 }}><span>Total Paid</span><span>{formatPeso(editTotalPaid)}</span></div>
-                  <div style={{ ...totalRowStyle, marginTop: 6 }}><span>Balance Due</span><span style={{ color: editBalance > 0 ? '#e74c3c' : '#2ecc71', fontWeight: 700 }}>{formatPeso(editBalance)}</span></div>
-                  <div style={{ ...totalRowStyle, marginTop: 6 }}><span>Status</span><span style={{ color: '#7A1828', fontWeight: 600, fontSize: '0.8rem' }}>{editPaymentStatus}</span></div>
-                </div>
-
-                {/* Payments table */}
-                <div style={fieldStyle}>
-                  <label style={labelStyle}>Payments</label>
-                  {editPayments.length > 0 && (
-                    <div style={{ overflowX: 'auto', marginBottom: 8 }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-                        <thead>
-                          <tr style={{ background: '#3a3a3a', color: '#ccc' }}>
-                            <th style={th}>Method</th>
-                            <th style={{ ...th, textAlign: 'right' }}>Amount</th>
-                            <th style={{ ...th, textAlign: 'right' }}>Cashback</th>
-                            <th style={{ ...th, width: 32 }}></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {editPayments.map((p, i) => (
-                            <tr key={p.payment_id || i} style={{ borderBottom: '1px solid #EDE0CC' }}>
-                              <td style={{ ...td, color: '#1a1a1a', fontWeight: 600 }}>{p.method || p.payment_method}</td>
-                              <td style={{ ...td, textAlign: 'right', color: '#1a1a1a' }}>{formatPeso(p.amount)}</td>
-                              <td style={{ ...td, textAlign: 'right', color: '#777' }}>{p.cashback > 0 ? formatPeso(p.cashback) : '—'}</td>
-                              <td style={{ ...td, textAlign: 'center' }}>
-                                <button onClick={() => {
-                                  if (p._existing) setRemovedPaymentIds(prev => [...prev, p.payment_id])
-                                  setEditPayments(prev => prev.filter((_, j) => j !== i))
-                                }} style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: '1rem', lineHeight: 1 }}>✕</button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                  {showEditPayForm ? (
-                    <div style={{ background: '#f0f0f0', borderRadius: 8, padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <div style={{ flex: 1 }}>
-                          <label style={labelStyle}>Amount</label>
-                          <input type="number" value={editPayAmount} onChange={e => setEditPayAmount(e.target.value)} placeholder="0.00" style={inputStyle} />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <label style={labelStyle}>Method</label>
-                          <select value={editPayMethod} onChange={e => setEditPayMethod(e.target.value)} style={inputStyle}>
-                            {['Cash','G-Cash','Maya','Bank Transfer via BPI Acct.','Bank Transfer via BDO Acct.','Cheque'].map(m => (
-                              <option key={m} value={m}>{m}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                      {editEarnedRewards > 0 && (
-                        <div>
-                          <label style={labelStyle}>Apply Cashback (Available: {formatPeso(editEarnedRewards)})</label>
-                          <input type="number" value={editPayCashback} onChange={e => setEditPayCashback(Math.min(parseFloat(e.target.value) || 0, editEarnedRewards))} placeholder="0.00" style={inputStyle} />
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={addEditPayment} style={{ flex: 1, background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.5rem', cursor: 'pointer', fontWeight: 700 }}>Add</button>
-                        <button onClick={() => setShowEditPayForm(false)} style={{ flex: 1, background: '#eee', color: '#333', border: 'none', borderRadius: 7, padding: '0.5rem', cursor: 'pointer' }}>Cancel</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button type="button" onClick={() => setShowEditPayForm(true)}
-                      style={{ width: '100%', background: '#f0f0f0', border: '1px dashed #aaa', color: '#7A1828', fontWeight: 700, padding: '0.55rem', borderRadius: 8, cursor: 'pointer', fontSize: '0.82rem' }}>
-                      + Add Payment
-                    </button>
-                  )}
-                </div>
-
-                {editError && <div style={{ color: '#e74c3c', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{editError}</div>}
-
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={closeEditJO} style={{ flex: 1, background: '#f0f0f0', color: '#1a1a1a', border: 'none', borderRadius: 8, padding: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
-                  <button onClick={handleSaveEdit} disabled={editSaving}
-                    style={{ flex: 2, background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.75rem', cursor: editSaving ? 'not-allowed' : 'pointer', fontWeight: 700 }}>
-                    {editSaving ? 'Saving…' : 'Save Changes'}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+        <EditJOModal
+          jo={editingJO}
+          categories={categories}
+          subcategories={subcategories}
+          currentUser={currentUser}
+          onClose={() => setEditingJO(null)}
+          onSave={handleEditSave}
+        />
       )}
 
       {/* Item Form Modal (existing saved JO) */}
@@ -854,16 +512,6 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
           subcategories={subcategories}
           onSave={(item) => handleAddItemToExistingJO(addingItemToJO, item)}
           onClose={() => setAddingItemToJO(null)}
-        />
-      )}
-
-      {/* Item Form Modal (edit JO) */}
-      {showEditItemForm && (
-        <JOItemForm
-          categories={categories}
-          subcategories={subcategories}
-          onSave={(item) => { setEditItems(prev => [...prev, item]); setShowEditItemForm(false) }}
-          onClose={() => setShowEditItemForm(false)}
         />
       )}
 
