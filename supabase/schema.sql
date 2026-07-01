@@ -10,7 +10,7 @@ create table if not exists users (
   id uuid primary key default uuid_generate_v4(),
   user_email text unique not null,
   name text not null,
-  role text not null check (role in ('Admin', 'Frontdesk', 'Treasury', 'Production')),
+  role text not null check (role in ('Admin', 'GA', 'Treasury', 'Fabricator')),
   is_active boolean default true,
   created_at timestamptz default now()
 );
@@ -264,3 +264,46 @@ create policy "auth_users_redemptions" on rewards_redemptions for all using (aut
 create policy "auth_users_raw_materials" on raw_materials for select using (auth.role() = 'authenticated');
 create policy "auth_users_process_types" on process_types for select using (auth.role() = 'authenticated');
 create policy "auth_users_sop" on process_type_sop for select using (auth.role() = 'authenticated');
+
+-- ============================================================
+-- GRANTS — required for PostgREST (anon / authenticated / service_role)
+-- RLS policies above still gate ROW access; these grant TABLE access.
+-- Without these, a fresh SQL-created project returns
+-- "42501 permission denied for table ..." on every API query.
+-- ============================================================
+grant usage on schema public to anon, authenticated, service_role;
+grant all on all tables in schema public to anon, authenticated, service_role;
+grant all on all sequences in schema public to anon, authenticated, service_role;
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+
+-- ============================================================
+-- AUTO-PROFILE — create a public.users row whenever an auth user
+-- is created (via the Supabase dashboard OR the in-app register page).
+-- Name/role come from user metadata if provided; role defaults to 'GA'.
+-- This means: add a user once in Auth and they can log in immediately.
+-- Valid roles: Admin, GA, Treasury, Fabricator.
+-- ============================================================
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.users (user_email, name, role, is_active)
+  values (
+    new.email,
+    coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+    coalesce(new.raw_user_meta_data->>'role', 'GA'),
+    true
+  )
+  on conflict (user_email) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();

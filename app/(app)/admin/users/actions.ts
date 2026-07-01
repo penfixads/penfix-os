@@ -1,7 +1,6 @@
 'use server'
 
 import { createSupabaseAdminClient } from '@/lib/supabase-admin'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { getCurrentUser } from '@/lib/user'
 
 async function assertAdmin() {
@@ -22,16 +21,18 @@ export async function createUser(formData: {
     email: formData.email,
     password: formData.password,
     email_confirm: true,
+    user_metadata: { name: formData.name, role: formData.role },
   })
   if (authErr) throw new Error(authErr.message)
 
-  const supabase = createSupabaseServerClient()
-  const { error: dbErr } = await supabase.from('users').insert({
+  // The on_auth_user_created trigger auto-creates the profile from metadata;
+  // this upsert (via service_role) guarantees the exact name/role and is idempotent.
+  const { error: dbErr } = await admin.from('users').upsert({
     user_email: formData.email,
     name: formData.name,
     role: formData.role,
     is_active: true,
-  })
+  }, { onConflict: 'user_email' })
   if (dbErr) {
     await admin.auth.admin.deleteUser(authData.user.id)
     throw new Error(dbErr.message)
@@ -42,8 +43,8 @@ export async function createUser(formData: {
 
 export async function updateUserRole(email: string, role: string) {
   await assertAdmin()
-  const supabase = createSupabaseServerClient()
-  const { error } = await supabase.from('users').update({ role }).eq('user_email', email)
+  const admin = createSupabaseAdminClient()
+  const { error } = await admin.from('users').update({ role }).eq('user_email', email)
   if (error) throw new Error(error.message)
   return { success: true }
 }
@@ -51,7 +52,6 @@ export async function updateUserRole(email: string, role: string) {
 export async function toggleUserActive(email: string, is_active: boolean) {
   await assertAdmin()
   const admin = createSupabaseAdminClient()
-  const supabase = createSupabaseServerClient()
 
   const { data: authUsers } = await admin.auth.admin.listUsers()
   const authUser = authUsers?.users.find(u => u.email === email)
@@ -59,7 +59,7 @@ export async function toggleUserActive(email: string, is_active: boolean) {
     await admin.auth.admin.updateUserById(authUser.id, { ban_duration: is_active ? 'none' : '876600h' })
   }
 
-  const { error } = await supabase.from('users').update({ is_active }).eq('user_email', email)
+  const { error } = await admin.from('users').update({ is_active }).eq('user_email', email)
   if (error) throw new Error(error.message)
   return { success: true }
 }

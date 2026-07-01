@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { computeLineTotal, formatPeso } from '@/lib/jo-helpers'
+import { IconPlus, IconX } from '@/components/icons'
 
 interface Props {
   categories: any[]
@@ -121,20 +122,20 @@ export default function JOItemForm({ categories, onSave, onClose }: Props) {
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 200, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
       <div style={{ background: '#FDF5EC', borderRadius: 14, width: '100%', maxWidth: 480, padding: '1.5rem', marginTop: '1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <h3 style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>Add Job Order Item</h3>
+          <h3 style={{ color: '#7A1828', fontWeight: 700, fontSize: '1rem' }}>Add Job Order Item</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
         </div>
 
-        <div style={field}>
-          <label style={lbl}>Category</label>
-          <select value={categoryId} onChange={e => setCategoryId(e.target.value)} style={inp}>
+        <div className="pf-field">
+          <label className="pf-label">Category</label>
+          <select value={categoryId} onChange={e => setCategoryId(e.target.value)} className="pf-select">
             <option value="">-- Select a Category --</option>
             {categories.map(c => <option key={c.category_id} value={c.category_id}>{c.category_name}</option>)}
           </select>
         </div>
 
-        <div style={field}>
-          <label style={lbl}>Subcategory / Item <span style={{ color: '#e74c3c' }}>*</span></label>
+        <div className="pf-field">
+          <label className="pf-label">Subcategory / Item <span className="pf-req">*</span></label>
           <select
             value={subcategoryId}
             disabled={!categoryId || loadingSubs}
@@ -143,7 +144,7 @@ export default function JOItemForm({ categories, onSave, onClose }: Props) {
               const sub = filteredSubs.find(s => s.subcategory_id === e.target.value)
               if (sub) { setPricingModel(sub.pricing_model || ''); setBasePrice(String(sub.base_price || '')) }
             }}
-            style={{ ...inp, background: (!categoryId || loadingSubs) ? '#f0ece3' : '#fff', color: (!categoryId || loadingSubs) ? '#999' : '#1a1a1a' }}
+            className="pf-select"
           >
             <option value="">{getSubPlaceholder()}</option>
             {filteredSubs.map(s => <option key={s.subcategory_id} value={s.subcategory_id}>{s.subcategory_name}</option>)}
@@ -152,76 +153,76 @@ export default function JOItemForm({ categories, onSave, onClose }: Props) {
 
         {subcategoryId && (
           <>
-            <div style={field}>
-              <label style={lbl}>Pricing Model</label>
-              <select value={effectivePricing} onChange={e => setPricingModel(e.target.value)} style={inp}>
+            <div className="pf-field">
+              <label className="pf-label">Pricing Model</label>
+              <select value={effectivePricing} onChange={e => setPricingModel(e.target.value)} className="pf-select">
                 {Object.entries(PRICING_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: '0.85rem' }}>
               <div>
-                <label style={lbl}>Base Price (₱)</label>
-                <input type="number" value={basePrice} onChange={e => setBasePrice(e.target.value)} style={inp} />
+                <label className="pf-label">Base Price (₱)</label>
+                <input type="number" value={basePrice} onChange={e => setBasePrice(e.target.value)} className="pf-input" />
               </div>
               <div>
-                <label style={lbl}>Quantity</label>
-                <input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} min="1" style={inp} />
+                <label className="pf-label">Quantity</label>
+                <input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} min="1" className="pf-input" />
               </div>
             </div>
 
             {needsDims && (
               <div style={{ display: 'grid', gridTemplateColumns: needsDepth ? '1fr 1fr 1fr' : '1fr 1fr', gap: 8, marginBottom: '0.85rem' }}>
                 <div>
-                  <label style={lbl}>Width</label>
-                  <input type="number" value={width} onChange={e => setWidth(e.target.value)} placeholder="ft" style={inp} />
+                  <label className="pf-label">Width</label>
+                  <input type="number" value={width} onChange={e => setWidth(e.target.value)} placeholder="ft" className="pf-input" />
                 </div>
                 <div>
-                  <label style={lbl}>Height</label>
-                  <input type="number" value={height} onChange={e => setHeight(e.target.value)} placeholder="ft" style={inp} />
+                  <label className="pf-label">Height</label>
+                  <input type="number" value={height} onChange={e => setHeight(e.target.value)} placeholder="ft" className="pf-input" />
                 </div>
                 {needsDepth && (
                   <div>
-                    <label style={lbl}>Depth</label>
-                    <input type="number" value={depth} onChange={e => setDepth(e.target.value)} placeholder="ft" style={inp} />
+                    <label className="pf-label">Depth</label>
+                    <input type="number" value={depth} onChange={e => setDepth(e.target.value)} placeholder="ft" className="pf-input" />
                   </div>
                 )}
               </div>
             )}
 
             {needsMins && (
-              <div style={field}>
-                <label style={lbl}>No. of Minutes</label>
-                <input type="number" value={noOfMins} onChange={e => setNoOfMins(e.target.value)} style={inp} />
+              <div className="pf-field">
+                <label className="pf-label">No. of Minutes</label>
+                <input type="number" value={noOfMins} onChange={e => setNoOfMins(e.target.value)} className="pf-input" />
               </div>
             )}
 
             {needsLetters && (
-              <div style={field}>
-                <label style={lbl}>Letter Count</label>
-                <input type="number" value={letterCount} onChange={e => setLetterCount(e.target.value)} style={inp} />
+              <div className="pf-field">
+                <label className="pf-label">Letter Count</label>
+                <input type="number" value={letterCount} onChange={e => setLetterCount(e.target.value)} className="pf-input" />
               </div>
             )}
 
-            <div style={field}>
-              <label style={lbl}>Production Specs / Description</label>
-              <textarea value={productionSpecs} onChange={e => setProductionSpecs(e.target.value)} rows={2} placeholder="Material, size details, color, etc." style={{ ...inp, resize: 'vertical' }} />
+            <div className="pf-field">
+              <label className="pf-label">Production Specs / Description</label>
+              <textarea value={productionSpecs} onChange={e => setProductionSpecs(e.target.value)} rows={2} placeholder="Material, size details, color, etc." className="pf-textarea" />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: '0.85rem' }}>
               <div>
-                <label style={lbl}>Deadline / Date Needed</label>
-                <input type="datetime-local" value={dateNeeded} onChange={e => setDateNeeded(e.target.value)} style={inp} />
+                <label className="pf-label">Deadline / Date Needed</label>
+                <input type="datetime-local" value={dateNeeded} onChange={e => setDateNeeded(e.target.value)} className="pf-input" />
               </div>
               <div>
-                <label style={lbl}>Item Discount (₱)</label>
-                <input type="number" value={discount} onChange={e => setDiscount(e.target.value)} min="0" style={inp} />
+                <label className="pf-label">Item Discount (₱)</label>
+                <input type="number" value={discount} onChange={e => setDiscount(e.target.value)} min="0" className="pf-input" />
               </div>
             </div>
 
-            <div style={field}>
-              <label style={lbl}>Remarks</label>
-              <input type="text" value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Optional" style={inp} />
+            <div className="pf-field">
+              <label className="pf-label">Remarks</label>
+              <input type="text" value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Optional" className="pf-input" />
             </div>
 
             <div style={{ background: '#3a3a3a', borderRadius: 8, padding: '0.65rem 0.85rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -232,16 +233,12 @@ export default function JOItemForm({ categories, onSave, onClose }: Props) {
         )}
 
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={onClose} style={{ flex: 1, background: '#eee', color: '#333', border: 'none', borderRadius: 8, padding: '0.7rem', cursor: 'pointer' }}>Cancel</button>
-          <button onClick={handleSave} disabled={!subcategoryId} style={{ flex: 2, background: subcategoryId ? '#7A1828' : '#333', color: '#fff', border: 'none', borderRadius: 8, padding: '0.7rem', fontWeight: 700, cursor: subcategoryId ? 'pointer' : 'not-allowed' }}>
-            Add Item
+          <button onClick={onClose} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
+          <button onClick={handleSave} disabled={!subcategoryId} className="pf-btn" style={{ flex: 2 }}>
+            <IconPlus />Add Item
           </button>
         </div>
       </div>
     </div>
   )
 }
-
-const field: React.CSSProperties = { marginBottom: '0.85rem' }
-const lbl: React.CSSProperties = { display: 'block', color: '#aaa', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.3rem' }
-const inp: React.CSSProperties = { width: '100%', background: '#fff', border: '1.5px solid #d0c9b0', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#1a1a1a', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none' }

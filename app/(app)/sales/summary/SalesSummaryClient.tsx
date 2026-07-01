@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
+import { IconPlus, IconX, IconCheck } from '@/components/icons'
 
 interface Props {
   payments: any[]
@@ -143,31 +144,31 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, s
       <div style={{ background: '#FDF5EC', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem', border: '1px solid #EDE0CC' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
           <div style={{ color: '#666', fontWeight: 700, fontSize: '0.8rem' }}>Expenses (EXPCASH)</div>
-          <button onClick={() => setShowExpenseForm(v => !v)} style={{ background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.3rem 0.7rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700 }}>+ Add</button>
+          <button onClick={() => setShowExpenseForm(v => !v)} className="pf-btn" style={{ padding: '0.3rem 0.7rem', fontSize: '0.75rem' }}><IconPlus />Add</button>
         </div>
 
         {showExpenseForm && (
           <div style={{ background: '#FDF5EC', borderRadius: 8, padding: '0.85rem', marginBottom: '0.75rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', gap: 8 }}>
               <div style={{ flex: 2 }}>
-                <label style={lbl}>Description</label>
-                <input type="text" value={expDesc} onChange={e => setExpDesc(e.target.value)} placeholder="e.g. Ink cartridge" style={inp} />
+                <label className="pf-label">Description</label>
+                <input type="text" value={expDesc} onChange={e => setExpDesc(e.target.value)} placeholder="e.g. Ink cartridge" className="pf-input" />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={lbl}>Amount (₱)</label>
-                <input type="number" value={expAmount} onChange={e => setExpAmount(e.target.value)} placeholder="0.00" style={inp} />
+                <label className="pf-label">Amount (₱)</label>
+                <input type="number" value={expAmount} onChange={e => setExpAmount(e.target.value)} placeholder="0.00" className="pf-input" />
               </div>
             </div>
             <div>
-              <label style={lbl}>Category</label>
-              <select value={expCategory} onChange={e => setExpCategory(e.target.value)} style={inp}>
+              <label className="pf-label">Category</label>
+              <select value={expCategory} onChange={e => setExpCategory(e.target.value)} className="pf-select">
                 {['Operations','Supplies','Utilities','Transport','Miscellaneous'].map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setShowExpenseForm(false)} style={{ flex: 1, background: '#f0f0f0', color: '#1a1a1a', border: 'none', borderRadius: 7, padding: '0.5rem', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={addExpense} disabled={savingExp} style={{ flex: 2, background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.5rem', fontWeight: 700, cursor: 'pointer' }}>
-                {savingExp ? '…' : 'Save Expense'}
+              <button onClick={() => setShowExpenseForm(false)} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
+              <button onClick={addExpense} disabled={savingExp} className="pf-btn" style={{ flex: 2 }}>
+                <IconCheck />{savingExp ? '…' : 'Save Expense'}
               </button>
             </div>
           </div>
@@ -207,15 +208,13 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, s
           onChange={e => setRemark(e.target.value)}
           rows={3}
           placeholder="Notes for the day, reminders, reconciliation notes..."
-          style={{ ...inp, resize: 'vertical', marginBottom: 8 }}
+          className="pf-textarea"
+          style={{ marginBottom: 8 }}
         />
-        <button onClick={saveRemark} disabled={savingRemark} style={{ background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.5rem 1rem', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}>
-          {savingRemark ? 'Saving…' : 'Save Remark'}
+        <button onClick={saveRemark} disabled={savingRemark} className="pf-btn">
+          <IconCheck />{savingRemark ? 'Saving…' : 'Save Remark'}
         </button>
       </div>
     </div>
   )
 }
-
-const lbl: React.CSSProperties = { display: 'block', color: '#999', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem' }
-const inp: React.CSSProperties = { width: '100%', background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#1a1a1a', fontSize: '0.82rem', boxSizing: 'border-box', outline: 'none' }

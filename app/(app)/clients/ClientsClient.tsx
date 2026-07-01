@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso, generateClientId } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
+import { IconUserPlus, IconEdit, IconCheck, IconX } from '@/components/icons'
 
 interface Props { clients: any[]; currentUser: AppUser }
 
@@ -88,8 +89,8 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
           <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Clients</h1>
           <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{filtered.length} of {clients.length} clients</p>
         </div>
-        <button onClick={openAdd} style={{ background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.6rem 1.2rem', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
-          + New Client
+        <button onClick={openAdd} className="pf-btn">
+          <IconUserPlus />New Client
         </button>
       </div>
 
@@ -123,8 +124,8 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
                   {totalJOs} JO(s) · {formatPeso(totalSales)} total sales · Rewards: {formatPeso(c.rewards_balance || 0)}
                 </div>
               </div>
-              <button onClick={() => openEdit(c)} style={{ background: '#f0f0f0', border: '1px solid #d0d0d0', color: '#666', borderRadius: 7, padding: '0.35rem 0.7rem', cursor: 'pointer', fontSize: '0.75rem' }}>
-                Edit
+              <button onClick={() => openEdit(c)} className="pf-btn pf-btn-secondary" style={{ fontSize: '0.75rem', padding: '0.35rem 0.7rem' }}>
+                <IconEdit />Edit
               </button>
             </div>
           )
@@ -140,51 +141,51 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
               <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', color: '#999', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div style={field}>
-              <label style={lbl}>Type</label>
+            <div className="pf-field">
+              <label className="pf-label">Type</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 {(['Individual','Company'] as const).map(t => (
                   <button key={t} onClick={() => setClientType(t)}
-                    style={{ flex: 1, padding: '0.45rem', borderRadius: 7, border: '1.5px solid', borderColor: clientType === t ? '#7A1828' : '#333', background: clientType === t ? '#7A1828' : 'transparent', color: '#1a1a1a', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem' }}>
+                    className={clientType === t ? 'pf-btn' : 'pf-btn pf-btn-secondary'} style={{ flex: 1 }}>
                     {t}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div style={field}>
-              <label style={lbl}>{clientType === 'Individual' ? 'Full Name' : 'Contact Person'} *</label>
-              <input type="text" value={clientName} onChange={e => setClientName(e.target.value)} style={inp} />
+            <div className="pf-field">
+              <label className="pf-label">{clientType === 'Individual' ? 'Full Name' : 'Contact Person'} *</label>
+              <input type="text" value={clientName} onChange={e => setClientName(e.target.value)} className="pf-input" />
             </div>
             {clientType === 'Company' && (
-              <div style={field}>
-                <label style={lbl}>Company Name</label>
-                <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} style={inp} />
+              <div className="pf-field">
+                <label className="pf-label">Company Name</label>
+                <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} className="pf-input" />
               </div>
             )}
-            <div style={field}>
-              <label style={lbl}>Contact Number</label>
-              <input type="text" value={contact} onChange={e => setContact(e.target.value)} style={inp} />
+            <div className="pf-field">
+              <label className="pf-label">Contact Number</label>
+              <input type="text" value={contact} onChange={e => setContact(e.target.value)} className="pf-input" />
             </div>
-            <div style={field}>
-              <label style={lbl}>Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} style={inp} />
+            <div className="pf-field">
+              <label className="pf-label">Email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="pf-input" />
             </div>
-            <div style={field}>
-              <label style={lbl}>Address</label>
-              <input type="text" value={address} onChange={e => setAddress(e.target.value)} style={inp} />
+            <div className="pf-field">
+              <label className="pf-label">Address</label>
+              <input type="text" value={address} onChange={e => setAddress(e.target.value)} className="pf-input" />
             </div>
-            <div style={{ ...field, display: 'flex', gap: 10, alignItems: 'center' }}>
+            <div className="pf-field" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <input type="checkbox" checked={creditLine} onChange={e => setCreditLine(e.target.checked)} style={{ accentColor: '#7A1828', width: 16, height: 16 }} />
-              <label style={{ ...lbl, marginBottom: 0, cursor: 'pointer' }}>Credit Line Client</label>
+              <label className="pf-label" style={{ marginBottom: 0, cursor: 'pointer' }}>Credit Line Client</label>
             </div>
 
             {error && <div style={{ color: '#e74c3c', fontSize: '0.8rem', marginBottom: '0.75rem' }}>{error}</div>}
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setShowForm(false)} style={{ flex: 1, background: '#f0f0f0', color: '#1a1a1a', border: 'none', borderRadius: 8, padding: '0.7rem', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleSave} disabled={saving} style={{ flex: 2, background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
-                {saving ? 'Saving…' : editing ? 'Update Client' : 'Add Client'}
+              <button onClick={() => setShowForm(false)} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
+              <button onClick={handleSave} disabled={saving} className="pf-btn" style={{ flex: 2 }}>
+                <IconCheck />{saving ? 'Saving…' : editing ? 'Update Client' : 'Add Client'}
               </button>
             </div>
           </div>
@@ -193,7 +194,3 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
     </div>
   )
 }
-
-const field: React.CSSProperties = { marginBottom: '0.85rem' }
-const lbl: React.CSSProperties = { display: 'block', color: '#999', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.3rem' }
-const inp: React.CSSProperties = { width: '100%', background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#1a1a1a', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none' }

@@ -111,7 +111,8 @@ export default function PendingApprovalClient({ jobOrders: initialJOs, currentUs
                           value={rejectNote[jo.job_order_id] || ''}
                           onChange={e => setRejectNote(prev => ({ ...prev, [jo.job_order_id]: e.target.value }))}
                           rows={2}
-                          style={{ background: '#FDF5EC', border: '1.5px solid #3a0000', borderRadius: 7, padding: '0.5rem 0.7rem', color: '#1a1a1a', fontSize: '0.82rem', resize: 'none', outline: 'none' }}
+                          className="pf-textarea"
+                          style={{ resize: 'none' }}
                         />
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button onClick={() => setShowReject(null)} style={{ flex: 1, background: '#f0f0f0', color: '#1a1a1a', border: 'none', borderRadius: 7, padding: '0.5rem', cursor: 'pointer', fontSize: '0.8rem' }}>Cancel</button>

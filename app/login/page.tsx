@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { Suspense } from 'react'
+import { IconLogin, IconSend } from '@/components/icons'
 
 function LoginForm() {
   const router = useRouter()
@@ -64,7 +65,7 @@ function LoginForm() {
         maxWidth: 400,
       }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <Image src="/penfixtwhhite.png" alt="Penfix" width={80} height={80} style={{ objectFit: 'contain', filter: 'brightness(0) saturate(100%) invert(14%) sepia(60%) saturate(1200%) hue-rotate(330deg)' }} />
+          <Image src="/penfix-logo.png" alt="Penfix" width={80} height={80} style={{ objectFit: 'contain', display: 'block', margin: '0 auto' }} />
           <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700, marginTop: '0.75rem', marginBottom: '0.25rem' }}>Penfix OS</h1>
           <p style={{ color: '#888', fontSize: '0.85rem' }}>{forgotMode ? 'Reset your password' : 'Sign in to continue'}</p>
         </div>
@@ -82,14 +83,14 @@ function LoginForm() {
           ) : (
             <form onSubmit={handleForgotPassword}>
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={labelStyle}>Email</label>
+                <label className="pf-label">Email</label>
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="you@penfix.com"
-                  style={inputStyle}
+                  className="pf-input"
                 />
               </div>
               {error && (
@@ -97,12 +98,8 @@ function LoginForm() {
                   {error}
                 </p>
               )}
-              <button type="submit" disabled={loading} style={{
-                width: '100%', background: loading ? '#7A1828' : '#7A1828', color: '#C9A84C', border: '2px solid #C9A84C',
-                border: 'none', borderRadius: 8, padding: '0.85rem', fontSize: '1rem',
-                fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', letterSpacing: 0.5,
-              }}>
-                {loading ? 'Sending…' : 'Send Reset Link'}
+              <button type="submit" disabled={loading} className="pf-btn pf-btn-block" style={{ padding: '0.85rem', fontSize: '1rem', letterSpacing: 0.5 }}>
+                <IconSend />{loading ? 'Sending…' : 'Send Reset Link'}
               </button>
               <div style={{ textAlign: 'center', marginTop: '1rem' }}>
                 <button type="button" onClick={() => { setForgotMode(false); setError('') }} style={linkBtnStyle}>
@@ -114,18 +111,18 @@ function LoginForm() {
         ) : (
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: '1rem' }}>
-              <label style={labelStyle}>Email</label>
+              <label className="pf-label">Email</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="you@penfix.com"
-                style={inputStyle}
+                className="pf-input"
               />
             </div>
             <div style={{ marginBottom: '0.5rem' }}>
-              <label style={labelStyle}>Password</label>
+              <label className="pf-label">Password</label>
               <div style={{ position: 'relative' }}>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -133,7 +130,8 @@ function LoginForm() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  style={{ ...inputStyle, paddingRight: '2.5rem' }}
+                  className="pf-input"
+                  style={{ paddingRight: '2.5rem' }}
                 />
                 <button
                   type="button"
@@ -171,20 +169,10 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              style={{
-                width: '100%',
-                background: loading ? '#7A1828' : '#7A1828',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 8,
-                padding: '0.85rem',
-                fontSize: '1rem',
-                fontWeight: 700,
-                cursor: loading ? 'not-allowed' : 'pointer',
-                letterSpacing: 0.5,
-              }}
+              className="pf-btn pf-btn-block"
+              style={{ padding: '0.85rem', fontSize: '1rem', letterSpacing: 0.5 }}
             >
-              {loading ? 'Signing in…' : 'Sign In'}
+              <IconLogin />{loading ? 'Signing in…' : 'Sign In'}
             </button>
           </form>
         )}
@@ -197,8 +185,6 @@ function LoginForm() {
   )
 }
 
-const labelStyle: React.CSSProperties = { display: 'block', fontWeight: 600, fontSize: '0.85rem', color: '#444', marginBottom: '0.4rem' }
-const inputStyle: React.CSSProperties = { width: '100%', padding: '0.65rem 0.75rem', border: '1.5px solid #ddd', borderRadius: 7, fontSize: '0.9rem', color: '#333', boxSizing: 'border-box', outline: 'none' }
 const linkBtnStyle: React.CSSProperties = { background: 'none', border: 'none', color: '#7A1828', fontSize: '0.82rem', cursor: 'pointer', textDecoration: 'underline', padding: 0 }
 
 export default function LoginPage() {

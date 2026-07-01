@@ -55,6 +55,83 @@ h1, h2, h3, h4, h5, h6 {
   color: #999;
 }
 
+/* ============================================================
+   Penfix form fields — light underline style (single source of truth)
+   Wrap each field in .pf-field; label = .pf-label (asterisk = .pf-req);
+   controls = .pf-input / .pf-select / .pf-textarea.
+   Sits on light surfaces (#fff / #FDF5EC / #F9EBD8). Maroon focus.
+   ============================================================ */
+.pf-field { margin-bottom: 1.15rem; }
+.pf-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #8a7d80;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.01em;
+}
+.pf-label .pf-req { color: #c0392b; }
+.pf-input, .pf-select, .pf-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid #d8ccc0;
+  border-radius: 0;
+  padding: 0.5rem 0.15rem;
+  font-size: 0.9rem;
+  color: #2a2426;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.pf-input::placeholder, .pf-textarea::placeholder { color: #b7abae; }
+.pf-input:focus, .pf-select:focus, .pf-textarea:focus { border-bottom-color: #5C001F; }
+.pf-input:disabled, .pf-select:disabled, .pf-textarea:disabled {
+  color: #b0a5a8;
+  cursor: not-allowed;
+  border-bottom-style: dashed;
+}
+.pf-select { cursor: pointer; }
+.pf-textarea { resize: vertical; min-height: 3rem; line-height: 1.5; }
+
+/* ============================================================
+   Penfix buttons — maroon fill, gold border (single source of truth)
+   Primary:   class="pf-btn"            (Save, Add, New, Submit)
+   Secondary: class="pf-btn pf-btn-secondary"  (Cancel, dismiss)
+   Full width: add pf-btn-block  ·  Icons: drop an <svg> inside, auto-sized
+   ============================================================ */
+.pf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  background: #5C001F;
+  color: #fff;
+  border: 1.5px solid #C9A84C;
+  border-radius: 8px;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 0.8rem;
+  line-height: 1.25;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+.pf-btn:hover { background: #7A1828; }
+.pf-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.45); }
+.pf-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.pf-btn svg { width: 0.9rem; height: 0.9rem; flex-shrink: 0; }
+.pf-btn-block { width: 100%; }
+
+/* Secondary / outline — for Cancel and low-emphasis actions */
+.pf-btn-secondary {
+  background: transparent;
+  color: #5C001F;
+  border-color: #d8ccc0;
+}
+.pf-btn-secondary:hover { background: rgba(92, 0, 31, 0.06); border-color: #5C001F; }
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

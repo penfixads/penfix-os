@@ -5,6 +5,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { generateItemId, generatePaymentId, formatPeso } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
+import { IconPlus, IconX, IconCheck } from '@/components/icons'
 
 interface Props {
   jo: any
@@ -157,8 +158,8 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
           <div style={{ color: '#aaa', textAlign: 'center', padding: '2rem' }}>Loading…</div>
         ) : (
           <>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Client</label>
+            <div className="pf-field">
+              <label className="pf-label">Client</label>
               <div style={{ display: 'inline-block', background: '#f0ece3', color: '#1a1a1a', borderRadius: 20, padding: '0.3rem 0.85rem', fontSize: '0.8rem' }}>
                 {client?.client_name || client?.company_name || jo.client_id}
               </div>
@@ -167,20 +168,20 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
               )}
             </div>
 
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Is Client Type for Billing?</label>
+            <div className="pf-field">
+              <label className="pf-label">Is Client Type for Billing?</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 {['N', 'Y'].map(v => (
                   <button key={v} type="button" onClick={() => setEditIsForBilling(v === 'Y')}
-                    style={{ flex: 1, padding: '0.5rem', borderRadius: 7, border: '1.5px solid', borderColor: (v === 'Y') === editIsForBilling ? '#7A1828' : '#ccc', background: (v === 'Y') === editIsForBilling ? '#7A1828' : 'transparent', color: '#1a1a1a', cursor: 'pointer', fontWeight: 600 }}>
+                    className={(v === 'Y') === editIsForBilling ? 'pf-btn' : 'pf-btn pf-btn-secondary'} style={{ flex: 1 }}>
                     {v}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Job Order Items</label>
+            <div className="pf-field">
+              <label className="pf-label">Job Order Items</label>
               {editItems.length > 0 && (
                 <div style={{ overflowX: 'auto', marginBottom: 8 }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
@@ -214,8 +215,8 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                 </div>
               )}
               <button type="button" onClick={() => setShowItemForm(true)}
-                style={{ width: '100%', background: '#f0f0f0', border: '1px dashed #aaa', color: '#7A1828', fontWeight: 700, padding: '0.55rem', borderRadius: 8, cursor: 'pointer', fontSize: '0.82rem' }}>
-                + Add Item
+                className="pf-btn pf-btn-block">
+                <IconPlus />Add Item
               </button>
             </div>
 
@@ -244,8 +245,8 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
               </div>
             </div>
 
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Payments</label>
+            <div className="pf-field">
+              <label className="pf-label">Payments</label>
               {editPayments.length > 0 && (
                 <div style={{ overflowX: 'auto', marginBottom: 8 }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
@@ -279,12 +280,12 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                 <div style={{ background: '#f0f0f0', borderRadius: 8, padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <div style={{ flex: 1 }}>
-                      <label style={labelStyle}>Amount</label>
-                      <input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="0.00" style={inputStyle} />
+                      <label className="pf-label">Amount</label>
+                      <input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="0.00" className="pf-input" />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <label style={labelStyle}>Method</label>
-                      <select value={payMethod} onChange={e => setPayMethod(e.target.value)} style={inputStyle}>
+                      <label className="pf-label">Method</label>
+                      <select value={payMethod} onChange={e => setPayMethod(e.target.value)} className="pf-select">
                         {['Cash','G-Cash','Maya','Bank Transfer via BPI Acct.','Bank Transfer via BDO Acct.','Cheque'].map(m => (
                           <option key={m} value={m}>{m}</option>
                         ))}
@@ -293,19 +294,19 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                   </div>
                   {rewardsBalance > 0 && (
                     <div>
-                      <label style={labelStyle}>Apply Cashback (Available: {formatPeso(rewardsBalance)})</label>
-                      <input type="number" value={payCashback} onChange={e => setPayCashback(Math.min(parseFloat(e.target.value) || 0, rewardsBalance))} placeholder="0.00" style={inputStyle} />
+                      <label className="pf-label">Apply Cashback (Available: {formatPeso(rewardsBalance)})</label>
+                      <input type="number" value={payCashback} onChange={e => setPayCashback(Math.min(parseFloat(e.target.value) || 0, rewardsBalance))} placeholder="0.00" className="pf-input" />
                     </div>
                   )}
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={addPayment} style={{ flex: 1, background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.5rem', cursor: 'pointer', fontWeight: 700 }}>Add</button>
-                    <button onClick={() => setShowPayForm(false)} style={{ flex: 1, background: '#eee', color: '#333', border: 'none', borderRadius: 7, padding: '0.5rem', cursor: 'pointer' }}>Cancel</button>
+                    <button onClick={addPayment} className="pf-btn" style={{ flex: 1 }}><IconPlus />Add</button>
+                    <button onClick={() => setShowPayForm(false)} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
                   </div>
                 </div>
               ) : (
                 <button type="button" onClick={() => setShowPayForm(true)}
-                  style={{ width: '100%', background: '#f0f0f0', border: '1px dashed #aaa', color: '#7A1828', fontWeight: 700, padding: '0.55rem', borderRadius: 8, cursor: 'pointer', fontSize: '0.82rem' }}>
-                  + Add Payment
+                  className="pf-btn pf-btn-block">
+                  <IconPlus />Add Payment
                 </button>
               )}
             </div>
@@ -313,10 +314,10 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
             {error && <div style={{ color: '#e74c3c', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{error}</div>}
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={onClose} style={{ flex: 1, background: '#f0f0f0', color: '#1a1a1a', border: 'none', borderRadius: 8, padding: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
+              <button onClick={onClose} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
               <button onClick={handleSave} disabled={saving}
-                style={{ flex: 2, background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.75rem', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700 }}>
-                {saving ? 'Saving…' : 'Save Changes'}
+                className="pf-btn" style={{ flex: 2 }}>
+                <IconCheck />{saving ? 'Saving…' : 'Save Changes'}
               </button>
             </div>
           </>
@@ -335,8 +336,5 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   )
 }
 
-const fieldStyle: React.CSSProperties = { marginBottom: '1rem' }
-const labelStyle: React.CSSProperties = { display: 'block', color: '#999', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.35rem' }
-const inputStyle: React.CSSProperties = { width: '100%', background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 7, padding: '0.55rem 0.75rem', color: '#1a1a1a', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none' }
 const th: React.CSSProperties = { padding: '0.4rem 0.6rem', textAlign: 'left', fontWeight: 600, fontSize: '0.72rem', letterSpacing: '0.03em' }
 const td: React.CSSProperties = { padding: '0.45rem 0.6rem', verticalAlign: 'top' }

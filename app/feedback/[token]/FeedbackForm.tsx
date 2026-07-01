@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { useParams, useSearchParams } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
+import { IconSend } from '@/components/icons'
 
 const SERVICES = [
   'Banners & Tarpaulin',
@@ -101,7 +102,7 @@ export default function FeedbackForm() {
           </div>
           <h1 style={{ color: '#7A1828', fontSize: '1.8rem', fontWeight: 700, marginBottom: '0.5rem' }}>Thank you, {name}!</h1>
           <p style={{ color: '#555', fontSize: '1rem', maxWidth: 340, margin: '0 auto' }}>Your feedback means a lot to us. We&apos;ll keep improving to serve you better.</p>
-          <Image src="/penfixtwhhite.png" alt="Penfix" width={120} height={60} style={{ objectFit: 'contain', marginTop: '2rem', filter: 'invert(11%) sepia(63%) saturate(1200%) hue-rotate(330deg) brightness(80%)', opacity: 1 }} />
+          <Image src="/penfix-logo.png" alt="Penfix" width={120} height={60} style={{ objectFit: 'contain', display: 'block', margin: '2rem auto 0', opacity: 1 }} />
         </div>
       </div>
     )
@@ -123,19 +124,19 @@ export default function FeedbackForm() {
           <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1.75rem' }}>We&apos;d love your honest feedback on your recent order.</p>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <Field label="Job Order #"><input readOnly value={jo} style={inputStyle} /></Field>
-            <Field label="Client Name"><input readOnly value={name} style={inputStyle} /></Field>
+            <Field label="Job Order #"><input readOnly value={jo} className="pf-input" /></Field>
+            <Field label="Client Name"><input readOnly value={name} className="pf-input" /></Field>
           </div>
 
           <Field label="Service Availed" style={{ marginBottom: '1.5rem' }}>
-            <select required value={service} onChange={e => setService(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+            <select required value={service} onChange={e => setService(e.target.value)} className="pf-select">
               <option value="">Select a service…</option>
               {SERVICES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </Field>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={labelStyle}>Overall Rating <span style={{ color: '#c00' }}>*</span></label>
+            <label className="pf-label">Overall Rating <span style={{ color: '#c00' }}>*</span></label>
             <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem' }}>
               {[1, 2, 3, 4, 5].map(n => (
                 <button key={n} type="button" onMouseEnter={() => setHovered(n)} onMouseLeave={() => setHovered(0)} onClick={() => setRating(n)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }} aria-label={`${n} star`}>
@@ -151,33 +152,33 @@ export default function FeedbackForm() {
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={labelStyle}>What did we do best? <span style={{ color: '#aaa', fontWeight: 400 }}>(optional)</span></label>
+            <label className="pf-label">What did we do best? <span style={{ color: '#aaa', fontWeight: 400 }}>(optional)</span></label>
             <ChipGroup options={BEST_AREAS} selected={bestAreas} onToggle={v => toggleChip(bestAreas, setBestAreas, v)} color="#7A1828" />
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={labelStyle}>What can we improve? <span style={{ color: '#aaa', fontWeight: 400 }}>(optional)</span></label>
+            <label className="pf-label">What can we improve? <span style={{ color: '#aaa', fontWeight: 400 }}>(optional)</span></label>
             <ChipGroup options={IMPROVE_AREAS} selected={improveAreas} onToggle={v => toggleChip(improveAreas, setImproveAreas, v)} color="#c05a00" />
           </div>
 
           <Field label="Additional Comments" style={{ marginBottom: '1.5rem' }}>
-            <textarea value={comments} onChange={e => setComments(e.target.value)} rows={4} placeholder="Tell us more about your experience…" style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }} />
+            <textarea value={comments} onChange={e => setComments(e.target.value)} rows={4} placeholder="Tell us more about your experience…" className="pf-textarea" />
           </Field>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={labelStyle}>Would you recommend Penfix to others?</label>
+            <label className="pf-label">Would you recommend Penfix to others?</label>
             <RadioGroup options={['Yes!', 'Maybe', 'No']} value={recommend} onChange={setRecommend} name="recommend" />
           </div>
 
           <div style={{ marginBottom: '2rem' }}>
-            <label style={labelStyle}>May we use your feedback as a testimonial?</label>
+            <label className="pf-label">May we use your feedback as a testimonial?</label>
             <RadioGroup options={['Sure!', 'No thanks']} value={testimonialConsent} onChange={setTestimonialConsent} name="testimonial" />
           </div>
 
           {error && <p style={{ color: '#c00', fontSize: '0.875rem', marginBottom: '1rem' }}>{error}</p>}
 
-          <button type="submit" disabled={submitting} style={{ width: '100%', background: submitting ? '#b26060' : '#7A1828', color: '#fff', border: 'none', borderRadius: 8, padding: '0.85rem', fontSize: '1rem', fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer', letterSpacing: 0.5 }}>
-            {submitting ? 'Submitting…' : 'Submit Feedback'}
+          <button type="submit" disabled={submitting} className="pf-btn pf-btn-block" style={{ padding: '0.85rem', fontSize: '1rem', letterSpacing: 0.5 }}>
+            <IconSend />{submitting ? 'Submitting…' : 'Submit Feedback'}
           </button>
         </form>
       </div>
@@ -185,14 +186,10 @@ export default function FeedbackForm() {
   )
 }
 
-const labelStyle: React.CSSProperties = { display: 'block', fontWeight: 600, fontSize: '0.875rem', color: '#444', marginBottom: '0.4rem' }
-
-const inputStyle: React.CSSProperties = { width: '100%', padding: '0.6rem 0.75rem', border: '1.5px solid #ddd', borderRadius: 7, fontSize: '0.9rem', background: '#fff', color: '#333', boxSizing: 'border-box' }
-
 function Field({ label, children, style }: { label: string; children: React.ReactNode; style?: React.CSSProperties }) {
   return (
     <div style={style}>
-      <label style={labelStyle}>{label}</label>
+      <label className="pf-label">{label}</label>
       {children}
     </div>
   )

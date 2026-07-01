@@ -28,6 +28,9 @@ yarn-error.log*
 # local env files
 .env*.local
 
+# local screenshots / credentials — never commit
+public/cred.png
+
 # vercel
 .vercel
 

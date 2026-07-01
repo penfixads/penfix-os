@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createUser, updateUserRole, toggleUserActive, resetUserPassword } from './actions'
+import { IconUserPlus, IconCheck, IconX, IconKey } from '@/components/icons'
 
 const ROLES = ['Admin', 'GA', 'Treasury', 'Fabricator']
 
@@ -101,9 +102,8 @@ export default function UsersClient({ users: initialUsers }: Props) {
           <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>User Management</h1>
           <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{users.length} registered user(s)</p>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true) }}
-          style={{ background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.6rem 1.2rem', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
-          + New User
+        <button onClick={() => { resetForm(); setShowForm(true) }} className="pf-btn">
+          <IconUserPlus />New User
         </button>
       </div>
 
@@ -177,21 +177,21 @@ export default function UsersClient({ users: initialUsers }: Props) {
               <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', color: '#999', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div style={field}>
-              <label style={lbl}>Full Name <span style={{ color: '#e74c3c' }}>*</span></label>
-              <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Juan dela Cruz" style={inp} />
+            <div className="pf-field">
+              <label className="pf-label">Full Name <span className="pf-req">*</span></label>
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Juan dela Cruz" className="pf-input" />
             </div>
-            <div style={field}>
-              <label style={lbl}>Email Address <span style={{ color: '#e74c3c' }}>*</span></label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="user@penfix.com" style={inp} />
+            <div className="pf-field">
+              <label className="pf-label">Email Address <span className="pf-req">*</span></label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="user@penfix.com" className="pf-input" />
             </div>
-            <div style={field}>
-              <label style={lbl}>Temporary Password <span style={{ color: '#e74c3c' }}>*</span></label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min. 6 characters" style={inp} />
+            <div className="pf-field">
+              <label className="pf-label">Temporary Password <span className="pf-req">*</span></label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min. 6 characters" className="pf-input" />
             </div>
-            <div style={field}>
-              <label style={lbl}>Role <span style={{ color: '#e74c3c' }}>*</span></label>
-              <select value={role} onChange={e => setRole(e.target.value)} style={inp}>
+            <div className="pf-field">
+              <label className="pf-label">Role <span className="pf-req">*</span></label>
+              <select value={role} onChange={e => setRole(e.target.value)} className="pf-select">
                 {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
@@ -199,10 +199,9 @@ export default function UsersClient({ users: initialUsers }: Props) {
             {error && <div style={{ color: '#e74c3c', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{error}</div>}
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setShowForm(false)} style={{ flex: 1, background: '#f0f0f0', color: '#333', border: 'none', borderRadius: 8, padding: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
-              <button onClick={handleCreate} disabled={saving}
-                style={{ flex: 2, background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.75rem', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700 }}>
-                {saving ? 'Creating…' : 'Create User'}
+              <button onClick={() => setShowForm(false)} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
+              <button onClick={handleCreate} disabled={saving} className="pf-btn" style={{ flex: 2 }}>
+                <IconCheck />{saving ? 'Creating…' : 'Create User'}
               </button>
             </div>
           </div>
@@ -215,15 +214,15 @@ export default function UsersClient({ users: initialUsers }: Props) {
           <div style={{ background: '#FDF5EC', borderRadius: 14, width: '100%', maxWidth: 380, padding: '1.5rem' }}>
             <h2 style={{ color: '#7A1828', fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Reset Password</h2>
             <p style={{ color: '#777', fontSize: '0.78rem', marginBottom: '1rem' }}>{resetTarget}</p>
-            <div style={field}>
-              <label style={lbl}>New Password</label>
-              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min. 6 characters" style={inp} />
+            <div className="pf-field">
+              <label className="pf-label">New Password</label>
+              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min. 6 characters" className="pf-input" />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setResetTarget(null)} style={{ flex: 1, background: '#f0f0f0', color: '#333', border: 'none', borderRadius: 8, padding: '0.65rem', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => setResetTarget(null)} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
               <button onClick={handleResetPassword} disabled={!newPassword || actingOn === resetTarget}
-                style={{ flex: 2, background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.65rem', cursor: 'pointer', fontWeight: 700 }}>
-                {actingOn === resetTarget ? 'Saving…' : 'Reset Password'}
+                className="pf-btn" style={{ flex: 2 }}>
+                <IconKey />{actingOn === resetTarget ? 'Saving…' : 'Reset Password'}
               </button>
             </div>
           </div>
@@ -233,8 +232,5 @@ export default function UsersClient({ users: initialUsers }: Props) {
   )
 }
 
-const field: React.CSSProperties = { marginBottom: '1rem' }
-const lbl: React.CSSProperties = { display: 'block', color: '#999', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.35rem' }
-const inp: React.CSSProperties = { width: '100%', background: '#fff', border: '1.5px solid #d0d0d0', borderRadius: 7, padding: '0.55rem 0.75rem', color: '#1a1a1a', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none' }
 const th: React.CSSProperties = { padding: '0.6rem 0.85rem', textAlign: 'left', color: '#ccc', fontWeight: 600, fontSize: '0.75rem', letterSpacing: '0.04em' }
 const td: React.CSSProperties = { padding: '0.65rem 0.85rem', verticalAlign: 'middle' }

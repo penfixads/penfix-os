@@ -6,6 +6,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { generateJobOrderId, generateItemId, generateClientId, generatePaymentId, computeLineTotal, formatPeso, getNextJOSequence } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from './JOItemForm'
+import { IconPlus, IconX, IconCheck } from '@/components/icons'
 import AddClientModal from './AddClientModal'
 import EditJOModal from '@/components/EditJOModal'
 
@@ -250,8 +251,8 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
           <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Today&apos;s Received JOs</h1>
           <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </div>
-        <button onClick={() => { resetForm(); setShowForm(true) }} style={{ background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.6rem 1.2rem', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
-          + New JO
+        <button onClick={() => { resetForm(); setShowForm(true) }} className="pf-btn">
+          <IconPlus />New JO
         </button>
       </div>
 
@@ -315,14 +316,14 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
             </div>
 
             {/* User */}
-            <div style={fieldStyle}>
-              <label style={labelStyle}>User</label>
+            <div className="pf-field">
+              <label className="pf-label">User</label>
               <div style={{ ...chipStyle }}>{currentUser.name}</div>
             </div>
 
             {/* Client search */}
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Client <span style={{ color: '#e74c3c' }}>*</span></label>
+            <div className="pf-field">
+              <label className="pf-label">Client <span className="pf-req">*</span></label>
               <div style={{ position: 'relative' }}>
                 <input
                   type="text"
@@ -330,7 +331,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                   value={clientSearch}
                   onChange={e => { setClientSearch(e.target.value); setShowClientDropdown(true); setSelectedClientId('') }}
                   onFocus={() => setShowClientDropdown(true)}
-                  style={inputStyle}
+                  className="pf-input"
                 />
                 {showClientDropdown && (
                   <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, zIndex: 10, maxHeight: 220, overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
@@ -368,12 +369,12 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
             </div>
 
             {/* Billing toggle */}
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Is Client Type for Billing?</label>
+            <div className="pf-field">
+              <label className="pf-label">Is Client Type for Billing?</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 {['N', 'Y'].map(v => (
                   <button key={v} type="button" onClick={() => setIsForBilling(v === 'Y')}
-                    style={{ flex: 1, padding: '0.5rem', borderRadius: 7, border: '1.5px solid', borderColor: (v === 'Y') === isForBilling ? '#7A1828' : '#333', background: (v === 'Y') === isForBilling ? '#7A1828' : 'transparent', color: '#1a1a1a', cursor: 'pointer', fontWeight: 600 }}>
+                    className={(v === 'Y') === isForBilling ? 'pf-btn' : 'pf-btn pf-btn-secondary'} style={{ flex: 1 }}>
                     {v}
                   </button>
                 ))}
@@ -381,8 +382,8 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
             </div>
 
             {/* Job Order Items */}
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Job Order Items <span style={{ color: '#e74c3c' }}>*</span></label>
+            <div className="pf-field">
+              <label className="pf-label">Job Order Items <span className="pf-req">*</span></label>
               {items.length > 0 && (
                 <div style={{ marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {items.map((item, i) => (
@@ -399,8 +400,8 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                   ))}
                 </div>
               )}
-              <button type="button" onClick={() => setShowItemForm(true)} style={{ width: '100%', background: '#f0f0f0', border: '1px dashed #444', color: '#7A1828', fontWeight: 700, padding: '0.6rem', borderRadius: 8, cursor: 'pointer' }}>
-                + Add Item
+              <button type="button" onClick={() => setShowItemForm(true)} className="pf-btn pf-btn-block">
+                <IconPlus />Add Item
               </button>
             </div>
 
@@ -408,7 +409,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
             <div style={{ background: '#FDF5EC', borderRadius: 8, padding: '0.75rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
               <div style={totalRowStyle}><span>Grand Total</span><span>{formatPeso(grandTotal)}</span></div>
               <div style={totalRowStyle}><span>Discount</span>
-                <input type="number" value={discount} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} style={{ ...inputStyle, width: 100, padding: '0.2rem 0.5rem', textAlign: 'right' }} />
+                <input type="number" value={discount} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} className="pf-input" style={{ width: 100, textAlign: 'right' }} />
               </div>
               <div style={totalRowStyle}><span>Total Paid</span><span>{formatPeso(totalPaid)}</span></div>
               <div style={totalRowStyle}><span>Balance Due</span><span style={{ color: balanceDue > 0 ? '#e74c3c' : '#2ecc71', fontWeight: 700 }}>{formatPeso(balanceDue)}</span></div>
@@ -416,8 +417,8 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
             </div>
 
             {/* Payments */}
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Payments</label>
+            <div className="pf-field">
+              <label className="pf-label">Payments</label>
               {payments.length > 0 && (
                 <div style={{ marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {payments.map((p, i) => (
@@ -432,12 +433,12 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                 <div style={{ background: '#f0f0f0', borderRadius: 8, padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <div style={{ flex: 1 }}>
-                      <label style={labelStyle}>Amount</label>
-                      <input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="0.00" style={inputStyle} />
+                      <label className="pf-label">Amount</label>
+                      <input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="0.00" className="pf-input" />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <label style={labelStyle}>Method</label>
-                      <select value={payMethod} onChange={e => setPayMethod(e.target.value)} style={inputStyle}>
+                      <label className="pf-label">Method</label>
+                      <select value={payMethod} onChange={e => setPayMethod(e.target.value)} className="pf-select">
                         {['Cash','G-Cash','Maya','Bank Transfer via BPI Acct.','Bank Transfer via BDO Acct.','Cheque'].map(m => (
                           <option key={m} value={m}>{m}</option>
                         ))}
@@ -446,27 +447,27 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                   </div>
                   {earnedRewards > 0 && (
                     <div>
-                      <label style={labelStyle}>Apply Cashback (Available: {formatPeso(earnedRewards)})</label>
-                      <input type="number" value={payCashback} onChange={e => setPayCashback(Math.min(parseFloat(e.target.value) || 0, earnedRewards))} placeholder="0.00" style={inputStyle} />
+                      <label className="pf-label">Apply Cashback (Available: {formatPeso(earnedRewards)})</label>
+                      <input type="number" value={payCashback} onChange={e => setPayCashback(Math.min(parseFloat(e.target.value) || 0, earnedRewards))} placeholder="0.00" className="pf-input" />
                     </div>
                   )}
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={addPayment} style={{ flex: 1, background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.5rem', cursor: 'pointer', fontWeight: 700 }}>Add</button>
-                    <button onClick={() => setShowPaymentForm(false)} style={{ flex: 1, background: '#333', color: '#1a1a1a', border: 'none', borderRadius: 7, padding: '0.5rem', cursor: 'pointer' }}>Cancel</button>
+                    <button onClick={addPayment} className="pf-btn" style={{ flex: 1 }}><IconPlus />Add</button>
+                    <button onClick={() => setShowPaymentForm(false)} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
                   </div>
                 </div>
               ) : (
-                <button type="button" onClick={() => setShowPaymentForm(true)} style={{ width: '100%', background: '#f0f0f0', border: '1px dashed #444', color: '#7A1828', fontWeight: 700, padding: '0.6rem', borderRadius: 8, cursor: 'pointer' }}>
-                  + Add Payment
+                <button type="button" onClick={() => setShowPaymentForm(true)} className="pf-btn pf-btn-block">
+                  <IconPlus />Add Payment
                 </button>
               )}
             </div>
 
             {/* Override reason */}
             {needsOverride && (
-              <div style={fieldStyle}>
-                <label style={{ ...labelStyle, color: '#e74c3c' }}>Reason for override (below 50%) <span style={{ color: '#e74c3c' }}>*</span></label>
-                <textarea value={overrideReason} onChange={e => setOverrideReason(e.target.value)} rows={3} placeholder="Please provide a reason..." style={{ ...inputStyle, resize: 'vertical' }} />
+              <div className="pf-field">
+                <label className="pf-label" style={{ color: '#e74c3c' }}>Reason for override (below 50%) <span className="pf-req">*</span></label>
+                <textarea value={overrideReason} onChange={e => setOverrideReason(e.target.value)} rows={3} placeholder="Please provide a reason..." className="pf-textarea" />
                 <div style={{ color: '#e74c3c', fontSize: '0.72rem', marginTop: 4 }}>This will be sent to the manager for approval before production can start.</div>
               </div>
             )}
@@ -475,9 +476,9 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => { resetForm(); setShowForm(false) }} style={{ flex: 1, background: '#f0f0f0', color: '#1a1a1a', border: 'none', borderRadius: 8, padding: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
-              <button onClick={handleSave} disabled={saving} style={{ flex: 2, background: '#7A1828', color: '#fff', border: '2px solid #C9A84C', borderRadius: 999, padding: '0.75rem', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700 }}>
-                {saving ? 'Saving…' : 'Save Job Order'}
+              <button onClick={() => { resetForm(); setShowForm(false) }} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
+              <button onClick={handleSave} disabled={saving} className="pf-btn" style={{ flex: 2 }}>
+                <IconCheck />{saving ? 'Saving…' : 'Save Job Order'}
               </button>
             </div>
           </div>
@@ -531,9 +532,6 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
   )
 }
 
-const fieldStyle: React.CSSProperties = { marginBottom: '1rem' }
-const labelStyle: React.CSSProperties = { display: 'block', color: '#999', fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.35rem' }
-const inputStyle: React.CSSProperties = { width: '100%', background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 7, padding: '0.55rem 0.75rem', color: '#1a1a1a', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none' }
 const chipStyle: React.CSSProperties = { display: 'inline-block', background: '#f0f0f0', color: '#1a1a1a', borderRadius: 20, padding: '0.3rem 0.85rem', fontSize: '0.8rem' }
 const totalRowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#ccc', fontSize: '0.82rem' }
 const th: React.CSSProperties = { padding: '0.4rem 0.6rem', textAlign: 'left', fontWeight: 600, fontSize: '0.72rem', letterSpacing: '0.03em' }
