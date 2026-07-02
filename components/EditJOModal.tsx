@@ -5,7 +5,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { generateItemId, generatePaymentId, formatPeso } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
-import { IconPlus, IconX, IconCheck } from '@/components/icons'
+import { IconPlus, IconCirclePlus, IconX, IconCheck } from '@/components/icons'
 
 interface Props {
   jo: any
@@ -32,6 +32,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   const [payMethod, setPayMethod] = useState('Cash')
   const [payCashback, setPayCashback] = useState(0)
   const [rewardsBalance, setRewardsBalance] = useState(0)
+  const [overrideReason, setOverrideReason] = useState(jo.request_override || '')
 
   const client = jo.clients
 
@@ -62,6 +63,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
     if ((totalPaid + cashback) >= grandTotal * 0.5) return 'Downpayment Received'
     return 'Below 50% Downpayment'
   })()
+  const needsOverride = (paymentStatus === 'Below 50% Downpayment' || paymentStatus === 'Pending Payment') && !editIsForBilling
 
   function addPayment() {
     const amt = parseFloat(payAmount) || 0
@@ -73,6 +75,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   }
 
   async function handleSave() {
+    if (needsOverride && !overrideReason) { setError('Please provide a reason for the override.'); return }
     setSaving(true)
     setError('')
     try {
@@ -113,6 +116,8 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
         is_for_billing: editIsForBilling,
         is_fully_paid: paymentStatus === 'Fully Paid',
         balance_due: balance,
+        request_override: overrideReason || null,
+        override_status: needsOverride ? 'Pending' : null,
       }).eq('job_order_id', joId)
 
       const newCashback = newPays.filter(p => (p.cashback || 0) > 0).reduce((s, p) => s + p.cashback, 0)
@@ -133,6 +138,8 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
         balance_due: balance,
         payment_status: paymentStatus,
         is_for_billing: editIsForBilling,
+        request_override: overrideReason || null,
+        override_status: needsOverride ? 'Pending' : null,
         job_order_items: editItems.map(i => ({ item_id: i.item_id, computed_line_total: i.computed_line_total, job_status: i.job_status, date_time_needed: i.date_time_needed, subcategories: i.subcategories })),
       })
       onClose()
@@ -144,18 +151,18 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 100, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
-      <div style={{ background: '#FDF5EC', borderRadius: 14, width: '100%', maxWidth: 620, padding: '1.5rem', marginTop: '1rem' }}>
+    <div className="pf-modal-overlay" style={{ alignItems: 'flex-start' }}>
+      <div className="pf-modal-card pf-modal-wine" style={{ maxWidth: 620, marginTop: '1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <div>
-            <h2 style={{ color: '#7A1828', fontSize: '1.1rem', fontWeight: 700 }}>Edit Job Order</h2>
-            <div style={{ color: '#999', fontSize: '0.75rem', marginTop: 2 }}>{jo.job_order_id}</div>
+            <h2 style={{ color: '#fff', fontSize: '1.7rem', fontWeight: 700 }}>Edit Job Order</h2>
+            <div style={{ color: '#E8B9C6', fontSize: '0.75rem', marginTop: 2 }}>{jo.job_order_id}</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#999', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#E8B9C6', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
         </div>
 
         {loading ? (
-          <div style={{ color: '#aaa', textAlign: 'center', padding: '2rem' }}>Loading…</div>
+          <div style={{ color: '#E8B9C6', textAlign: 'center', padding: '2rem' }}>Loading…</div>
         ) : (
           <>
             <div className="pf-field">
@@ -173,7 +180,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
               <div style={{ display: 'flex', gap: 8 }}>
                 {['N', 'Y'].map(v => (
                   <button key={v} type="button" onClick={() => setEditIsForBilling(v === 'Y')}
-                    className={(v === 'Y') === editIsForBilling ? 'pf-btn' : 'pf-btn pf-btn-secondary'} style={{ flex: 1 }}>
+                    className={(v === 'Y') === editIsForBilling ? 'pf-btn' : 'pf-btn pf-btn-secondary'} style={{ minWidth: 56 }}>
                     {v}
                   </button>
                 ))}
@@ -181,7 +188,6 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
             </div>
 
             <div className="pf-field">
-              <label className="pf-label">Job Order Items</label>
               {editItems.length > 0 && (
                 <div style={{ overflowX: 'auto', marginBottom: 8 }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
@@ -195,13 +201,13 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                     </thead>
                     <tbody>
                       {editItems.map((item, i) => (
-                        <tr key={item.item_id || i} style={{ borderBottom: '1px solid #EDE0CC' }}>
+                        <tr key={item.item_id || i} style={{ borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
                           <td style={td}>
-                            <div style={{ fontWeight: 600, color: '#1a1a1a' }}>{item.subcategory_name}</div>
-                            {item.production_specs && <div style={{ color: '#888', fontSize: '0.7rem', marginTop: 1 }}>{item.production_specs}</div>}
+                            <div style={{ fontWeight: 600, color: '#fff' }}>{item.subcategory_name}</div>
+                            {item.production_specs && <div style={{ color: '#E8B9C6', fontSize: '0.7rem', marginTop: 1 }}>{item.production_specs}</div>}
                           </td>
-                          <td style={{ ...td, textAlign: 'center', color: '#555' }}>{item.quantity || 1}</td>
-                          <td style={{ ...td, textAlign: 'right', fontWeight: 700, color: '#1a1a1a' }}>{formatPeso(item.computed_line_total)}</td>
+                          <td style={{ ...td, textAlign: 'center', color: '#E8B9C6' }}>{item.quantity || 1}</td>
+                          <td style={{ ...td, textAlign: 'right', fontWeight: 700, color: '#fff' }}>{formatPeso(item.computed_line_total)}</td>
                           <td style={{ ...td, textAlign: 'center' }}>
                             <button onClick={() => {
                               if (item._existing) setRemovedItemIds(prev => [...prev, item.item_id])
@@ -214,39 +220,37 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                   </table>
                 </div>
               )}
-              <button type="button" onClick={() => setShowItemForm(true)}
-                className="pf-btn pf-btn-block">
-                <IconPlus />Add Item
+              <button type="button" onClick={() => setShowItemForm(true)} className="pf-link-btn">
+                <IconCirclePlus />Add Job Order Item
               </button>
             </div>
 
-            <div style={{ background: '#fff', border: '1px solid #EDE0CC', borderRadius: 8, padding: '0.75rem', marginBottom: '1rem' }}>
+            <div className="pf-totals-box">
               {[
                 { label: 'Grand Total', value: formatPeso(grandTotal), bold: true },
                 { label: 'Total Paid', value: formatPeso(totalPaid) },
                 { label: 'Balance Due', value: formatPeso(balance), warn: balance > 0 },
                 { label: 'Status', value: paymentStatus, accent: true },
               ].map(row => (
-                <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#ccc', fontSize: '0.82rem', marginBottom: 6 }}>
+                <div key={row.label} className="pf-totals-row">
                   <span>{row.label}</span>
                   {row.label === 'Balance Due' ? (
-                    <span style={{ color: balance > 0 ? '#e74c3c' : '#2ecc71', fontWeight: 700 }}>{row.value}</span>
+                    <span style={{ color: '#400016', fontWeight: 700 }}>{row.value}</span>
                   ) : row.label === 'Status' ? (
-                    <span style={{ color: '#7A1828', fontWeight: 600, fontSize: '0.8rem' }}>{row.value}</span>
+                    <span style={{ color: '#000', fontWeight: 600, fontSize: '0.8rem' }}>{row.value}</span>
                   ) : (
-                    <span style={{ fontWeight: row.bold ? 700 : 400, color: row.bold ? '#1a1a1a' : undefined }}>{row.value}</span>
+                    <span style={{ fontWeight: row.bold ? 700 : 400, color: '#000' }}>{row.value}</span>
                   )}
                 </div>
               ))}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#ccc', fontSize: '0.82rem' }}>
+              <div className="pf-totals-row" style={{ marginBottom: 0 }}>
                 <span>Discount</span>
                 <input type="number" value={editDiscount} onChange={e => setEditDiscount(parseFloat(e.target.value) || 0)}
-                  style={{ width: 100, background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 7, padding: '0.2rem 0.5rem', color: '#1a1a1a', fontSize: '0.82rem', textAlign: 'right', outline: 'none' }} />
+                  className="pf-input" style={{ width: 100, textAlign: 'right' }} />
               </div>
             </div>
 
             <div className="pf-field">
-              <label className="pf-label">Payments</label>
               {editPayments.length > 0 && (
                 <div style={{ overflowX: 'auto', marginBottom: 8 }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
@@ -260,10 +264,10 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                     </thead>
                     <tbody>
                       {editPayments.map((p, i) => (
-                        <tr key={p.payment_id || i} style={{ borderBottom: '1px solid #EDE0CC' }}>
-                          <td style={{ ...td, fontWeight: 600, color: '#1a1a1a' }}>{p.method || p.payment_method}</td>
-                          <td style={{ ...td, textAlign: 'right', color: '#1a1a1a' }}>{formatPeso(p.amount)}</td>
-                          <td style={{ ...td, textAlign: 'right', color: '#777' }}>{p.cashback > 0 ? formatPeso(p.cashback) : '—'}</td>
+                        <tr key={p.payment_id || i} style={{ borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
+                          <td style={{ ...td, fontWeight: 600, color: '#fff' }}>{p.method || p.payment_method}</td>
+                          <td style={{ ...td, textAlign: 'right', color: '#fff' }}>{formatPeso(p.amount)}</td>
+                          <td style={{ ...td, textAlign: 'right', color: '#E8B9C6' }}>{p.cashback > 0 ? formatPeso(p.cashback) : '—'}</td>
                           <td style={{ ...td, textAlign: 'center' }}>
                             <button onClick={() => {
                               if (p._existing) setRemovedPaymentIds(prev => [...prev, p.payment_id])
@@ -277,7 +281,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                 </div>
               )}
               {showPayForm ? (
-                <div style={{ background: '#f0f0f0', borderRadius: 8, padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="pf-payment-panel" style={{ borderRadius: 8, padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <div style={{ flex: 1 }}>
                       <label className="pf-label">Amount</label>
@@ -298,25 +302,31 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                       <input type="number" value={payCashback} onChange={e => setPayCashback(Math.min(parseFloat(e.target.value) || 0, rewardsBalance))} placeholder="0.00" className="pf-input" />
                     </div>
                   )}
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={addPayment} className="pf-btn" style={{ flex: 1 }}><IconPlus />Add</button>
-                    <button onClick={() => setShowPayForm(false)} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <button onClick={() => setShowPayForm(false)} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
+                    <button onClick={addPayment} className="pf-btn"><IconPlus />Add</button>
                   </div>
                 </div>
               ) : (
-                <button type="button" onClick={() => setShowPayForm(true)}
-                  className="pf-btn pf-btn-block">
-                  <IconPlus />Add Payment
+                <button type="button" onClick={() => setShowPayForm(true)} className="pf-link-btn">
+                  <IconCirclePlus />Add Payment
                 </button>
               )}
             </div>
 
+            {needsOverride && (
+              <div className="pf-field">
+                <label className="pf-label" style={{ color: '#e74c3c' }}>Reason for override (below 50%) <span className="pf-req">*</span></label>
+                <textarea value={overrideReason} onChange={e => setOverrideReason(e.target.value)} rows={3} placeholder="Please provide a reason..." className="pf-textarea" />
+                <div style={{ color: '#e74c3c', fontSize: '0.72rem', marginTop: 4 }}>This will be sent to the manager for approval before production can start.</div>
+              </div>
+            )}
+
             {error && <div style={{ color: '#e74c3c', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{error}</div>}
 
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={onClose} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
-              <button onClick={handleSave} disabled={saving}
-                className="pf-btn" style={{ flex: 2 }}>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={onClose} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
+              <button onClick={handleSave} disabled={saving} className="pf-btn">
                 <IconCheck />{saving ? 'Saving…' : 'Save Changes'}
               </button>
             </div>

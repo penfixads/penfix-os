@@ -5,6 +5,8 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import EditJOModal from '@/components/EditJOModal'
+import { IconMessage } from '@/components/icons'
+import { sendTrackingLink } from './actions'
 
 interface Props {
   jobOrders: any[]
@@ -26,6 +28,7 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [editingJO, setEditingJO] = useState<any | null>(null)
+  const [sendingTrackingId, setSendingTrackingId] = useState<string | null>(null)
 
   const filtered = jobOrders.filter(jo => {
     const client = jo.clients?.client_name || jo.clients?.company_name || ''
@@ -49,6 +52,21 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
 
   function handleEditSave(joId: string, updates: any) {
     setJobOrders(prev => prev.map(j => j.job_order_id !== joId ? j : { ...j, ...updates }))
+  }
+
+  async function handleSendTrackingLink(jo: any) {
+    const contactNumber = jo.clients?.contact_number
+    if (!contactNumber) { alert('This client has no contact number on file.'); return }
+    if (!confirm(`Send tracking link via SMS to ${contactNumber}?`)) return
+    setSendingTrackingId(jo.job_order_id)
+    try {
+      await sendTrackingLink(jo.job_order_id, contactNumber, window.location.origin)
+      alert('Tracking link sent.')
+    } catch (e: any) {
+      alert(e.message || 'Failed to send tracking link.')
+    } finally {
+      setSendingTrackingId(null)
+    }
   }
 
   return (
@@ -124,8 +142,12 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexShrink: 0 }}>
-                    {/* Edit / Delete icons */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 2 }}>
+                    {/* Edit / Delete / Send tracking link icons */}
+                    <div style={{ display: 'flex', flexDirection: 'row', gap: 6, paddingTop: 2 }}>
+                      <button title="Send tracking link via SMS" onClick={() => handleSendTrackingLink(jo)} disabled={sendingTrackingId === jo.job_order_id}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2980b9', padding: 2, display: 'flex', alignItems: 'center', opacity: sendingTrackingId === jo.job_order_id ? 0.5 : 1 }}>
+                        <IconMessage width={17} height={17} />
+                      </button>
                       <button title="Edit JO" onClick={() => setEditingJO(jo)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7A1828', padding: 2, display: 'flex', alignItems: 'center' }}>
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>

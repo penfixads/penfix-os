@@ -6,7 +6,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { generateJobOrderId, generateItemId, generateClientId, generatePaymentId, computeLineTotal, formatPeso, getNextJOSequence } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from './JOItemForm'
-import { IconPlus, IconX, IconCheck } from '@/components/icons'
+import { IconPlus, IconCirclePlus, IconX, IconCheck } from '@/components/icons'
 import AddClientModal from './AddClientModal'
 import EditJOModal from '@/components/EditJOModal'
 
@@ -74,7 +74,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
     if ((totalPaid + cashbackDiscount) >= grandTotal * 0.5) return 'Downpayment Received'
     return 'Below 50% Downpayment'
   })()
-  const needsOverride = paymentStatus === 'Below 50% Downpayment' && !isForBilling
+  const needsOverride = (paymentStatus === 'Below 50% Downpayment' || paymentStatus === 'Pending Payment') && !isForBilling
 
   const filteredClients = clients.filter(c => {
     const name = (c.client_name || c.company_name || '').toLowerCase()
@@ -307,18 +307,17 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
 
       {/* New JO Modal */}
       {showForm && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
-          <div style={{ background: '#FDF5EC', borderRadius: 14, width: '100%', maxWidth: 560, padding: '1.5rem', marginTop: '1rem' }}>
+        <div className="pf-modal-overlay" style={{ background: 'rgba(0,0,0,0.7)', alignItems: 'flex-start' }}>
+          <div className="pf-modal-card pf-modal-wine" style={{ maxWidth: 560, marginTop: '1rem' }}>
             {/* Modal header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h2 style={{ color: '#7A1828', fontSize: '1.1rem', fontWeight: 700 }}>New Job Order</h2>
-              <button onClick={() => { resetForm(); setShowForm(false) }} style={{ background: 'none', border: 'none', color: '#999', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+              <h2 style={{ color: '#fff', fontSize: '1.7rem', fontWeight: 700 }}>New Job Order</h2>
+              <button onClick={() => { resetForm(); setShowForm(false) }} style={{ background: 'none', border: 'none', color: '#E8B9C6', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
 
             {/* User */}
-            <div className="pf-field">
-              <label className="pf-label">User</label>
-              <div style={{ ...chipStyle }}>{currentUser.name}</div>
+            <div className="pf-field" style={{ color: '#E8B9C6', fontSize: '0.85rem' }}>
+              User: <span style={{ color: '#fff', fontWeight: 600 }}>{currentUser.name}</span>
             </div>
 
             {/* Client search */}
@@ -374,7 +373,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
               <div style={{ display: 'flex', gap: 8 }}>
                 {['N', 'Y'].map(v => (
                   <button key={v} type="button" onClick={() => setIsForBilling(v === 'Y')}
-                    className={(v === 'Y') === isForBilling ? 'pf-btn' : 'pf-btn pf-btn-secondary'} style={{ flex: 1 }}>
+                    className={(v === 'Y') === isForBilling ? 'pf-btn' : 'pf-btn pf-btn-secondary'} style={{ minWidth: 56 }}>
                     {v}
                   </button>
                 ))}
@@ -383,7 +382,6 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
 
             {/* Job Order Items */}
             <div className="pf-field">
-              <label className="pf-label">Job Order Items <span className="pf-req">*</span></label>
               {items.length > 0 && (
                 <div style={{ marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {items.map((item, i) => (
@@ -400,25 +398,24 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                   ))}
                 </div>
               )}
-              <button type="button" onClick={() => setShowItemForm(true)} className="pf-btn pf-btn-block">
-                <IconPlus />Add Item
+              <button type="button" onClick={() => setShowItemForm(true)} className="pf-link-btn">
+                <IconCirclePlus />Add Job Order Item <span className="pf-req">*</span>
               </button>
             </div>
 
             {/* Totals */}
-            <div style={{ background: '#FDF5EC', borderRadius: 8, padding: '0.75rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={totalRowStyle}><span>Grand Total</span><span>{formatPeso(grandTotal)}</span></div>
-              <div style={totalRowStyle}><span>Discount</span>
+            <div className="pf-totals-box">
+              <div className="pf-totals-row"><span>Grand Total</span><span style={{ color: '#000', fontWeight: 700 }}>{formatPeso(grandTotal)}</span></div>
+              <div className="pf-totals-row"><span>Discount</span>
                 <input type="number" value={discount} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} className="pf-input" style={{ width: 100, textAlign: 'right' }} />
               </div>
-              <div style={totalRowStyle}><span>Total Paid</span><span>{formatPeso(totalPaid)}</span></div>
-              <div style={totalRowStyle}><span>Balance Due</span><span style={{ color: balanceDue > 0 ? '#e74c3c' : '#2ecc71', fontWeight: 700 }}>{formatPeso(balanceDue)}</span></div>
-              <div style={totalRowStyle}><span>Status</span><span style={{ color: '#7A1828', fontWeight: 600, fontSize: '0.8rem' }}>{paymentStatus}</span></div>
+              <div className="pf-totals-row"><span>Total Paid</span><span style={{ color: '#000' }}>{formatPeso(totalPaid)}</span></div>
+              <div className="pf-totals-row"><span>Balance Due</span><span style={{ color: '#400016', fontWeight: 700 }}>{formatPeso(balanceDue)}</span></div>
+              <div className="pf-totals-row" style={{ marginBottom: 0 }}><span>Status</span><span style={{ color: '#000', fontWeight: 600, fontSize: '0.8rem' }}>{paymentStatus}</span></div>
             </div>
 
             {/* Payments */}
             <div className="pf-field">
-              <label className="pf-label">Payments</label>
               {payments.length > 0 && (
                 <div style={{ marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {payments.map((p, i) => (
@@ -430,7 +427,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                 </div>
               )}
               {showPaymentForm ? (
-                <div style={{ background: '#f0f0f0', borderRadius: 8, padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="pf-payment-panel" style={{ borderRadius: 8, padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <div style={{ flex: 1 }}>
                       <label className="pf-label">Amount</label>
@@ -451,14 +448,14 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                       <input type="number" value={payCashback} onChange={e => setPayCashback(Math.min(parseFloat(e.target.value) || 0, earnedRewards))} placeholder="0.00" className="pf-input" />
                     </div>
                   )}
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={addPayment} className="pf-btn" style={{ flex: 1 }}><IconPlus />Add</button>
-                    <button onClick={() => setShowPaymentForm(false)} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <button onClick={() => setShowPaymentForm(false)} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
+                    <button onClick={addPayment} className="pf-btn"><IconPlus />Add</button>
                   </div>
                 </div>
               ) : (
-                <button type="button" onClick={() => setShowPaymentForm(true)} className="pf-btn pf-btn-block">
-                  <IconPlus />Add Payment
+                <button type="button" onClick={() => setShowPaymentForm(true)} className="pf-link-btn">
+                  <IconCirclePlus />Add Payment
                 </button>
               )}
             </div>
@@ -475,9 +472,9 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
             {error && <div style={{ color: '#e74c3c', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{error}</div>}
 
             {/* Actions */}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => { resetForm(); setShowForm(false) }} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
-              <button onClick={handleSave} disabled={saving} className="pf-btn" style={{ flex: 2 }}>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => { resetForm(); setShowForm(false) }} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
+              <button onClick={handleSave} disabled={saving} className="pf-btn">
                 <IconCheck />{saving ? 'Saving…' : 'Save Job Order'}
               </button>
             </div>
@@ -533,6 +530,5 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
 }
 
 const chipStyle: React.CSSProperties = { display: 'inline-block', background: '#f0f0f0', color: '#1a1a1a', borderRadius: 20, padding: '0.3rem 0.85rem', fontSize: '0.8rem' }
-const totalRowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#ccc', fontSize: '0.82rem' }
 const th: React.CSSProperties = { padding: '0.4rem 0.6rem', textAlign: 'left', fontWeight: 600, fontSize: '0.72rem', letterSpacing: '0.03em' }
 const td: React.CSSProperties = { padding: '0.45rem 0.6rem', verticalAlign: 'top' }

@@ -119,11 +119,11 @@ export default function JOItemForm({ categories, onSave, onClose }: Props) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 200, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
-      <div style={{ background: '#FDF5EC', borderRadius: 14, width: '100%', maxWidth: 480, padding: '1.5rem', marginTop: '1rem' }}>
+    <div className="pf-modal-overlay" style={{ background: 'rgba(0,0,0,0.8)', zIndex: 200, alignItems: 'flex-start' }}>
+      <div className="pf-modal-card pf-modal-wine" style={{ maxWidth: 480, marginTop: '1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <h3 style={{ color: '#7A1828', fontWeight: 700, fontSize: '1rem' }}>Add Job Order Item</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+          <h3 style={{ color: '#fff', fontWeight: 700, fontSize: '1.7rem' }}>Add Job Order Item</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#E8B9C6', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
         </div>
 
         <div className="pf-field">
@@ -155,9 +155,7 @@ export default function JOItemForm({ categories, onSave, onClose }: Props) {
           <>
             <div className="pf-field">
               <label className="pf-label">Pricing Model</label>
-              <select value={effectivePricing} onChange={e => setPricingModel(e.target.value)} className="pf-select">
-                {Object.entries(PRICING_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
+              <input type="text" value={PRICING_LABELS[effectivePricing] || effectivePricing || '—'} disabled className="pf-input" />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: '0.85rem' }}>
@@ -225,16 +223,16 @@ export default function JOItemForm({ categories, onSave, onClose }: Props) {
               <input type="text" value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Optional" className="pf-input" />
             </div>
 
-            <div style={{ background: '#3a3a3a', borderRadius: 8, padding: '0.65rem 0.85rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: '#aaa', fontSize: '0.82rem' }}>Line Total</span>
-              <span style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>{formatPeso(lineTotal)}</span>
+            <div className="pf-totals-box" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: '#000', fontSize: '0.82rem' }}>Line Total</span>
+              <span style={{ color: '#000', fontWeight: 700, fontSize: '1rem' }}>{formatPeso(lineTotal)}</span>
             </div>
           </>
         )}
 
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={onClose} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
-          <button onClick={handleSave} disabled={!subcategoryId} className="pf-btn" style={{ flex: 2 }}>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
+          <button onClick={handleSave} disabled={!subcategoryId} className="pf-btn">
             <IconPlus />Add Item
           </button>
         </div>

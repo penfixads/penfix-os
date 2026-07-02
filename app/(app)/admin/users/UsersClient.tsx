@@ -170,11 +170,11 @@ export default function UsersClient({ users: initialUsers }: Props) {
 
       {/* New User Modal */}
       {showForm && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: '#FDF5EC', borderRadius: 14, width: '100%', maxWidth: 440, padding: '1.5rem' }}>
+        <div className="pf-modal-overlay">
+          <div className="pf-modal-card pf-modal-wine" style={{ maxWidth: 440 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h2 style={{ color: '#7A1828', fontSize: '1.1rem', fontWeight: 700 }}>Register New User</h2>
-              <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', color: '#999', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+              <h2 style={{ color: '#fff', fontSize: '1.7rem', fontWeight: 700 }}>Register New User</h2>
+              <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', color: '#E8B9C6', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
 
             <div className="pf-field">
@@ -198,9 +198,9 @@ export default function UsersClient({ users: initialUsers }: Props) {
 
             {error && <div style={{ color: '#e74c3c', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{error}</div>}
 
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setShowForm(false)} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
-              <button onClick={handleCreate} disabled={saving} className="pf-btn" style={{ flex: 2 }}>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowForm(false)} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
+              <button onClick={handleCreate} disabled={saving} className="pf-btn">
                 <IconCheck />{saving ? 'Creating…' : 'Create User'}
               </button>
             </div>
@@ -210,18 +210,17 @@ export default function UsersClient({ users: initialUsers }: Props) {
 
       {/* Reset Password Modal */}
       {resetTarget && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: '#FDF5EC', borderRadius: 14, width: '100%', maxWidth: 380, padding: '1.5rem' }}>
-            <h2 style={{ color: '#7A1828', fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Reset Password</h2>
-            <p style={{ color: '#777', fontSize: '0.78rem', marginBottom: '1rem' }}>{resetTarget}</p>
+        <div className="pf-modal-overlay">
+          <div className="pf-modal-card pf-modal-wine" style={{ maxWidth: 380 }}>
+            <h2 style={{ color: '#fff', fontSize: '1.7rem', fontWeight: 700, marginBottom: '0.5rem' }}>Reset Password</h2>
+            <p style={{ color: '#E8B9C6', fontSize: '0.78rem', marginBottom: '1rem' }}>{resetTarget}</p>
             <div className="pf-field">
               <label className="pf-label">New Password</label>
               <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min. 6 characters" className="pf-input" />
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setResetTarget(null)} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
-              <button onClick={handleResetPassword} disabled={!newPassword || actingOn === resetTarget}
-                className="pf-btn" style={{ flex: 2 }}>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setResetTarget(null)} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
+              <button onClick={handleResetPassword} disabled={!newPassword || actingOn === resetTarget} className="pf-btn">
                 <IconKey />{actingOn === resetTarget ? 'Saving…' : 'Reset Password'}
               </button>
             </div>

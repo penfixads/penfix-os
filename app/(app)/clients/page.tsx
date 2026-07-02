@@ -9,15 +9,14 @@ export default async function ClientsPage() {
 
   const supabase = createSupabaseServerClient()
 
-  const { data: clients } = await supabase
-    .from('clients')
-    .select('*, job_orders(job_order_id, grand_total, payment_status)')
-    .order('client_name')
-
-  // Compute rewards balance from ledger for each client
-  const { data: ledger } = await supabase
-    .from('rewards_ledger')
-    .select('client_id, type, amount')
+  const [{ data: clients }, { data: ledger }] = await Promise.all([
+    supabase
+      .from('clients')
+      .select('*, job_orders(job_order_id, grand_total, payment_status)')
+      .order('client_name'),
+    // Compute rewards balance from ledger for each client
+    supabase.from('rewards_ledger').select('client_id, type, amount'),
+  ])
 
   const rewardsMap: Record<string, number> = {}
   for (const row of ledger || []) {

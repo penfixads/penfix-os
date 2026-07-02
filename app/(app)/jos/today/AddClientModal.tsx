@@ -50,11 +50,11 @@ export default function AddClientModal({ onSave, onClose }: Props) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <div style={{ background: '#FDF5EC', borderRadius: 14, width: '100%', maxWidth: 400, padding: '1.5rem' }}>
+    <div className="pf-modal-overlay" style={{ background: 'rgba(0,0,0,0.85)', zIndex: 300 }}>
+      <div className="pf-modal-card pf-modal-wine" style={{ maxWidth: 400 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <h3 style={{ color: '#7A1828', fontWeight: 700, fontSize: '1rem' }}>Add New Client</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+          <h3 style={{ color: '#fff', fontWeight: 700, fontSize: '1.7rem' }}>Add New Client</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#E8B9C6', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
         </div>
 
         <div className="pf-field">
@@ -62,7 +62,7 @@ export default function AddClientModal({ onSave, onClose }: Props) {
           <div style={{ display: 'flex', gap: 8 }}>
             {(['Individual', 'Company'] as const).map(t => (
               <button key={t} type="button" onClick={() => setClientType(t)}
-                className={clientType === t ? 'pf-btn' : 'pf-btn pf-btn-secondary'} style={{ flex: 1 }}>
+                className={clientType === t ? 'pf-btn' : 'pf-btn pf-btn-secondary'} style={{ minWidth: 100 }}>
                 {t}
               </button>
             ))}
@@ -97,15 +97,15 @@ export default function AddClientModal({ onSave, onClose }: Props) {
         </div>
 
         <div className="pf-field" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <input type="checkbox" id="creditLine" checked={creditLine} onChange={e => setCreditLine(e.target.checked)} style={{ accentColor: '#7A1828', width: 16, height: 16 }} />
+          <input type="checkbox" id="creditLine" checked={creditLine} onChange={e => setCreditLine(e.target.checked)} style={{ accentColor: '#C9A84C', width: 16, height: 16 }} />
           <label htmlFor="creditLine" className="pf-label" style={{ marginBottom: 0, cursor: 'pointer' }}>Credit Line Client</label>
         </div>
 
         {error && <div style={{ color: '#e74c3c', fontSize: '0.8rem', marginBottom: '0.75rem' }}>{error}</div>}
 
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={onClose} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
-          <button onClick={handleSave} disabled={saving} className="pf-btn" style={{ flex: 2 }}>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
+          <button onClick={handleSave} disabled={saving} className="pf-btn">
             <IconCheck />{saving ? 'Saving…' : 'Save Client'}
           </button>
         </div>

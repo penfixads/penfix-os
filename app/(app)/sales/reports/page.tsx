@@ -15,23 +15,23 @@ export default async function SalesReportsPage() {
   yearAgo.setFullYear(yearAgo.getFullYear() - 1)
   const since = yearAgo.toISOString().split('T')[0]
 
-  const { data: payments } = await supabase
-    .from('payments')
-    .select('payment_date, amount, payment_method')
-    .gte('payment_date', since)
-    .order('payment_date')
-
-  const { data: jobOrders } = await supabase
-    .from('job_orders')
-    .select('date_time_received, grand_total, received_by, payment_status')
-    .gte('date_time_received', `${since}T00:00:00`)
-    .order('date_time_received')
-
-  const { data: expenses } = await supabase
-    .from('expenses')
-    .select('expense_date, date, amount')
-    .gte('expense_date', since)
-    .order('expense_date')
+  const [{ data: payments }, { data: jobOrders }, { data: expenses }] = await Promise.all([
+    supabase
+      .from('payments')
+      .select('payment_date, amount, payment_method')
+      .gte('payment_date', since)
+      .order('payment_date'),
+    supabase
+      .from('job_orders')
+      .select('date_time_received, grand_total, received_by, payment_status')
+      .gte('date_time_received', `${since}T00:00:00`)
+      .order('date_time_received'),
+    supabase
+      .from('expenses')
+      .select('expense_date, date, amount')
+      .gte('expense_date', since)
+      .order('expense_date'),
+  ])
 
   return (
     <SalesReportsClient

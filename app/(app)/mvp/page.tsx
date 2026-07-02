@@ -10,18 +10,16 @@ export default async function MVPPage() {
   const supabase = createSupabaseServerClient()
   const today = new Date().toISOString().split('T')[0]
 
-  // JOs received today grouped by received_by
-  const { data: jobOrders } = await supabase
-    .from('job_orders')
-    .select('job_order_id, received_by, grand_total, total_amount_paid, payment_status')
-    .gte('date_time_received', `${today}T00:00:00`)
-    .lte('date_time_received', `${today}T23:59:59`)
-
-  // Payments collected today grouped by recorded_by
-  const { data: payments } = await supabase
-    .from('payments')
-    .select('payment_id, recorded_by, amount')
-    .eq('payment_date', today)
+  const [{ data: jobOrders }, { data: payments }] = await Promise.all([
+    // JOs received today grouped by received_by
+    supabase
+      .from('job_orders')
+      .select('job_order_id, received_by, grand_total, total_amount_paid, payment_status')
+      .gte('date_time_received', `${today}T00:00:00`)
+      .lte('date_time_received', `${today}T23:59:59`),
+    // Payments collected today grouped by recorded_by
+    supabase.from('payments').select('payment_id, recorded_by, amount').eq('payment_date', today),
+  ])
 
   return <MVPClient jobOrders={jobOrders || []} payments={payments || []} today={today} />
 }

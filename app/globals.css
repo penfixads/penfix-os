@@ -93,6 +93,7 @@ h1, h2, h3, h4, h5, h6 {
   border-bottom-style: dashed;
 }
 .pf-select { cursor: pointer; }
+.pf-select option { background: #FDF5EC; color: #2a2426; }
 .pf-textarea { resize: vertical; min-height: 3rem; line-height: 1.5; }
 
 /* ============================================================
@@ -131,6 +132,141 @@ h1, h2, h3, h4, h5, h6 {
   border-color: #d8ccc0;
 }
 .pf-btn-secondary:hover { background: rgba(92, 0, 31, 0.06); border-color: #5C001F; }
+
+/* ============================================================
+   Penfix modal/popup — same elegant card look as the login page
+   (single source of truth). Overlay = .pf-modal-overlay,
+   card = .pf-modal-card. Pass maxWidth / marginTop / alignItems
+   inline per modal since those vary by content.
+   ============================================================ */
+.pf-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+.pf-modal-card {
+  background: rgba(255, 255, 255, 0.97);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  padding: 2rem 1.75rem;
+  width: 100%;
+}
+/* Lighter maroon buttons inside modals only — page buttons keep the darker .pf-btn tone.
+   :not(.pf-btn-secondary) so the outline/secondary variant stays transparent. */
+.pf-modal-card .pf-btn:not(.pf-btn-secondary) { background: #8E2C48; }
+.pf-modal-card .pf-btn:not(.pf-btn-secondary):hover { background: #A3415D; }
+
+/* Wine-maroon modal theme — applied to every modal/popup form alongside
+   .pf-modal-card: className="pf-modal-card pf-modal-wine" */
+.pf-modal-wine {
+  background: #5C001F;
+  color: #fff;
+}
+.pf-modal-wine h2, .pf-modal-wine h3 { color: #fff; }
+.pf-modal-wine .pf-label { color: #E8B9C6; font-size: 1.05rem; }
+.pf-modal-wine .pf-input, .pf-modal-wine .pf-select, .pf-modal-wine .pf-textarea {
+  color: #fff;
+  border-bottom-color: rgba(255, 255, 255, 0.35);
+}
+.pf-modal-wine .pf-input::placeholder, .pf-modal-wine .pf-textarea::placeholder { color: rgba(255, 255, 255, 0.5); }
+.pf-modal-wine .pf-input:focus, .pf-modal-wine .pf-select:focus, .pf-modal-wine .pf-textarea:focus { border-bottom-color: #C9A84C; }
+.pf-modal-wine .pf-req { color: #ffd277; }
+.pf-modal-wine .pf-input::-webkit-calendar-picker-indicator { filter: invert(1); }
+/* Primary buttons — solid dark-maroon fill (same #5C001F as the page's "+ New JO"
+   trigger button), with only the border animating a gold gradient sweep on hover.
+   Two background layers: solid fill clipped to padding-box, gradient clipped to
+   border-box — the border area is the only place the gradient layer shows through. */
+.pf-modal-wine .pf-btn:not(.pf-btn-secondary) {
+  background:
+    linear-gradient(#5C001F, #5C001F) padding-box,
+    linear-gradient(to right, #77530a, #ffd277, #77530a, #77530a, #ffd277, #77530a) border-box;
+  background-size: 100% 100%, 250% 100%;
+  background-position: 0 0, left center;
+  border: 2px solid transparent;
+  color: #ffd277;
+  transition: background-position 1s, transform 0.15s;
+}
+.pf-modal-wine .pf-btn:not(.pf-btn-secondary):hover {
+  background:
+    linear-gradient(#400016, #400016) padding-box,
+    linear-gradient(to right, #77530a, #ffd277, #77530a, #77530a, #ffd277, #77530a) border-box;
+  background-size: 100% 100%, 250% 100%;
+  background-position: 0 0, right center;
+}
+.pf-modal-wine .pf-btn:not(.pf-btn-secondary):active { transform: scale(0.95); }
+.pf-modal-wine .pf-btn-secondary { background: transparent; color: #E8B9C6; border-color: rgba(255, 255, 255, 0.2); }
+.pf-modal-wine .pf-btn-secondary:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.35); }
+
+/* Link-style trigger — for "add" actions that shouldn't compete visually with
+   the form's real buttons (Save, Cancel). Plain text + icon, underline on hover. */
+.pf-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #7A1828;
+}
+.pf-link-btn:hover { text-decoration: underline; }
+.pf-link-btn svg { width: 1rem; height: 1rem; flex-shrink: 0; }
+.pf-modal-wine .pf-link-btn { color: #E3C878; }
+
+/* Add-payment detail panel — same cream as the totals box, with dark text,
+   overriding the wine modal's white-on-dark defaults for this sub-panel only. */
+.pf-payment-panel { background: #FDF5EC; border: 1px solid #EDE0CC; }
+.pf-modal-wine .pf-payment-panel .pf-label { color: #666; }
+.pf-modal-wine .pf-payment-panel .pf-input,
+.pf-modal-wine .pf-payment-panel .pf-select {
+  color: #1a1a1a;
+  border-bottom-color: #d8ccc0;
+}
+.pf-modal-wine .pf-payment-panel .pf-input::placeholder { color: #999; }
+.pf-modal-wine .pf-payment-panel .pf-btn-secondary { color: #666; border-color: #d8ccc0; }
+.pf-modal-wine .pf-payment-panel .pf-btn-secondary:hover { background: rgba(0, 0, 0, 0.05); border-color: #888; }
+
+/* Totals/summary box inside modals — dark wine-rose card so figures pop against the
+   white modal card, tying back to the wine-rose button color. */
+.pf-totals-box {
+  background: #3D1523;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+}
+/* On the wine-maroon modal (.pf-modal-wine), the totals box is light grey instead —
+   a light panel that pops against the dark card, with dark text to match. */
+.pf-modal-wine .pf-totals-box { background: #FDF5EC; border-color: #EDE0CC; }
+.pf-modal-wine .pf-totals-box .pf-totals-row { color: #000; }
+.pf-modal-wine .pf-totals-box .pf-input {
+  color: #1a1a1a;
+  border-bottom-color: #d8ccc0;
+}
+.pf-modal-wine .pf-totals-box .pf-input:focus { border-bottom-color: #5C001F; }
+.pf-totals-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #D9A8B5;
+  font-size: 0.82rem;
+  margin-bottom: 6px;
+}
+.pf-totals-row:last-child { margin-bottom: 0; }
+.pf-totals-box .pf-input {
+  color: #fff;
+  border-bottom-color: rgba(255, 255, 255, 0.35);
+}
+.pf-totals-box .pf-input::placeholder { color: rgba(255, 255, 255, 0.4); }
+.pf-totals-box .pf-input:focus { border-bottom-color: #C9A84C; }
 
 @layer utilities {
   .text-balance {
