@@ -115,7 +115,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
       </div>
 
       {/* Totals bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8, marginBottom: '1.25rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginBottom: '1.25rem' }}>
         {[
           { label: 'Total JOs', value: grandJOs },
           { label: 'Total Sales', value: formatPeso(grandSales) },

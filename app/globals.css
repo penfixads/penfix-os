@@ -7,6 +7,11 @@
   --foreground: #171717;
 }
 
+.pf-main-content { padding: 1.5rem; }
+@media (max-width: 768px) {
+  .pf-main-content { padding: 1rem; padding-top: 4rem; }
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;

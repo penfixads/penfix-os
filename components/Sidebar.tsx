@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -81,6 +82,9 @@ export default function Sidebar({ role, name }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const items = NAV_ITEMS.filter(i => i.roles.includes(role))
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  useEffect(() => { setMobileOpen(false) }, [pathname])
 
   async function handleSignOut() {
     const supabase = createSupabaseBrowserClient()
@@ -90,63 +94,114 @@ export default function Sidebar({ role, name }: Props) {
   }
 
   return (
-    <aside style={{
-      width: 240,
-      minHeight: '100vh',
-      background: '#5C001F',
-      display: 'flex',
-      flexDirection: 'column',
-      borderRight: '1px solid #3a0000',
-      flexShrink: 0,
-    }}>
-      {/* Logo */}
-      <div style={{ padding: '1.25rem 1rem', borderBottom: '1px solid #3a0000', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-        <Image src="/penfixtwhhite.png" alt="Penfix" width={36} height={36} style={{ objectFit: 'contain' }} />
-        <div>
-          <div style={{ color: '#C9A84C', fontFamily: 'var(--font-cormorant), "Cormorant Garamond", serif', fontWeight: 600, fontSize: '1.25rem', letterSpacing: '0.18em', textTransform: 'uppercase' }}>Penfix OS</div>
-          <div style={{ color: '#C9A84C', fontFamily: 'var(--font-inter), Inter, sans-serif', fontSize: '0.68rem', letterSpacing: '0.2em', textTransform: 'uppercase', opacity: 0.75 }}>Job Orders</div>
-        </div>
-      </div>
-
-      {/* Nav */}
+    <>
       <style>{`
         .nav-link { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 1rem; font-size: 0.8rem; text-decoration: none; transition: all 0.15s; }
         .nav-link:hover { background: rgba(255,255,255,0.08) !important; color: #fff !important; }
         .nav-link:hover svg { stroke: #fff !important; }
+        .pf-hamburger { display: none; }
+        .pf-sidebar-backdrop { display: none; }
+        @media (max-width: 768px) {
+          .pf-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            z-index: 300;
+            transform: translateX(-100%);
+            transition: transform 0.25s ease;
+          }
+          .pf-sidebar.pf-sidebar-open { transform: translateX(0); }
+          .pf-hamburger {
+            display: flex;
+            position: fixed;
+            top: 0.85rem;
+            left: 1rem;
+            z-index: 310;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: #5C001F;
+            border: 1px solid #3a0000;
+            border-radius: 8px;
+            color: #C9A84C;
+            cursor: pointer;
+          }
+          .pf-sidebar-backdrop.pf-sidebar-backdrop-open {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 290;
+          }
+        }
       `}</style>
-      <nav style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0' }}>
-        {items.map(item => {
-          const active = pathname === item.href || pathname.startsWith(item.href + '/')
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              prefetch={true}
-              className="nav-link"
-              style={{
-                color: active ? '#fff' : '#ddd',
-                background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
-                borderLeft: active ? '3px solid #C9A84C' : '3px solid transparent',
-              }}
-            >
-              <span style={{ color: active ? '#C9A84C' : '#ccc', display: 'flex' }}>{item.icon}</span>
-              {item.label}
-            </Link>
-          )
-        })}
-      </nav>
 
-      {/* User + Sign out */}
-      <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid #3a0000' }}>
-        <div style={{ color: '#fff', fontSize: '0.78rem', fontWeight: 600 }}>{name}</div>
-        <div style={{ color: '#C9A84C', fontSize: '0.68rem', marginBottom: '0.5rem' }}>{role}</div>
-        <button
-          onClick={handleSignOut}
-          style={{ background: 'none', border: '1px solid #3a0000', color: '#aaa', fontSize: '0.72rem', padding: '0.3rem 0.75rem', borderRadius: 6, cursor: 'pointer', width: '100%' }}
-        >
-          Sign Out
+      {!mobileOpen && (
+        <button className="pf-hamburger" onClick={() => setMobileOpen(v => !v)} aria-label="Open menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
-      </div>
-    </aside>
+      )}
+
+      <div
+        className={`pf-sidebar-backdrop${mobileOpen ? ' pf-sidebar-backdrop-open' : ''}`}
+        onClick={() => setMobileOpen(false)}
+      />
+
+      <aside className={`pf-sidebar${mobileOpen ? ' pf-sidebar-open' : ''}`} style={{
+        width: 240,
+        minHeight: '100vh',
+        background: '#5C001F',
+        display: 'flex',
+        flexDirection: 'column',
+        borderRight: '1px solid #3a0000',
+        flexShrink: 0,
+      }}>
+        {/* Logo */}
+        <div style={{ padding: '1.25rem 1rem', borderBottom: '1px solid #3a0000', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <Image src="/penfixtwhhite.png" alt="Penfix" width={36} height={36} style={{ objectFit: 'contain' }} />
+          <div>
+            <div style={{ color: '#C9A84C', fontFamily: 'var(--font-cormorant), "Cormorant Garamond", serif', fontWeight: 600, fontSize: '1.25rem', letterSpacing: '0.18em', textTransform: 'uppercase' }}>Penfix OS</div>
+            <div style={{ color: '#C9A84C', fontFamily: 'var(--font-inter), Inter, sans-serif', fontSize: '0.68rem', letterSpacing: '0.2em', textTransform: 'uppercase', opacity: 0.75 }}>Job Orders</div>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0' }}>
+          {items.map(item => {
+            const active = pathname === item.href || pathname.startsWith(item.href + '/')
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                prefetch={true}
+                className="nav-link"
+                style={{
+                  color: active ? '#fff' : '#ddd',
+                  background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
+                  borderLeft: active ? '3px solid #C9A84C' : '3px solid transparent',
+                }}
+              >
+                <span style={{ color: active ? '#C9A84C' : '#ccc', display: 'flex' }}>{item.icon}</span>
+                {item.label}
+              </Link>
+            )
+          })}
+        </nav>
+
+        {/* User + Sign out */}
+        <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid #3a0000' }}>
+          <div style={{ color: '#fff', fontSize: '0.78rem', fontWeight: 600 }}>{name}</div>
+          <div style={{ color: '#C9A84C', fontSize: '0.68rem', marginBottom: '0.5rem' }}>{role}</div>
+          <button
+            onClick={handleSignOut}
+            style={{ background: 'none', border: '1px solid #3a0000', color: '#aaa', fontSize: '0.72rem', padding: '0.3rem 0.75rem', borderRadius: 6, cursor: 'pointer', width: '100%' }}
+          >
+            Sign Out
+          </button>
+        </div>
+      </aside>
+    </>
   )
 }

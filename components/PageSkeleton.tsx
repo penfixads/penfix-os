@@ -8,7 +8,7 @@ export default function PageSkeleton({ title }: { title?: string }) {
           <div style={{ background: '#e8e8e8', borderRadius: 4, height: 14, width: 120 }} />
         </div>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: '1.25rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: '1.25rem' }}>
         {[1,2,3].map(i => (
           <div key={i} style={{ background: '#EDE0CC', borderRadius: 10, height: 64 }} />
         ))}

@@ -41,7 +41,7 @@ export default function AllJOsClient({ jobOrders }: Props) {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginBottom: '1rem' }}>
         {[
           { label: 'JOs', value: filtered.length },
           { label: 'Grand Total', value: formatPeso(totalGrand) },

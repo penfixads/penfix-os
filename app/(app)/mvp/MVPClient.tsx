@@ -46,7 +46,7 @@ export default function MVPClient({ jobOrders, payments, today }: Props) {
       </div>
 
       {/* Day totals */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: '1.5rem' }}>
         {[
           { label: "Total JOs Today", value: totalJOs },
           { label: "Total Sales", value: formatPeso(totalSales) },

@@ -88,7 +88,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, s
       </div>
 
       {/* Summary cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: '1.25rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: '1.25rem' }}>
         {[
           { label: "Today's Received JOs", value: joCount, unit: 'JOs' },
           { label: 'Total Collections', value: formatPeso(totalCollections) },

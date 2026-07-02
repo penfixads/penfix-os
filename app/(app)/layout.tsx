@@ -10,7 +10,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#F9EBD8' }}>
       <Sidebar role={user.role} name={user.name} />
-      <main style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
+      <main className="pf-main-content" style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
         {children}
       </main>
     </div>

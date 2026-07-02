@@ -76,7 +76,7 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
         <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{filtered.length} active JO(s)</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: '1.25rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: '1.25rem' }}>
         {[
           { label: 'Total JOs', value: filtered.length },
           { label: 'Total Grand Total', value: formatPeso(totalGrand) },
