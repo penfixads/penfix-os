@@ -77,7 +77,7 @@ export default function AddClientModal({ onSave, onClose }: Props) {
         {clientType === 'Company' && (
           <div className="pf-field">
             <label className="pf-label">Company Name</label>
-            <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} className="pf-input" />
+            <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value.toUpperCase())} className="pf-input" style={{ textTransform: 'uppercase' }} />
           </div>
         )}
 

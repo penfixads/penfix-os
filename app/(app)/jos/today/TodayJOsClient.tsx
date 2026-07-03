@@ -62,6 +62,12 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
     })
   }, [selectedClientId])
 
+  // "For Billing" is the client's credit-line status as declared in the database —
+  // not user-editable here, so staff can't flip it just to skip the override reason.
+  useEffect(() => {
+    setIsForBilling(!!selectedClient?.credit_line_status)
+  }, [selectedClientId])
+
   const earnedRewards = rewardsBalance
   const grandTotal = items.reduce((s, i) => s + (i.computed_line_total || 0), 0) - discount
   const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0)
@@ -77,8 +83,8 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
   const needsOverride = (paymentStatus === 'Below 50% Downpayment' || paymentStatus === 'Pending Payment') && !isForBilling
 
   const filteredClients = clients.filter(c => {
-    const name = (c.client_name || c.company_name || '').toLowerCase()
-    return name.includes(clientSearch.toLowerCase())
+    const q = clientSearch.toLowerCase()
+    return (c.client_name || '').toLowerCase().includes(q) || (c.company_name || '').toLowerCase().includes(q)
   }).slice(0, 10)
 
   function resetForm() {
@@ -328,11 +334,10 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                   type="text"
                   placeholder="Search client name..."
                   value={clientSearch}
-                  onChange={e => { setClientSearch(e.target.value); setShowClientDropdown(true); setSelectedClientId('') }}
-                  onFocus={() => setShowClientDropdown(true)}
+                  onChange={e => { setClientSearch(e.target.value); setShowClientDropdown(!!e.target.value); setSelectedClientId('') }}
                   className="pf-input"
                 />
-                {showClientDropdown && (
+                {showClientDropdown && clientSearch && (
                   <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, zIndex: 10, maxHeight: 220, overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                     {filteredClients.length === 0 && clientSearch && (
                       <div style={{ padding: '0.6rem 0.85rem', color: '#999', fontSize: '0.85rem' }}>No clients found</div>
@@ -345,7 +350,12 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                         onMouseEnter={e => (e.currentTarget.style.background = '#FDF5EC')}
                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                       >
-                        <div style={{ fontWeight: 600 }}>{c.client_name || c.company_name}</div>
+                        <div style={{ fontWeight: 600 }}>
+                          {c.client_name || c.company_name}
+                          {c.company_name && c.client_name && (
+                            <span style={{ color: '#7A1828', fontWeight: 600 }}> · {c.company_name}</span>
+                          )}
+                        </div>
                         <div style={{ color: '#999', fontSize: '0.72rem' }}>{c.client_id} {c.credit_line_status ? '· Credit Line' : ''}</div>
                       </div>
                     ))}
@@ -367,13 +377,13 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
               )}
             </div>
 
-            {/* Billing toggle */}
+            {/* Billing toggle — read-only, mirrors the client's credit_line_status in the database */}
             <div className="pf-field">
               <label className="pf-label">Is Client Type for Billing?</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 {['N', 'Y'].map(v => (
-                  <button key={v} type="button" onClick={() => setIsForBilling(v === 'Y')}
-                    className={(v === 'Y') === isForBilling ? 'pf-btn' : 'pf-btn pf-btn-secondary'} style={{ minWidth: 56 }}>
+                  <button key={v} type="button" disabled title="Set by the client's credit line status. Edit the client record to change it."
+                    className={(v === 'Y') === isForBilling ? 'pf-btn' : 'pf-btn pf-btn-secondary'} style={{ minWidth: 56, opacity: (v === 'Y') === isForBilling ? 1 : 0.5, cursor: 'not-allowed' }}>
                     {v}
                   </button>
                 ))}
@@ -463,7 +473,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
             {/* Override reason */}
             {needsOverride && (
               <div className="pf-field">
-                <label className="pf-label" style={{ color: '#e74c3c' }}>Reason for override (below 50%) <span className="pf-req">*</span></label>
+                <label className="pf-label" style={{ color: '#f1c40f' }}>Reason for override (below 50%) <span className="pf-req">*</span></label>
                 <textarea value={overrideReason} onChange={e => setOverrideReason(e.target.value)} rows={3} placeholder="Please provide a reason..." className="pf-textarea" />
                 <div style={{ color: '#e74c3c', fontSize: '0.72rem', marginTop: 4 }}>This will be sent to the manager for approval before production can start.</div>
               </div>

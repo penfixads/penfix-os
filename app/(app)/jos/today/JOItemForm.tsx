@@ -88,7 +88,7 @@ export default function JOItemForm({ categories, onSave, onClose }: Props) {
   const needsLetters = effectivePricing === 'per_lettersqft'
 
   function handleSave() {
-    if (!subcategoryId) return
+    if (!subcategoryId || !dateNeeded) return
     const selectedCat = categories.find(c => c.category_id === categoryId)
     onSave({
       subcategory_id: subcategoryId,
@@ -120,7 +120,7 @@ export default function JOItemForm({ categories, onSave, onClose }: Props) {
 
   return (
     <div className="pf-modal-overlay" style={{ background: 'rgba(0,0,0,0.8)', zIndex: 200, alignItems: 'flex-start' }}>
-      <div className="pf-modal-card pf-modal-wine" style={{ maxWidth: 480, marginTop: '1rem' }}>
+      <div className="pf-modal-card pf-modal-wine" style={{ maxWidth: 580, marginTop: '1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <h3 style={{ color: '#fff', fontWeight: 700, fontSize: '1.7rem' }}>Add Job Order Item</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#E8B9C6', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
@@ -158,7 +158,7 @@ export default function JOItemForm({ categories, onSave, onClose }: Props) {
               <input type="text" value={PRICING_LABELS[effectivePricing] || effectivePricing || '—'} disabled className="pf-input" />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: '0.85rem' }}>
+            <div className="pf-grid-2" style={{ marginBottom: '0.85rem' }}>
               <div>
                 <label className="pf-label">Base Price (₱)</label>
                 <input type="number" value={basePrice} onChange={e => setBasePrice(e.target.value)} className="pf-input" />
@@ -170,7 +170,7 @@ export default function JOItemForm({ categories, onSave, onClose }: Props) {
             </div>
 
             {needsDims && (
-              <div style={{ display: 'grid', gridTemplateColumns: needsDepth ? '1fr 1fr 1fr' : '1fr 1fr', gap: 8, marginBottom: '0.85rem' }}>
+              <div className={needsDepth ? 'pf-grid-3' : 'pf-grid-2'} style={{ marginBottom: '0.85rem' }}>
                 <div>
                   <label className="pf-label">Width</label>
                   <input type="number" value={width} onChange={e => setWidth(e.target.value)} placeholder="ft" className="pf-input" />
@@ -207,9 +207,9 @@ export default function JOItemForm({ categories, onSave, onClose }: Props) {
               <textarea value={productionSpecs} onChange={e => setProductionSpecs(e.target.value)} rows={2} placeholder="Material, size details, color, etc." className="pf-textarea" />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: '0.85rem' }}>
+            <div className="pf-grid-2" style={{ marginBottom: '0.85rem' }}>
               <div>
-                <label className="pf-label">Deadline / Date Needed</label>
+                <label className="pf-label">Deadline / Date Needed <span className="pf-req">*</span></label>
                 <input type="datetime-local" value={dateNeeded} onChange={e => setDateNeeded(e.target.value)} className="pf-input" />
               </div>
               <div>
@@ -232,7 +232,7 @@ export default function JOItemForm({ categories, onSave, onClose }: Props) {
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onClose} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
-          <button onClick={handleSave} disabled={!subcategoryId} className="pf-btn">
+          <button onClick={handleSave} disabled={!subcategoryId || !dateNeeded} className="pf-btn">
             <IconPlus />Add Item
           </button>
         </div>

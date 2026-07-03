@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { createUser, updateUserRole, toggleUserActive, resetUserPassword } from './actions'
+import { useState, useRef, useEffect } from 'react'
+import { createUser, updateUserRole, updateUserInfo, deleteUser, toggleUserActive, resetUserPassword } from './actions'
 import { IconUserPlus, IconCheck, IconX, IconKey } from '@/components/icons'
 
 const ROLES = ['Admin', 'GA', 'Treasury', 'Fabricator']
@@ -18,6 +18,29 @@ interface Props {
 }
 
 export default function UsersClient({ users: initialUsers }: Props) {
+  const tableScrollRef = useRef<HTMLDivElement>(null)
+  const [scrollX, setScrollX] = useState(0)
+  const [maxScrollX, setMaxScrollX] = useState(0)
+
+  useEffect(() => {
+    function measure() {
+      const el = tableScrollRef.current
+      if (el) setMaxScrollX(Math.max(0, el.scrollWidth - el.clientWidth))
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
+
+  function handleSliderChange(value: number) {
+    setScrollX(value)
+    if (tableScrollRef.current) tableScrollRef.current.scrollLeft = value
+  }
+
+  function handleTableScroll() {
+    if (tableScrollRef.current) setScrollX(tableScrollRef.current.scrollLeft)
+  }
+
   const [users, setUsers] = useState(initialUsers)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -26,6 +49,11 @@ export default function UsersClient({ users: initialUsers }: Props) {
   const [actingOn, setActingOn] = useState<string | null>(null)
   const [resetTarget, setResetTarget] = useState<string | null>(null)
   const [newPassword, setNewPassword] = useState('')
+  const [editingUser, setEditingUser] = useState<any | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editEmail, setEditEmail] = useState('')
+  const [editRole, setEditRole] = useState('GA')
+  const [editError, setEditError] = useState('')
 
   // New user form
   const [name, setName] = useState('')
@@ -79,6 +107,46 @@ export default function UsersClient({ users: initialUsers }: Props) {
     }
   }
 
+  function openEdit(u: any) {
+    setEditingUser(u)
+    setEditName(u.name)
+    setEditEmail(u.user_email)
+    setEditRole(u.role)
+    setEditError('')
+  }
+
+  async function handleEditSave() {
+    if (!editingUser) return
+    if (!editName || !editEmail) { setEditError('Name and email are required.'); return }
+    setActingOn(editingUser.user_email)
+    setEditError('')
+    try {
+      await updateUserInfo(editingUser.user_email, { name: editName, email: editEmail, role: editRole })
+      const oldEmail = editingUser.user_email
+      setUsers(prev => prev.map(u => u.user_email === oldEmail ? { ...u, name: editName, user_email: editEmail, role: editRole } : u))
+      setEditingUser(null)
+      setSuccess(`User ${editName} updated successfully.`)
+    } catch (e: any) {
+      setEditError(e.message)
+    } finally {
+      setActingOn(null)
+    }
+  }
+
+  async function handleDelete(u: any) {
+    if (!confirm(`Delete user ${u.name} (${u.user_email})? This cannot be undone.`)) return
+    setActingOn(u.user_email)
+    try {
+      await deleteUser(u.user_email)
+      setUsers(prev => prev.filter(x => x.user_email !== u.user_email))
+      setSuccess(`User ${u.name} deleted.`)
+    } catch (e: any) {
+      alert(e.message)
+    } finally {
+      setActingOn(null)
+    }
+  }
+
   async function handleResetPassword() {
     if (!resetTarget || !newPassword) return
     setActingOn(resetTarget)
@@ -114,8 +182,8 @@ export default function UsersClient({ users: initialUsers }: Props) {
       )}
 
       {/* Users Table */}
-      <div style={{ background: '#FDF5EC', borderRadius: 12, border: '1px solid #EDE0CC', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+      <div ref={tableScrollRef} onScroll={handleTableScroll} style={{ background: '#FDF5EC', borderRadius: 12, border: '1px solid #EDE0CC', overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: 780 }}>
           <thead>
             <tr style={{ background: '#3a3a3a' }}>
               <th style={th}>Name</th>
@@ -123,6 +191,7 @@ export default function UsersClient({ users: initialUsers }: Props) {
               <th style={th}>Role</th>
               <th style={{ ...th, textAlign: 'center' }}>Status</th>
               <th style={{ ...th, textAlign: 'center' }}>Actions</th>
+              <th style={{ ...th, textAlign: 'center' }}>Edit / Delete</th>
             </tr>
           </thead>
           <tbody>
@@ -162,11 +231,41 @@ export default function UsersClient({ users: initialUsers }: Props) {
                     </button>
                   </div>
                 </td>
+                <td style={{ ...td, textAlign: 'center' }}>
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                    <button
+                      title="Edit user"
+                      onClick={() => openEdit(u)}
+                      disabled={actingOn === u.user_email}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7A1828', padding: '0.3rem', display: 'flex', alignItems: 'center' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button
+                      title="Delete user"
+                      onClick={() => handleDelete(u)}
+                      disabled={actingOn === u.user_email}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c', padding: '0.3rem', display: 'flex', alignItems: 'center' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {maxScrollX > 0 && (
+        <input
+          type="range"
+          min={0}
+          max={maxScrollX}
+          value={scrollX}
+          onChange={e => handleSliderChange(Number(e.target.value))}
+          aria-label="Scroll table horizontally"
+          style={{ width: '100%', marginTop: '0.6rem', accentColor: '#7A1828' }}
+        />
+      )}
 
       {/* New User Modal */}
       {showForm && (
@@ -202,6 +301,42 @@ export default function UsersClient({ users: initialUsers }: Props) {
               <button onClick={() => setShowForm(false)} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
               <button onClick={handleCreate} disabled={saving} className="pf-btn">
                 <IconCheck />{saving ? 'Creating…' : 'Create User'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {editingUser && (
+        <div className="pf-modal-overlay">
+          <div className="pf-modal-card pf-modal-wine" style={{ maxWidth: 440 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h2 style={{ color: '#fff', fontSize: '1.7rem', fontWeight: 700 }}>Edit User</h2>
+              <button onClick={() => setEditingUser(null)} style={{ background: 'none', border: 'none', color: '#E8B9C6', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <div className="pf-field">
+              <label className="pf-label">Full Name <span className="pf-req">*</span></label>
+              <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="e.g. Juan dela Cruz" className="pf-input" />
+            </div>
+            <div className="pf-field">
+              <label className="pf-label">Email Address <span className="pf-req">*</span></label>
+              <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="user@penfix.com" className="pf-input" />
+            </div>
+            <div className="pf-field">
+              <label className="pf-label">Role <span className="pf-req">*</span></label>
+              <select value={editRole} onChange={e => setEditRole(e.target.value)} className="pf-select">
+                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+
+            {editError && <div style={{ color: '#e74c3c', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{editError}</div>}
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setEditingUser(null)} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
+              <button onClick={handleEditSave} disabled={actingOn === editingUser.user_email} className="pf-btn">
+                <IconCheck />{actingOn === editingUser.user_email ? 'Saving…' : 'Save Changes'}
               </button>
             </div>
           </div>

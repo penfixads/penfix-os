@@ -194,6 +194,12 @@ export default function Sidebar({ role, name }: Props) {
         <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid #3a0000' }}>
           <div style={{ color: '#fff', fontSize: '0.78rem', fontWeight: 600 }}>{name}</div>
           <div style={{ color: '#C9A84C', fontSize: '0.68rem', marginBottom: '0.5rem' }}>{role}</div>
+          <Link
+            href="/account"
+            style={{ display: 'block', textAlign: 'center', background: 'none', border: '1px solid #3a0000', color: '#ddd', fontSize: '0.72rem', padding: '0.3rem 0.75rem', borderRadius: 6, marginBottom: '0.4rem', textDecoration: 'none' }}
+          >
+            My Account
+          </Link>
           <button
             onClick={handleSignOut}
             style={{ background: 'none', border: '1px solid #3a0000', color: '#aaa', fontSize: '0.72rem', padding: '0.3rem 0.75rem', borderRadius: 6, cursor: 'pointer', width: '100%' }}

@@ -39,7 +39,7 @@ export function FormField({ label, required, htmlFor, hint, children, className,
 /** Grid row for pairing short fields side by side (stacks on narrow widths). */
 export function FormRow({ children, columns = 2, style }: { children: React.ReactNode; columns?: number; style?: React.CSSProperties }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, gap: '1.25rem', ...style }}>
+    <div className="pf-form-row" style={{ '--pf-row-cols': columns, ...style } as React.CSSProperties}>
       {children}
     </div>
   )

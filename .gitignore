@@ -37,3 +37,4 @@ public/cred.png
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.env*

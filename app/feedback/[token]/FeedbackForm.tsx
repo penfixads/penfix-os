@@ -123,7 +123,7 @@ export default function FeedbackForm() {
           <h2 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.25rem' }}>How did we do?</h2>
           <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1.75rem' }}>We&apos;d love your honest feedback on your recent order.</p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div className="pf-grid-2" style={{ gap: '1rem', marginBottom: '1.5rem' }}>
             <Field label="Job Order #"><input readOnly value={jo} className="pf-input" /></Field>
             <Field label="Client Name"><input readOnly value={name} className="pf-input" /></Field>
           </div>

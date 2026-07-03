@@ -316,7 +316,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
 
             {needsOverride && (
               <div className="pf-field">
-                <label className="pf-label" style={{ color: '#e74c3c' }}>Reason for override (below 50%) <span className="pf-req">*</span></label>
+                <label className="pf-label" style={{ color: '#f1c40f' }}>Reason for override (below 50%) <span className="pf-req">*</span></label>
                 <textarea value={overrideReason} onChange={e => setOverrideReason(e.target.value)} rows={3} placeholder="Please provide a reason..." className="pf-textarea" />
                 <div style={{ color: '#e74c3c', fontSize: '0.72rem', marginTop: 4 }}>This will be sent to the manager for approval before production can start.</div>
               </div>

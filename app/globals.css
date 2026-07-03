@@ -167,6 +167,15 @@ h1, h2, h3, h4, h5, h6 {
 .pf-modal-card .pf-btn:not(.pf-btn-secondary) { background: #8E2C48; }
 .pf-modal-card .pf-btn:not(.pf-btn-secondary):hover { background: #A3415D; }
 
+/* Fluid form-row grids — side-by-side fields (price/qty, width/height, etc.) that
+   stack to a single column on narrow phones instead of squishing inputs. */
+.pf-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pf-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.pf-form-row { display: grid; grid-template-columns: repeat(var(--pf-row-cols, 2), 1fr); gap: 1.25rem; }
+@media (max-width: 480px) {
+  .pf-grid-2, .pf-grid-3, .pf-form-row { grid-template-columns: 1fr; }
+}
+
 /* Wine-maroon modal theme — applied to every modal/popup form alongside
    .pf-modal-card: className="pf-modal-card pf-modal-wine" */
 .pf-modal-wine {

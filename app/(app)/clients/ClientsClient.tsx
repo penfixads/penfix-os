@@ -76,8 +76,11 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
   }
 
   const filtered = clients.filter(c => {
-    const name = (c.client_name || c.company_name || '').toLowerCase()
-    const matchSearch = !search || name.includes(search.toLowerCase()) || (c.client_id || '').toLowerCase().includes(search.toLowerCase())
+    const q = search.toLowerCase()
+    const matchSearch = !search
+      || (c.client_name || '').toLowerCase().includes(q)
+      || (c.company_name || '').toLowerCase().includes(q)
+      || (c.client_id || '').toLowerCase().includes(q)
     const matchType = typeFilter === 'all' || c.client_type === typeFilter
     return matchSearch && matchType
   })
@@ -116,6 +119,9 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.88rem' }}>{c.client_name || c.company_name}</span>
+                  {c.company_name && c.client_name && (
+                    <span style={{ color: '#7A1828', fontWeight: 600, fontSize: '0.78rem' }}>· {c.company_name}</span>
+                  )}
                   {c.credit_line_status && <span style={{ background: '#1a2a4a', color: '#3498db', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>CREDIT</span>}
                   {c.client_type === 'Company' && <span style={{ background: '#2a2a1a', color: '#f1c40f', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>CO.</span>}
                 </div>
@@ -160,7 +166,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
             {clientType === 'Company' && (
               <div className="pf-field">
                 <label className="pf-label">Company Name</label>
-                <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} className="pf-input" />
+                <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value.toUpperCase())} className="pf-input" style={{ textTransform: 'uppercase' }} />
               </div>
             )}
             <div className="pf-field">

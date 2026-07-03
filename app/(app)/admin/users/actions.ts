@@ -49,6 +49,45 @@ export async function updateUserRole(email: string, role: string) {
   return { success: true }
 }
 
+export async function updateUserInfo(oldEmail: string, formData: {
+  name: string
+  email: string
+  role: string
+}) {
+  await assertAdmin()
+  const admin = createSupabaseAdminClient()
+
+  const emailChanged = formData.email !== oldEmail
+  if (emailChanged) {
+    const { data: authUsers } = await admin.auth.admin.listUsers()
+    const authUser = authUsers?.users.find(u => u.email === oldEmail)
+    if (!authUser) throw new Error('User not found in auth')
+    const { error: authErr } = await admin.auth.admin.updateUserById(authUser.id, { email: formData.email, email_confirm: true })
+    if (authErr) throw new Error(authErr.message)
+  }
+
+  const { error } = await admin.from('users')
+    .update({ name: formData.name, role: formData.role, user_email: formData.email })
+    .eq('user_email', oldEmail)
+  if (error) throw new Error(error.message)
+  return { success: true }
+}
+
+export async function deleteUser(email: string) {
+  const admin = createSupabaseAdminClient()
+  const current = await getCurrentUser()
+  if (!current || current.role !== 'Admin') throw new Error('Unauthorized')
+  if (current.email === email) throw new Error('You cannot delete your own account.')
+
+  const { data: authUsers } = await admin.auth.admin.listUsers()
+  const authUser = authUsers?.users.find(u => u.email === email)
+  if (authUser) await admin.auth.admin.deleteUser(authUser.id)
+
+  const { error } = await admin.from('users').delete().eq('user_email', email)
+  if (error) throw new Error(error.message)
+  return { success: true }
+}
+
 export async function toggleUserActive(email: string, is_active: boolean) {
   await assertAdmin()
   const admin = createSupabaseAdminClient()
