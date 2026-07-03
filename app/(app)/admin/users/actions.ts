@@ -79,6 +79,12 @@ export async function deleteUser(email: string) {
   if (!current || current.role !== 'Admin') throw new Error('Unauthorized')
   if (current.email === email) throw new Error('You cannot delete your own account.')
 
+  const { data: target } = await admin.from('users').select('role').eq('user_email', email).single()
+  if (target?.role === 'Admin') {
+    const { count } = await admin.from('users').select('*', { count: 'exact', head: true }).eq('role', 'Admin')
+    if ((count ?? 0) <= 1) throw new Error('Cannot delete the last remaining Admin.')
+  }
+
   const { data: authUsers } = await admin.auth.admin.listUsers()
   const authUser = authUsers?.users.find(u => u.email === email)
   if (authUser) await admin.auth.admin.deleteUser(authUser.id)

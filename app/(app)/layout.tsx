@@ -1,6 +1,7 @@
 ﻿import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/user'
 import Sidebar from '@/components/Sidebar'
+import IdleLogout from '@/components/IdleLogout'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser()
@@ -9,6 +10,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#F9EBD8' }}>
+      <IdleLogout />
       <Sidebar role={user.role} name={user.name} />
       <main className="pf-main-content" style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
         {children}

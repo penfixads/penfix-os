@@ -11,6 +11,11 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const next = searchParams.get('next') ?? '/'
+  const urlError = searchParams.get('error')
+  const urlErrorMessage =
+    urlError === 'idle' ? 'You were signed out after 30 minutes of inactivity.' :
+    urlError === 'inactive' ? 'Your account has been deactivated. Contact an admin.' :
+    ''
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -69,6 +74,12 @@ function LoginForm() {
           <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700, marginTop: '0.75rem', marginBottom: '0.25rem' }}>Penfix OS</h1>
           <p style={{ color: '#888', fontSize: '0.85rem' }}>{forgotMode ? 'Reset your password' : 'Sign in to continue'}</p>
         </div>
+
+        {urlErrorMessage && !forgotMode && (
+          <p style={{ color: '#7A1828', background: '#F9EBD8', borderRadius: 8, padding: '0.6rem 0.8rem', fontSize: '0.85rem', marginBottom: '1rem', textAlign: 'center' }}>
+            {urlErrorMessage}
+          </p>
+        )}
 
         {forgotMode ? (
           resetSent ? (
