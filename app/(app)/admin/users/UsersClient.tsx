@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { createUser, updateUserRole, updateUserInfo, deleteUser, toggleUserActive, resetUserPassword } from './actions'
+import { createUser, updateUserInfo, deleteUser, toggleUserActive, resetUserPassword } from './actions'
 import { IconUserPlus, IconCheck, IconX, IconKey } from '@/components/icons'
 
 const ROLES = ['Admin', 'GA', 'Treasury', 'Fabricator']
@@ -79,18 +79,6 @@ export default function UsersClient({ users: initialUsers }: Props) {
       setError(e.message)
     } finally {
       setSaving(false)
-    }
-  }
-
-  async function handleRoleChange(email: string, newRole: string) {
-    setActingOn(email)
-    try {
-      await updateUserRole(email, newRole)
-      setUsers(prev => prev.map(u => u.user_email === email ? { ...u, role: newRole } : u))
-    } catch (e: any) {
-      alert(e.message)
-    } finally {
-      setActingOn(null)
     }
   }
 
@@ -202,14 +190,9 @@ export default function UsersClient({ users: initialUsers }: Props) {
                 </td>
                 <td style={{ ...td, color: '#555' }}>{u.user_email}</td>
                 <td style={td}>
-                  <select
-                    value={u.role}
-                    disabled={actingOn === u.user_email}
-                    onChange={e => handleRoleChange(u.user_email, e.target.value)}
-                    style={{ background: ROLE_COLORS[u.role] || '#333', color: '#fff', border: 'none', borderRadius: 20, padding: '0.25rem 0.6rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', outline: 'none' }}
-                  >
-                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
+                  <span style={{ background: ROLE_COLORS[u.role] || '#333', color: '#fff', borderRadius: 20, padding: '0.25rem 0.6rem', fontSize: '0.72rem', fontWeight: 700 }}>
+                    {u.role}
+                  </span>
                 </td>
                 <td style={{ ...td, textAlign: 'center' }}>
                   <span style={{ background: u.is_active ? '#1a3a1a' : '#3a1a1a', color: u.is_active ? '#2ecc71' : '#e74c3c', borderRadius: 20, padding: '0.2rem 0.6rem', fontSize: '0.7rem', fontWeight: 700 }}>

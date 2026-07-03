@@ -41,14 +41,6 @@ export async function createUser(formData: {
   return { success: true }
 }
 
-export async function updateUserRole(email: string, role: string) {
-  await assertAdmin()
-  const admin = createSupabaseAdminClient()
-  const { error } = await admin.from('users').update({ role }).eq('user_email', email)
-  if (error) throw new Error(error.message)
-  return { success: true }
-}
-
 export async function updateUserInfo(oldEmail: string, formData: {
   name: string
   email: string
