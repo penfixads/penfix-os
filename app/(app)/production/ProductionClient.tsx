@@ -2,12 +2,17 @@
 
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { formatPeso } from '@/lib/jo-helpers'
+import { formatPeso, getEffectiveSteps } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
+import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
 
 interface Props {
   items: any[]
   sopSteps: any[]
+  staff: any[]
+  statusLogs: any[]
+  categories: any[]
+  subcategories: any[]
   currentUser: AppUser
 }
 
@@ -79,40 +84,86 @@ function canPushToProduction(jo: any): boolean {
   return false
 }
 
-export default function ProductionClient({ items: initialItems, sopSteps, currentUser }: Props) {
+export default function ProductionClient({ items: initialItems, sopSteps, staff, statusLogs, categories, subcategories, currentUser }: Props) {
   const [localItems, setLocalItems] = useState(initialItems)
+  const [localLogs, setLocalLogs] = useState(statusLogs)
   const [advancing, setAdvancing] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const [viewingItem, setViewingItem] = useState<any | null>(null)
+  // completedStatus = the step being marked done (attribution is logged against this);
+  // targetStatus = the step job_status advances to once confirmed.
+  const [pendingChange, setPendingChange] = useState<{ itemId: string; jobOrderId: string; completedStatus: string; targetStatus: string } | null>(null)
+  const [selectedProponents, setSelectedProponents] = useState<string[]>([])
+  const isFabricator = currentUser.role === 'Fabricator'
 
   const items = localItems
 
   // Build SOP lookup
-  const sopByType: Record<string, any[]> = {}
+  const sopBySubcategory: Record<string, any[]> = {}
   for (const s of sopSteps) {
-    if (!sopByType[s.process_type_id]) sopByType[s.process_type_id] = []
-    sopByType[s.process_type_id].push(s)
+    if (!sopBySubcategory[s.subcategory_id]) sopBySubcategory[s.subcategory_id] = []
+    sopBySubcategory[s.subcategory_id].push(s)
   }
 
-  function getAllNextStatuses(processTypeId: string, currentStatus: string): string[] {
-    const steps = sopByType[processTypeId] || []
-    const idx = steps.findIndex(s => s.status_name === currentStatus)
-    if (idx < 0) return []
-    return steps.slice(idx + 1).map(s => s.status_name)
+  // Who worked on each already-completed step, per item — feeds the checklist display.
+  const namesByItemStatus: Record<string, Record<string, string[]>> = {}
+  for (const log of localLogs) {
+    if (!namesByItemStatus[log.item_id]) namesByItemStatus[log.item_id] = {}
+    if (!namesByItemStatus[log.item_id][log.status_name]) namesByItemStatus[log.item_id][log.status_name] = []
+    namesByItemStatus[log.item_id][log.status_name].push(log.changed_by_name)
   }
 
-  async function advanceStatus(itemId: string, processTypeId: string, currentStatus: string, targetStatus: string) {
+  // A subcategory's SOP can include GA-owned steps (layout, client approval) before the
+  // step marked "Fabricators start here" — until that step, the item stays GA-only even
+  // though it's past "Received". Falls back to "any non-Received status" if nothing's marked.
+  function isVisibleToFabricator(subcategoryId: string, jobFlow: string | null | undefined, status: string): boolean {
+    if (status === 'Received') return false
+    const steps = getEffectiveSteps(sopBySubcategory[subcategoryId] || [], jobFlow)
+    const startStep = steps.find(s => s.is_production_start)
+    if (!startStep) return true
+    const currentStep = steps.find(s => s.status_name === status)
+    if (!currentStep) return true
+    return currentStep.sequence >= startStep.sequence
+  }
+
+  // completedStatus is the step being checked off (attribution is logged against it);
+  // targetStatus is the next step job_status moves to.
+  function requestStatusChange(itemId: string, jobOrderId: string, completedStatus: string, targetStatus: string) {
+    setPendingChange({ itemId, jobOrderId, completedStatus, targetStatus })
+    setSelectedProponents([currentUser.email])
+  }
+
+  function toggleProponent(email: string) {
+    setSelectedProponents(prev => prev.includes(email) ? prev.filter(e => e !== email) : [...prev, email])
+  }
+
+  async function confirmStatusChange() {
+    if (!pendingChange) return
+    const { itemId, jobOrderId, completedStatus, targetStatus } = pendingChange
+    const proponents = selectedProponents.length > 0 ? selectedProponents : [currentUser.email]
     setAdvancing(itemId)
     try {
       const supabase = createSupabaseBrowserClient()
-      const isDone = sopByType[processTypeId]?.find(s => s.status_name === targetStatus)?.is_terminal
-      await supabase.from('job_order_items').update({
-        job_status: targetStatus,
-        ...(isDone ? { date_time_done: new Date().toISOString() } : {}),
-      }).eq('item_id', itemId)
-      setLocalItems(prev => prev.map(i =>
-        i.item_id === itemId ? { ...i, job_status: targetStatus } : i
-      ))
+      const { error } = await supabase.from('job_order_items').update({ job_status: targetStatus }).eq('item_id', itemId)
+      if (error) { alert(error.message || 'Failed to advance status.'); return }
+      setLocalItems(prev => prev.map(i => i.item_id === itemId ? { ...i, job_status: targetStatus } : i))
+      // Attribution log for the people-KPI system — one row per person who worked on this
+      // step together, so credit isn't limited to whoever clicked the checklist item.
+      const newLogs = proponents.map(email => {
+        const person = staff.find(s => s.user_email === email)
+        return {
+          item_id: itemId,
+          job_order_id: jobOrderId,
+          status_name: completedStatus,
+          changed_by_email: email,
+          changed_by_name: person?.name || (email === currentUser.email ? currentUser.name : email),
+          changed_by_role: person?.role || (email === currentUser.email ? currentUser.role : null),
+        }
+      })
+      await supabase.from('job_order_item_status_log').insert(newLogs)
+      setLocalLogs(prev => [...prev, ...newLogs])
+      setPendingChange(null)
     } finally {
       setAdvancing(null)
     }
@@ -125,9 +176,27 @@ export default function ProductionClient({ items: initialItems, sopSteps, curren
     setLocalItems(prev => prev.filter(i => i.item_id !== itemId))
   }
 
-  // Filter to production-eligible items
-  const productionItems = items.filter(i => canPushToProduction(i.job_orders))
-  const pendingCount = items.length - productionItems.length
+  // GA/Admin/Treasury can edit an item's fields from this panel too — Fabricators open the
+  // same modal in read-only mode and only interact with the status checklist inside it.
+  async function saveItemFields(updated: any) {
+    const supabase = createSupabaseBrowserClient()
+    const { item_id, subcategory_name, category_name, ...fields } = updated
+    const { error } = await supabase.from('job_order_items').update(fields).eq('item_id', item_id)
+    if (error) { alert(error.message || 'Failed to save item.'); return }
+    setLocalItems(prev => prev.map(i => i.item_id === item_id ? { ...i, ...fields, subcategories: { ...i.subcategories, subcategory_name } } : i))
+    setViewingItem(null)
+  }
+
+  // Filter to production-eligible items. "Received" is the only automatic status (set at
+  // JO creation) — a GA has to manually advance it at least one step before a Fabricator
+  // sees it, so payment status alone isn't enough to enter their queue. GA/Admin/Treasury
+  // still see Received items here so they have somewhere to perform that first advance.
+  const paymentEligible = items.filter(i => canPushToProduction(i.job_orders))
+  const productionItems = paymentEligible.filter(i =>
+    !isFabricator || isVisibleToFabricator(i.subcategory_id, i.subcategories?.job_flow, i.job_status || 'Received')
+  )
+  const pendingCount = items.length - paymentEligible.length
+  const notYetStartedCount = paymentEligible.length - productionItems.length
 
   const filtered = productionItems.filter(item => {
     const q = search.toLowerCase()
@@ -159,6 +228,7 @@ export default function ProductionClient({ items: initialItems, sopSteps, curren
           <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>
             {productionItems.length} item(s) in queue
             {pendingCount > 0 && <span style={{ color: '#e67e22', marginLeft: 8 }}>· {pendingCount} awaiting payment/approval</span>}
+            {notYetStartedCount > 0 && <span style={{ color: '#e67e22', marginLeft: 8 }}>· {notYetStartedCount} not yet started by GA</span>}
           </p>
         </div>
         <input
@@ -197,21 +267,28 @@ export default function ProductionClient({ items: initialItems, sopSteps, curren
                     {groupItems.map((item, idx) => {
                       const jo = item.job_orders
                       const clientName = jo?.clients?.client_name || jo?.clients?.company_name || jo?.client_id
-                      const processTypeId = item.subcategories?.process_type_id
+                      const subcategoryId = item.subcategory_id
+                      const jobFlow = item.subcategories?.job_flow
                       const status = item.job_status || 'Received'
-                      const nextOptions = getAllNextStatuses(processTypeId, status)
-                      const isTerminal = sopByType[processTypeId]?.find(s => s.status_name === status)?.is_terminal
+                      const itemSteps = getEffectiveSteps(sopBySubcategory[subcategoryId] || [], jobFlow)
+                      const isTerminal = itemSteps.find(s => s.status_name === status)?.is_terminal
                       const isAdvancing = advancing === item.item_id
                       const isOverdue = group.key === 'overdue'
                       const isToday = group.key === 'today'
 
+                      const currentIndex = itemSteps.findIndex(s => s.status_name === status)
+                      const doneCount = currentIndex >= 0 ? currentIndex + (isTerminal ? 1 : 0) : 0
+
                       return (
-                        <div key={item.item_id} style={{
-                          background: '#FDF5EC',
-                          borderTop: idx > 0 ? '1px solid #EDE0CC' : 'none',
-                          padding: '0.9rem 1rem',
-                          borderLeft: `4px solid ${STATUS_COLORS[status] || '#555'}`,
-                        }}>
+                        <div key={item.item_id}
+                          onClick={() => setViewingItem(item)}
+                          style={{
+                            background: '#FDF5EC',
+                            borderTop: idx > 0 ? '1px solid #EDE0CC' : 'none',
+                            padding: '0.9rem 1rem',
+                            borderLeft: `4px solid ${STATUS_COLORS[status] || '#555'}`,
+                            cursor: 'pointer',
+                          }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               {/* Client + JO */}
@@ -235,48 +312,27 @@ export default function ProductionClient({ items: initialItems, sopSteps, curren
                                   </span>
                                 </div>
                               )}
+
+                              {itemSteps.length > 0 && (
+                                <div style={{ color: '#999', fontSize: '0.7rem', marginTop: 5 }}>
+                                  {doneCount} / {itemSteps.length} steps done · <span style={{ color: '#7A1828', fontWeight: 600 }}>click to view checklist</span>
+                                </div>
+                              )}
                             </div>
 
                             {/* Right: amount + qty */}
                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                              <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.85rem' }}>{formatPeso(item.computed_line_total || 0)}</div>
+                              {!isFabricator && <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.85rem' }}>{formatPeso(item.computed_line_total || 0)}</div>}
                               <div style={{ color: '#aaa', fontSize: '0.68rem' }}>qty: {item.quantity || 1}</div>
-                            </div>
-                          </div>
-
-                          {/* Advance buttons */}
-                          {!isTerminal && nextOptions.length > 0 && (
-                            <div style={{ marginTop: '0.7rem', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                              {nextOptions.slice(0, 4).map(next => {
-                                const isNextTerminal = sopByType[processTypeId]?.find(s => s.status_name === next)?.is_terminal
-                                return (
-                                  <button
-                                    key={next}
-                                    onClick={() => advanceStatus(item.item_id, processTypeId, status, next)}
-                                    disabled={!!isAdvancing}
-                                    style={{
-                                      background: isNextTerminal ? '#1a4a1a' : '#2a2a2a',
-                                      border: `1px solid ${isNextTerminal ? '#27ae60' : '#3a3a3a'}`,
-                                      color: isNextTerminal ? '#2ecc71' : '#bbb',
-                                      fontSize: '0.7rem',
-                                      padding: '0.3rem 0.65rem',
-                                      borderRadius: 6,
-                                      cursor: isAdvancing ? 'not-allowed' : 'pointer',
-                                      fontWeight: 600,
-                                    }}
-                                  >
-                                    {isAdvancing ? '…' : `→ ${next}`}
-                                  </button>
-                                )
-                              })}
                               <button
-                                onClick={() => markCancelled(item.item_id)}
-                                style={{ marginLeft: 'auto', background: 'none', border: '1px solid #3a0000', color: '#7A1828', fontSize: '0.7rem', padding: '0.3rem 0.65rem', borderRadius: 6, cursor: 'pointer' }}
+                                onClick={e => { e.stopPropagation(); markCancelled(item.item_id) }}
+                                style={{ marginTop: 6, background: 'none', border: '1px solid #3a0000', color: '#7A1828', fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: 6, cursor: 'pointer' }}
                               >
                                 Cancel
                               </button>
                             </div>
-                          )}
+                          </div>
+
                           {isTerminal && (
                             <div style={{ marginTop: '0.6rem', color: '#27ae60', fontSize: '0.75rem', fontWeight: 600 }}>✓ Complete — Ready for dispatch</div>
                           )}
@@ -290,6 +346,41 @@ export default function ProductionClient({ items: initialItems, sopSteps, curren
           })}
         </div>
       )}
+
+      {viewingItem && (() => {
+        // localItems may have advanced since the modal opened (checklist clicks update it) —
+        // always read the live copy so the modal reflects the current status.
+        const liveItem = localItems.find(i => i.item_id === viewingItem.item_id) || viewingItem
+        const subcategoryId = liveItem.subcategory_id
+        const jobFlow = liveItem.subcategories?.job_flow
+        const currentStatus = liveItem.job_status || 'Received'
+        const steps = getEffectiveSteps(sopBySubcategory[subcategoryId] || [], jobFlow)
+        const isPendingHere = pendingChange?.itemId === liveItem.item_id
+        return (
+          <JOItemForm
+            categories={categories}
+            subcategories={subcategories}
+            editingItem={{ ...liveItem, category_id: liveItem.subcategories?.category_id }}
+            currentUser={currentUser}
+            readOnly={isFabricator}
+            onSave={saveItemFields}
+            onClose={() => setViewingItem(null)}
+            statusChecklist={{
+              steps,
+              currentStatus,
+              namesByStatus: namesByItemStatus[liveItem.item_id] || {},
+              staff,
+              pendingStatus: isPendingHere ? pendingChange!.completedStatus : null,
+              selectedProponents,
+              advancing: advancing === liveItem.item_id,
+              onRequestAdvance: (completedStatus, targetStatus) => requestStatusChange(liveItem.item_id, liveItem.job_orders?.job_order_id, completedStatus, targetStatus),
+              onToggleProponent: toggleProponent,
+              onConfirmAdvance: confirmStatusChange,
+              onCancelPending: () => setPendingChange(null),
+            }}
+          />
+        )
+      })()}
     </div>
   )
 }

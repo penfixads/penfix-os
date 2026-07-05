@@ -98,6 +98,7 @@ function LoginForm() {
                 <input
                   type="email"
                   required
+                  autoComplete="username"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="you@penfix.com"
@@ -126,6 +127,7 @@ function LoginForm() {
               <input
                 type="email"
                 required
+                autoComplete="username"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="you@penfix.com"
@@ -138,6 +140,7 @@ function LoginForm() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
+                  autoComplete="new-password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"

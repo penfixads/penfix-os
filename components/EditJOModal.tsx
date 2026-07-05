@@ -5,7 +5,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { generateItemId, generatePaymentId, formatPeso } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
-import { IconPlus, IconCirclePlus, IconX, IconCheck } from '@/components/icons'
+import { IconPlus, IconCirclePlus, IconEdit, IconX, IconCheck } from '@/components/icons'
 
 interface Props {
   jo: any
@@ -33,6 +33,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   const [payCashback, setPayCashback] = useState(0)
   const [rewardsBalance, setRewardsBalance] = useState(0)
   const [overrideReason, setOverrideReason] = useState(jo.request_override || '')
+  const [editingItem, setEditingItem] = useState<any | null>(null)
 
   const client = jo.clients
 
@@ -42,15 +43,23 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
       supabase.from('job_order_items').select('*, subcategories(subcategory_name, category_id)').eq('job_order_id', jo.job_order_id).order('item_id'),
       supabase.from('payments').select('*').eq('job_order_id', jo.job_order_id).order('payment_date'),
       supabase.from('rewards_ledger').select('type, amount').eq('client_id', jo.client_id),
-    ]).then(([{ data: items }, { data: pays }, { data: rewards }]) => {
+      supabase.from('clients').select('credit_line_status').eq('client_id', jo.client_id).single(),
+    ]).then(([{ data: items }, { data: pays }, { data: rewards }, { data: clientRow }]) => {
       setEditItems((items || []).map(i => ({ ...i, subcategory_name: i.subcategories?.subcategory_name || i.item_id, _existing: true })))
       setEditPayments((pays || []).map(p => ({ ...p, method: p.payment_method, cashback: p.cashback_amount || 0, _existing: true })))
       const earned = (rewards || []).filter(r => r.type === 'earned').reduce((s, r) => s + (r.amount || 0), 0)
       const redeemed = (rewards || []).filter(r => r.type === 'redeemed').reduce((s, r) => s + (r.amount || 0), 0)
       setRewardsBalance(Math.max(0, earned - redeemed))
+      // "For Billing" mirrors the client's current credit line status — not editable from here.
+      setEditIsForBilling(!!clientRow?.credit_line_status)
       setLoading(false)
     })
   }, [jo.job_order_id, jo.client_id])
+
+  function saveEditedItem(updated: any) {
+    setEditItems(prev => prev.map(i => i.item_id === updated.item_id ? { ...i, ...updated, subcategory_name: updated.subcategory_name || i.subcategory_name } : i))
+    setEditingItem(null)
+  }
 
   const grandTotal = editItems.reduce((s, i) => s + (i.computed_line_total || 0), 0) - editDiscount
   const totalPaid = editPayments.reduce((s, p) => s + (p.amount || 0), 0)
@@ -86,10 +95,30 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
       for (const id of removedPaymentIds) await supabase.from('payments').delete().eq('payment_id', id)
 
       const newItems = editItems.filter(i => !i._existing)
-      const existingCount = editItems.filter(i => i._existing).length
+      const existingItems = editItems.filter(i => i._existing)
+      const existingCount = existingItems.length
       for (let i = 0; i < newItems.length; i++) {
         const { category_name, subcategory_name, _existing, subcategories, ...item } = newItems[i]
         await supabase.from('job_order_items').insert({ ...item, item_id: generateItemId(joId, existingCount + i + 1), job_order_id: joId })
+      }
+
+      for (const item of existingItems) {
+        await supabase.from('job_order_items').update({
+          subcategory_id: item.subcategory_id,
+          pricing_model: item.pricing_model,
+          base_price: item.base_price,
+          quantity: item.quantity,
+          width: item.width,
+          height: item.height,
+          depth: item.depth,
+          no_of_mins: item.no_of_mins,
+          letter_count: item.letter_count,
+          production_specs: item.production_specs,
+          notes: item.notes,
+          date_time_needed: item.date_time_needed,
+          discount: item.discount,
+          computed_line_total: item.computed_line_total,
+        }).eq('item_id', item.item_id)
       }
 
       const newPays = editPayments.filter(p => !p._existing)
@@ -167,20 +196,22 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
           <>
             <div className="pf-field">
               <label className="pf-label">Client</label>
-              <div style={{ display: 'inline-block', background: '#f0ece3', color: '#1a1a1a', borderRadius: 20, padding: '0.3rem 0.85rem', fontSize: '0.8rem' }}>
-                {client?.client_name || client?.company_name || jo.client_id}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'inline-block', background: '#f0ece3', color: '#1a1a1a', borderRadius: 20, padding: '0.3rem 0.85rem', fontSize: '0.8rem' }}>
+                  {client?.client_name || client?.company_name || jo.client_id}
+                </div>
+                {rewardsBalance > 0 && (
+                  <div style={{ color: '#2ecc71', fontSize: '0.75rem' }}>Total Rewards Earned: {formatPeso(rewardsBalance)}</div>
+                )}
               </div>
-              {rewardsBalance > 0 && (
-                <div style={{ color: '#2ecc71', fontSize: '0.75rem', marginTop: 4 }}>Earned Rewards: {formatPeso(rewardsBalance)}</div>
-              )}
             </div>
 
             <div className="pf-field">
               <label className="pf-label">Is Client Type for Billing?</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 {['N', 'Y'].map(v => (
-                  <button key={v} type="button" onClick={() => setEditIsForBilling(v === 'Y')}
-                    className={(v === 'Y') === editIsForBilling ? 'pf-btn' : 'pf-btn pf-btn-secondary'} style={{ minWidth: 56 }}>
+                  <button key={v} type="button" disabled title="Set by the client's credit line status. Edit the client record to change it."
+                    className={(v === 'Y') === editIsForBilling ? 'pf-btn' : 'pf-btn pf-btn-secondary'} style={{ minWidth: 56, opacity: (v === 'Y') === editIsForBilling ? 1 : 0.5, cursor: 'not-allowed' }}>
                     {v}
                   </button>
                 ))}
@@ -188,41 +219,130 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
             </div>
 
             <div className="pf-field">
-              {editItems.length > 0 && (
-                <div style={{ overflowX: 'auto', marginBottom: 8 }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-                    <thead>
-                      <tr style={{ background: '#3a3a3a', color: '#ccc' }}>
-                        <th style={th}>Item / Service</th>
-                        <th style={{ ...th, textAlign: 'center' }}>Qty</th>
-                        <th style={{ ...th, textAlign: 'right' }}>Line Total</th>
-                        <th style={{ ...th, width: 32 }}></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {editItems.map((item, i) => (
-                        <tr key={item.item_id || i} style={{ borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
-                          <td style={td}>
-                            <div style={{ fontWeight: 600, color: '#fff' }}>{item.subcategory_name}</div>
-                            {item.production_specs && <div style={{ color: '#E8B9C6', fontSize: '0.7rem', marginTop: 1 }}>{item.production_specs}</div>}
-                          </td>
-                          <td style={{ ...td, textAlign: 'center', color: '#E8B9C6' }}>{item.quantity || 1}</td>
-                          <td style={{ ...td, textAlign: 'right', fontWeight: 700, color: '#fff' }}>{formatPeso(item.computed_line_total)}</td>
-                          <td style={{ ...td, textAlign: 'center' }}>
-                            <button onClick={() => {
-                              if (item._existing) setRemovedItemIds(prev => [...prev, item.item_id])
-                              setEditItems(prev => prev.filter((_, j) => j !== i))
-                            }} style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
-                          </td>
+              <div className="pf-group-box">
+                {editItems.length > 0 ? (
+                  <div style={{ overflowX: 'auto', marginBottom: 8 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                      <thead>
+                        <tr style={{ background: '#C9A84C', color: '#3a0a0a' }}>
+                          <th style={th}>Item / Service</th>
+                          <th style={{ ...th, textAlign: 'center' }}>Qty</th>
+                          <th style={{ ...th, textAlign: 'right' }}>Line Total</th>
+                          <th style={th}>Status</th>
+                          <th style={{ ...th, width: 32 }}></th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {editItems.map((item, i) => {
+                          const status = item.job_status || 'Received'
+                          return (
+                            <tr key={item.item_id || i} style={{ borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
+                              <td style={td}>
+                                <div style={{ fontWeight: 600, color: '#fff' }}>{item.subcategory_name}</div>
+                                {item.production_specs && <div style={{ color: '#E8B9C6', fontSize: '0.7rem', marginTop: 1 }}>{item.production_specs}</div>}
+                              </td>
+                              <td style={{ ...td, textAlign: 'center', color: '#E8B9C6' }}>{item.quantity || 1}</td>
+                              <td style={{ ...td, textAlign: 'right', fontWeight: 700, color: '#fff' }}>{formatPeso(item.computed_line_total)}</td>
+                              <td style={td}>
+                                <span style={{ color: '#E8B9C6' }}>{item._existing ? status : 'New'}</span>
+                              </td>
+                              <td style={{ ...td, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                {item._existing && (
+                                  <button onClick={() => setEditingItem({ ...item, category_id: item.subcategories?.category_id })}
+                                    style={{ background: 'none', border: 'none', color: '#E8B9C6', cursor: 'pointer', padding: 0, marginRight: 8, display: 'inline-flex' }} title="Edit item">
+                                    <IconEdit style={{ width: 14, height: 14 }} />
+                                  </button>
+                                )}
+                                <button onClick={() => {
+                                  if (item._existing) setRemovedItemIds(prev => [...prev, item.item_id])
+                                  setEditItems(prev => prev.filter((_, j) => j !== i))
+                                }} style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="pf-group-empty">No job order items were added.</div>
+                )}
+                <div className="pf-group-box-actions">
+                  <button type="button" onClick={() => setShowItemForm(true)} className="pf-link-btn">
+                    <IconCirclePlus />Add Job Order Item
+                  </button>
                 </div>
-              )}
-              <button type="button" onClick={() => setShowItemForm(true)} className="pf-link-btn">
-                <IconCirclePlus />Add Job Order Item
-              </button>
+              </div>
+            </div>
+
+            <div className="pf-field">
+              <div className="pf-group-box">
+                {editPayments.length > 0 ? (
+                  <div style={{ overflowX: 'auto', marginBottom: 8 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                      <thead>
+                        <tr style={{ background: '#C9A84C', color: '#3a0a0a' }}>
+                          <th style={th}>Method</th>
+                          <th style={{ ...th, textAlign: 'right' }}>Amount</th>
+                          <th style={{ ...th, textAlign: 'right' }}>Cashback</th>
+                          <th style={{ ...th, width: 32 }}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {editPayments.map((p, i) => (
+                          <tr key={p.payment_id || i} style={{ borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
+                            <td style={{ ...td, fontWeight: 600, color: '#fff' }}>{p.method || p.payment_method}</td>
+                            <td style={{ ...td, textAlign: 'right', color: '#fff' }}>{formatPeso(p.amount)}</td>
+                            <td style={{ ...td, textAlign: 'right', color: '#E8B9C6' }}>{p.cashback > 0 ? formatPeso(p.cashback) : '—'}</td>
+                            <td style={{ ...td, textAlign: 'center' }}>
+                              <button onClick={() => {
+                                if (p._existing) setRemovedPaymentIds(prev => [...prev, p.payment_id])
+                                setEditPayments(prev => prev.filter((_, j) => j !== i))
+                              }} style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : !showPayForm && (
+                  <div className="pf-group-empty">No payments were added.</div>
+                )}
+                {showPayForm ? (
+                  <div className="pf-payment-panel" style={{ borderRadius: 8, padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <div style={{ flex: 1 }}>
+                        <label className="pf-label">Amount</label>
+                        <input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="0.00" className="pf-input" />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label className="pf-label">Method</label>
+                        <select value={payMethod} onChange={e => setPayMethod(e.target.value)} className="pf-select">
+                          {['Cash','G-Cash','Maya','Bank Transfer via BPI Acct.','Bank Transfer via BDO Acct.','Cheque'].map(m => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    {rewardsBalance > 0 && (
+                      <div>
+                        <label className="pf-label">Apply Cashback (Available: {formatPeso(rewardsBalance)})</label>
+                        <input type="number" value={payCashback} onChange={e => setPayCashback(Math.min(parseFloat(e.target.value) || 0, rewardsBalance))} placeholder="0.00" className="pf-input" />
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button onClick={() => setShowPayForm(false)} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
+                      <button onClick={addPayment} className="pf-btn"><IconPlus />Add</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="pf-group-box-actions">
+                    <button type="button" onClick={() => setShowPayForm(true)} className="pf-link-btn">
+                      <IconCirclePlus />Add Payment
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="pf-totals-box">
@@ -248,70 +368,6 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                 <input type="number" value={editDiscount} onChange={e => setEditDiscount(parseFloat(e.target.value) || 0)}
                   className="pf-input" style={{ width: 100, textAlign: 'right' }} />
               </div>
-            </div>
-
-            <div className="pf-field">
-              {editPayments.length > 0 && (
-                <div style={{ overflowX: 'auto', marginBottom: 8 }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-                    <thead>
-                      <tr style={{ background: '#3a3a3a', color: '#ccc' }}>
-                        <th style={th}>Method</th>
-                        <th style={{ ...th, textAlign: 'right' }}>Amount</th>
-                        <th style={{ ...th, textAlign: 'right' }}>Cashback</th>
-                        <th style={{ ...th, width: 32 }}></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {editPayments.map((p, i) => (
-                        <tr key={p.payment_id || i} style={{ borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
-                          <td style={{ ...td, fontWeight: 600, color: '#fff' }}>{p.method || p.payment_method}</td>
-                          <td style={{ ...td, textAlign: 'right', color: '#fff' }}>{formatPeso(p.amount)}</td>
-                          <td style={{ ...td, textAlign: 'right', color: '#E8B9C6' }}>{p.cashback > 0 ? formatPeso(p.cashback) : '—'}</td>
-                          <td style={{ ...td, textAlign: 'center' }}>
-                            <button onClick={() => {
-                              if (p._existing) setRemovedPaymentIds(prev => [...prev, p.payment_id])
-                              setEditPayments(prev => prev.filter((_, j) => j !== i))
-                            }} style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              {showPayForm ? (
-                <div className="pf-payment-panel" style={{ borderRadius: 8, padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <div style={{ flex: 1 }}>
-                      <label className="pf-label">Amount</label>
-                      <input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="0.00" className="pf-input" />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <label className="pf-label">Method</label>
-                      <select value={payMethod} onChange={e => setPayMethod(e.target.value)} className="pf-select">
-                        {['Cash','G-Cash','Maya','Bank Transfer via BPI Acct.','Bank Transfer via BDO Acct.','Cheque'].map(m => (
-                          <option key={m} value={m}>{m}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  {rewardsBalance > 0 && (
-                    <div>
-                      <label className="pf-label">Apply Cashback (Available: {formatPeso(rewardsBalance)})</label>
-                      <input type="number" value={payCashback} onChange={e => setPayCashback(Math.min(parseFloat(e.target.value) || 0, rewardsBalance))} placeholder="0.00" className="pf-input" />
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                    <button onClick={() => setShowPayForm(false)} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
-                    <button onClick={addPayment} className="pf-btn"><IconPlus />Add</button>
-                  </div>
-                </div>
-              ) : (
-                <button type="button" onClick={() => setShowPayForm(true)} className="pf-link-btn">
-                  <IconCirclePlus />Add Payment
-                </button>
-              )}
             </div>
 
             {needsOverride && (
@@ -340,6 +396,17 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
           subcategories={subcategories}
           onSave={(item) => { setEditItems(prev => [...prev, item]); setShowItemForm(false) }}
           onClose={() => setShowItemForm(false)}
+        />
+      )}
+
+      {editingItem && (
+        <JOItemForm
+          categories={categories}
+          subcategories={subcategories}
+          editingItem={editingItem}
+          currentUser={currentUser}
+          onSave={saveEditedItem}
+          onClose={() => setEditingItem(null)}
         />
       )}
     </div>

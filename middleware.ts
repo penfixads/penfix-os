@@ -59,7 +59,7 @@ export async function middleware(request: NextRequest) {
   const ROLE_RESTRICTIONS: Record<string, string[]> = {
     GA:        ['/jos/pending-approval', '/sales/summary', '/sales/reports', '/admin'],
     Treasury:  ['/jos/pending-approval', '/sales/reports', '/admin'],
-    Fabricator:['/jos/active', '/jos/today', '/sales/summary', '/jos/pending-approval', '/mvp', '/jos/historical', '/jos/items', '/jos/all', '/clients', '/jos/dispatch', '/sales/reports', '/admin'],
+    Fabricator:['/jos/active', '/jos/today', '/sales/summary', '/jos/pending-approval', '/mvp', '/jos/historical', '/jos/items', '/jos/all', '/clients', '/sales/reports', '/admin', '/client-feedback'],
   }
 
   if (role && ROLE_RESTRICTIONS[role]) {

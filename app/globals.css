@@ -235,6 +235,22 @@ h1, h2, h3, h4, h5, h6 {
 .pf-link-btn svg { width: 1rem; height: 1rem; flex-shrink: 0; }
 .pf-modal-wine .pf-link-btn { color: #E3C878; }
 
+/* Grouping box for Job Order Items / Payments — encloses the list (or its empty
+   state) plus its "Add" trigger so they read as one section instead of a floating link. */
+.pf-group-box {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 0.75rem 0.85rem;
+}
+.pf-modal-wine .pf-group-box { border-color: rgba(255, 255, 255, 0.18); }
+.pf-group-empty {
+  color: #E8B9C6;
+  font-size: 0.82rem;
+  font-style: italic;
+  padding: 0.2rem 0.1rem 0.75rem;
+}
+.pf-group-box-actions { display: flex; justify-content: flex-end; }
+
 /* Add-payment detail panel — same cream as the totals box, with dark text,
    overriding the wine modal's white-on-dark defaults for this sub-panel only. */
 .pf-payment-panel { background: #FDF5EC; border: 1px solid #EDE0CC; }

@@ -51,14 +51,24 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
     setSaving(true); setError('')
     try {
       const supabase = createSupabaseBrowserClient()
-      const payload = {
+      const payload: Record<string, any> = {
         client_type: clientType,
         client_name: clientName || companyName,
         company_name: companyName || null,
         contact_number: contact || null,
         email: email || null,
         address: address || null,
-        credit_line_status: creditLine,
+      }
+      // Only Admin can set credit line / for-billing status directly. GA/Treasury checking
+      // the box just files a request for Admin to approve on the Pending Approval page —
+      // it never flips credit_line_status itself.
+      if (currentUser.role === 'Admin') {
+        payload.credit_line_status = creditLine
+        payload.credit_line_request_status = null
+        payload.credit_line_requested_by = null
+      } else if (creditLine && !editing?.credit_line_status && editing?.credit_line_request_status !== 'Pending') {
+        payload.credit_line_request_status = 'Pending'
+        payload.credit_line_requested_by = currentUser.name
       }
       if (editing) {
         const { data } = await supabase.from('clients').update(payload).eq('client_id', editing.client_id).select('*, job_orders(job_order_id, grand_total, payment_status)').single()
@@ -123,6 +133,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
                     <span style={{ color: '#7A1828', fontWeight: 600, fontSize: '0.78rem' }}>· {c.company_name}</span>
                   )}
                   {c.credit_line_status && <span style={{ background: '#1a2a4a', color: '#3498db', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>CREDIT</span>}
+                  {!c.credit_line_status && c.credit_line_request_status === 'Pending' && <span style={{ background: '#4a3a1a', color: '#f39c12', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>CREDIT PENDING</span>}
                   {c.client_type === 'Company' && <span style={{ background: '#2a2a1a', color: '#f1c40f', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>CO.</span>}
                 </div>
                 <div style={{ color: '#aaa', fontSize: '0.68rem', marginTop: 1 }}>{c.client_id} {c.contact_number ? `· ${c.contact_number}` : ''}</div>
@@ -181,10 +192,25 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
               <label className="pf-label">Address</label>
               <input type="text" value={address} onChange={e => setAddress(e.target.value)} className="pf-input" />
             </div>
-            <div className="pf-field" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-              <input type="checkbox" checked={creditLine} onChange={e => setCreditLine(e.target.checked)} style={{ accentColor: '#C9A84C', width: 16, height: 16 }} />
-              <label className="pf-label" style={{ marginBottom: 0, cursor: 'pointer' }}>Credit Line Client</label>
-            </div>
+            {(() => {
+              const isAdmin = currentUser.role === 'Admin'
+              const alreadyApproved = !!editing?.credit_line_status
+              const isPending = editing?.credit_line_request_status === 'Pending'
+              const locked = !isAdmin && (alreadyApproved || isPending)
+              return (
+                <div className="pf-field" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <input type="checkbox" checked={creditLine} disabled={locked}
+                    onChange={e => setCreditLine(e.target.checked)} style={{ accentColor: '#C9A84C', width: 16, height: 16 }} />
+                  <label className="pf-label" style={{ marginBottom: 0, cursor: locked ? 'not-allowed' : 'pointer' }}
+                    title={isAdmin ? undefined : isPending ? 'Already pending Admin approval' : alreadyApproved ? 'Only an Admin can remove credit line status' : 'Requesting this will need Admin approval before it takes effect'}>
+                    Credit Line Client
+                    {!isAdmin && isPending && <span style={{ color: '#f39c12', fontWeight: 400 }}> (Pending Admin approval)</span>}
+                    {!isAdmin && !isPending && !alreadyApproved && <span style={{ color: '#999', fontWeight: 400 }}> (needs Admin approval)</span>}
+                    {!isAdmin && alreadyApproved && <span style={{ color: '#999', fontWeight: 400 }}> (Admin only to remove)</span>}
+                  </label>
+                </div>
+              )
+            })()}
 
             {error && <div style={{ color: '#e74c3c', fontSize: '0.8rem', marginBottom: '0.75rem' }}>{error}</div>}
 

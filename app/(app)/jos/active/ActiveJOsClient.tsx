@@ -2,11 +2,10 @@
 
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { formatPeso } from '@/lib/jo-helpers'
+import { formatPeso, generateItemId, buildFeedbackUrl, formatAge } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import EditJOModal from '@/components/EditJOModal'
-import { IconMessage } from '@/components/icons'
-import { sendTrackingLink } from './actions'
+import JOItemForm from '../today/JOItemForm'
 
 interface Props {
   jobOrders: any[]
@@ -28,7 +27,7 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [editingJO, setEditingJO] = useState<any | null>(null)
-  const [sendingTrackingId, setSendingTrackingId] = useState<string | null>(null)
+  const [addingItemToJO, setAddingItemToJO] = useState<string | null>(null)
 
   const filtered = jobOrders.filter(jo => {
     const client = jo.clients?.client_name || jo.clients?.company_name || ''
@@ -43,30 +42,44 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
   const totalGrand = filtered.reduce((s, j) => s + (j.grand_total || 0), 0)
   const totalBalance = filtered.reduce((s, j) => s + (j.balance_due || 0), 0)
 
-  async function handleDelete(joId: string) {
-    if (!confirm(`Delete job order ${joId}? This cannot be undone.`)) return
-    const supabase = createSupabaseBrowserClient()
-    await supabase.from('job_orders').delete().eq('job_order_id', joId)
-    setJobOrders(prev => prev.filter(j => j.job_order_id !== joId))
-  }
-
   function handleEditSave(joId: string, updates: any) {
     setJobOrders(prev => prev.map(j => j.job_order_id !== joId ? j : { ...j, ...updates }))
   }
 
-  async function handleSendTrackingLink(jo: any) {
-    const contactNumber = jo.clients?.contact_number
-    if (!contactNumber) { alert('This client has no contact number on file.'); return }
-    if (!confirm(`Send tracking link via SMS to ${contactNumber}?`)) return
-    setSendingTrackingId(jo.job_order_id)
-    try {
-      await sendTrackingLink(jo.job_order_id, contactNumber, window.location.origin)
-      alert('Tracking link sent.')
-    } catch (e: any) {
-      alert(e.message || 'Failed to send tracking link.')
-    } finally {
-      setSendingTrackingId(null)
-    }
+  async function handleAddItemToExistingJO(joId: string, rawItem: any) {
+    const supabase = createSupabaseBrowserClient()
+    const { category_name, subcategory_name, ...item } = rawItem
+    const { data: existingItems } = await supabase.from('job_order_items').select('item_id').eq('job_order_id', joId)
+    const seq = (existingItems?.length || 0) + 1
+    const itemId = generateItemId(joId, seq)
+    await supabase.from('job_order_items').insert({ ...item, item_id: itemId, job_order_id: joId })
+    const { data: allItems } = await supabase.from('job_order_items').select('computed_line_total').eq('job_order_id', joId)
+    const newTotal = (allItems || []).reduce((s: number, i: any) => s + (i.computed_line_total || 0), 0)
+    await supabase.from('job_orders').update({ grand_total: newTotal }).eq('job_order_id', joId)
+    setJobOrders(prev => prev.map(j => {
+      if (j.job_order_id !== joId) return j
+      return {
+        ...j,
+        grand_total: newTotal,
+        job_order_items: [...(j.job_order_items || []), { item_id: itemId, job_status: 'Received', computed_line_total: item.computed_line_total }],
+      }
+    }))
+    setAddingItemToJO(null)
+  }
+
+  function copyTrackLink(joId: string) {
+    const url = `${window.location.origin}/track/${joId}`
+    navigator.clipboard.writeText(url)
+  }
+
+  async function copyFeedbackLink(joId: string, clientName: string) {
+    const url = buildFeedbackUrl(window.location.origin, joId, clientName)
+    navigator.clipboard.writeText(url)
+    const supabase = createSupabaseBrowserClient()
+    await supabase.from('job_orders').update({ feedback_requested_at: new Date().toISOString() }).eq('job_order_id', joId)
+    // Feedback has now been requested for this Done JO, so it no longer belongs in Active JOs
+    setJobOrders(prev => prev.filter(j => j.job_order_id !== joId))
+    alert('Feedback link copied — paste it into Messenger, Viber, SMS, or wherever the client prefers.')
   }
 
   return (
@@ -116,6 +129,10 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
             const nearestDeadline = items.map((i: any) => i.date_time_needed).filter(Boolean).sort()[0]
             const isOverdue = nearestDeadline && new Date(nearestDeadline) < new Date()
             const statusColor = STATUS_COLORS[jo.payment_status] || '#555'
+            const isDone = jo.job_status === 'Done'
+            const ageMs = Date.now() - new Date(jo.date_time_received).getTime()
+            const ageHours = ageMs / (1000 * 60 * 60)
+            const ageColor = ageHours > 48 ? '#e74c3c' : ageHours > 24 ? '#f39c12' : '#999'
 
             return (
               <div key={jo.job_order_id} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.85rem 1rem', border: `1px solid ${isOverdue ? '#c0392b' : '#EDE0CC'}`, borderLeft: isOverdue ? '4px solid #e74c3c' : '1px solid #EDE0CC' }}>
@@ -124,11 +141,16 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
                     <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.9rem' }}>{clientName}</div>
                     <div style={{ color: '#999', fontSize: '0.72rem', marginTop: 1 }}>{jo.job_order_id} · {items.length} item(s) · by {jo.received_by || '—'}</div>
                     <div style={{ color: '#777', fontSize: '0.73rem', marginTop: 2 }}>
-                      Received: {new Date(jo.date_time_received).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      Date Received: {new Date(jo.date_time_received).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      {' · '}
+                      <span style={{ color: ageColor, fontWeight: ageHours > 24 ? 700 : 400 }}>{formatAge(jo.date_time_received)} old</span>
+                    </div>
+                    <div style={{ color: '#2ecc71', fontSize: '0.72rem', marginTop: 2 }}>
+                      Earned Rewards: {formatPeso(jo.rewards_balance || 0)}
                     </div>
                     {nearestDeadline && (
                       <div style={{ color: isOverdue ? '#e74c3c' : '#f39c12', fontSize: '0.72rem', marginTop: 2, fontWeight: isOverdue ? 700 : 400 }}>
-                        {isOverdue ? '⚠ OVERDUE' : 'Deadline'}: {new Date(nearestDeadline).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        {isOverdue ? '⚠ OVERDUE' : 'Date Needed'}: {new Date(nearestDeadline).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </div>
                     )}
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
@@ -142,20 +164,26 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexShrink: 0 }}>
-                    {/* Edit / Delete / Send tracking link icons */}
+                    {/* Edit / Add item / Copy tracking link / Copy feedback link */}
                     <div style={{ display: 'flex', flexDirection: 'row', gap: 6, paddingTop: 2 }}>
-                      <button title="Send tracking link via SMS" onClick={() => handleSendTrackingLink(jo)} disabled={sendingTrackingId === jo.job_order_id}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2980b9', padding: 2, display: 'flex', alignItems: 'center', opacity: sendingTrackingId === jo.job_order_id ? 0.5 : 1 }}>
-                        <IconMessage width={17} height={17} />
-                      </button>
                       <button title="Edit JO" onClick={() => setEditingJO(jo)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7A1828', padding: 2, display: 'flex', alignItems: 'center' }}>
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       </button>
-                      <button title="Delete JO" onClick={() => handleDelete(jo.job_order_id)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c', padding: 2, display: 'flex', alignItems: 'center' }}>
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      <button title="Add Job Order Item" onClick={() => setAddingItemToJO(jo.job_order_id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#27ae60', padding: 2, display: 'flex', alignItems: 'center' }}>
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                       </button>
+                      <button title="Send tracking link to be pasted on social media platform" onClick={() => copyTrackLink(jo.job_order_id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2980b9', padding: 2, display: 'flex', alignItems: 'center' }}>
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                      </button>
+                      {isDone && (
+                        <button title="Send feedback link to be pasted on social media platform" onClick={() => copyFeedbackLink(jo.job_order_id, clientName)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c9a84c', padding: 2, display: 'flex', alignItems: 'center' }}>
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        </button>
+                      )}
                     </div>
 
                     <div style={{ textAlign: 'right' }}>
@@ -183,6 +211,15 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
           currentUser={currentUser}
           onClose={() => setEditingJO(null)}
           onSave={handleEditSave}
+        />
+      )}
+
+      {addingItemToJO && (
+        <JOItemForm
+          categories={categories}
+          subcategories={subcategories}
+          onSave={(item) => handleAddItemToExistingJO(addingItemToJO, item)}
+          onClose={() => setAddingItemToJO(null)}
         />
       )}
     </div>

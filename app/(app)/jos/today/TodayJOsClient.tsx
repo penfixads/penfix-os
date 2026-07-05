@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { generateJobOrderId, generateItemId, generateClientId, generatePaymentId, computeLineTotal, formatPeso, getNextJOSequence } from '@/lib/jo-helpers'
+import { generateJobOrderId, generateItemId, generateClientId, generatePaymentId, computeLineTotal, formatPeso, getNextJOSequence, buildFeedbackUrl } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from './JOItemForm'
 import { IconPlus, IconCirclePlus, IconX, IconCheck } from '@/components/icons'
 import AddClientModal from './AddClientModal'
 import EditJOModal from '@/components/EditJOModal'
+import { sendTrackingEmail } from './actions'
 
 interface Props {
   jobOrders: any[]
@@ -115,27 +116,34 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
       const dd = String(now.getDate()).padStart(2, '0')
       const yyyy = now.getFullYear()
       const dateStr = `${mm}${dd}${yyyy}`
-      const existingIds = jobOrders.map(j => j.job_order_id)
-      const seq = getNextJOSequence(existingIds, dateStr)
-      const joId = generateJobOrderId(seq)
 
-      const { error: joErr } = await supabase.from('job_orders').insert({
-        job_order_id: joId,
-        user_email: currentUser.email,
-        client_id: selectedClientId,
-        date_time_received: now.toISOString(),
-        payment_status: paymentStatus,
-        grand_total: grandTotal,
-        total_amount_paid: totalPaid,
-        discount,
-        cashback_discount: cashbackDiscount,
-        received_by: currentUser.name,
-        request_override: overrideReason || null,
-        override_status: needsOverride ? 'Pending' : null,
-        is_for_billing: isForBilling,
-        is_fully_paid: paymentStatus === 'Fully Paid',
-      })
-      if (joErr) throw joErr
+      // Two staff saving a JO at the same moment can both compute the same "next"
+      // sequence number from stale local state, so retry against a fresh DB read
+      // on a duplicate-key conflict instead of failing the whole save.
+      let joId = ''
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const { data: existing } = await supabase.from('job_orders').select('job_order_id').like('job_order_id', `JO-${dateStr}-%`)
+        const seq = getNextJOSequence((existing || []).map(j => j.job_order_id), dateStr)
+        joId = generateJobOrderId(seq)
+        const { error: joErr } = await supabase.from('job_orders').insert({
+          job_order_id: joId,
+          user_email: currentUser.email,
+          client_id: selectedClientId,
+          date_time_received: now.toISOString(),
+          payment_status: paymentStatus,
+          grand_total: grandTotal,
+          total_amount_paid: totalPaid,
+          discount,
+          cashback_discount: cashbackDiscount,
+          received_by: currentUser.name,
+          request_override: overrideReason || null,
+          override_status: needsOverride ? 'Pending' : null,
+          is_for_billing: isForBilling,
+          is_fully_paid: paymentStatus === 'Fully Paid',
+        })
+        if (!joErr) break
+        if (joErr.code !== '23505' || attempt === 4) throw joErr
+      }
 
       // Insert items
       for (let i = 0; i < items.length; i++) {
@@ -195,22 +203,23 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
         date_time_received: now.toISOString(),
         received_by: currentUser.name,
         is_for_billing: isForBilling,
+        client_id: selectedClientId,
+        rewards_balance: Math.max(0, earnedRewards - cashbackDiscount),
       }
       setJobOrders(prev => [newJO, ...prev])
       resetForm()
       setShowForm(false)
+
+      // Best-effort: email the client their tracking link if we have an address on file.
+      // Never blocks or fails the JO save if this errors out.
+      if (selectedClient?.email) {
+        sendTrackingEmail(joId, selectedClient.email, selectedClient.client_name || selectedClient.company_name, window.location.origin).catch(() => {})
+      }
     } catch (e: any) {
       setError(e.message || 'Failed to save job order.')
     } finally {
       setSaving(false)
     }
-  }
-
-  async function handleDeleteJO(joId: string) {
-    if (!confirm(`Delete job order ${joId}? This cannot be undone.`)) return
-    const supabase = createSupabaseBrowserClient()
-    await supabase.from('job_orders').delete().eq('job_order_id', joId)
-    setJobOrders(prev => prev.filter(j => j.job_order_id !== joId))
   }
 
   async function handleAddItemToExistingJO(joId: string, rawItem: any) {
@@ -234,6 +243,19 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
       }
     }))
     setAddingItemToJO(null)
+  }
+
+  function copyTrackLink(joId: string) {
+    const url = `${window.location.origin}/track/${joId}`
+    navigator.clipboard.writeText(url)
+  }
+
+  async function copyFeedbackLink(joId: string, clientName: string) {
+    const url = buildFeedbackUrl(window.location.origin, joId, clientName)
+    navigator.clipboard.writeText(url)
+    const supabase = createSupabaseBrowserClient()
+    await supabase.from('job_orders').update({ feedback_requested_at: new Date().toISOString() }).eq('job_order_id', joId)
+    alert('Feedback link copied — paste it into Messenger, Viber, SMS, or wherever the client prefers.')
   }
 
   function addPayment() {
@@ -271,6 +293,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
             const clientName = jo.clients?.client_name || jo.clients?.company_name || jo.client_id
             const deadline = jo.job_order_items?.[0]?.date_time_needed
             const hasBalance = jo.balance_due > 0
+            const isDone = jo.job_status === 'Done'
             return (
               <div key={jo.job_order_id} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #EDE0CC' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -284,6 +307,9 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                         Deadline: {new Date(deadline).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </div>
                     )}
+                    <div style={{ color: '#2ecc71', fontSize: '0.72rem', marginTop: 2 }}>
+                      Earned Rewards: {formatPeso(jo.rewards_balance || 0)}
+                    </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ display: 'flex', flexDirection: 'row', gap: 8, alignItems: 'center' }}>
@@ -291,10 +317,20 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7A1828', padding: 2, display: 'flex', alignItems: 'center' }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       </button>
-                      <button title="Delete JO" onClick={() => handleDeleteJO(jo.job_order_id)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c', padding: 2, display: 'flex', alignItems: 'center' }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      <button title="Add Job Order Item" onClick={() => setAddingItemToJO(jo.job_order_id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#27ae60', padding: 2, display: 'flex', alignItems: 'center' }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                       </button>
+                      <button title="Send tracking link to be pasted on social media platform" onClick={() => copyTrackLink(jo.job_order_id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2980b9', padding: 2, display: 'flex', alignItems: 'center' }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                      </button>
+                      {isDone && (
+                        <button title="Send feedback link to be pasted on social media platform" onClick={() => copyFeedbackLink(jo.job_order_id, clientName)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c9a84c', padding: 2, display: 'flex', alignItems: 'center' }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        </button>
+                      )}
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ color: hasBalance ? '#e74c3c' : '#2ecc71', fontWeight: 700, fontSize: '0.9rem' }}>
@@ -392,25 +428,83 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
 
             {/* Job Order Items */}
             <div className="pf-field">
-              {items.length > 0 && (
-                <div style={{ marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {items.map((item, i) => (
-                    <div key={i} style={{ background: '#f0f0f0', borderRadius: 8, padding: '0.6rem 0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ color: '#1a1a1a', fontSize: '0.8rem', fontWeight: 600 }}>{item.subcategory_name}</div>
-                        <div style={{ color: '#777', fontSize: '0.72rem' }}>{item.production_specs}</div>
+              <div className="pf-group-box">
+                {items.length > 0 ? (
+                  <div style={{ marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {items.map((item, i) => (
+                      <div key={i} style={{ background: '#f0f0f0', borderRadius: 8, padding: '0.6rem 0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ color: '#1a1a1a', fontSize: '0.8rem', fontWeight: 600 }}>{item.subcategory_name}</div>
+                          <div style={{ color: '#777', fontSize: '0.72rem' }}>{item.production_specs}</div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ color: '#1a1a1a', fontSize: '0.82rem' }}>{formatPeso(item.computed_line_total)}</span>
+                          <button onClick={() => { setItems(prev => prev.filter((_, j) => j !== i)) }} style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: '0.9rem' }}>✕</button>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ color: '#1a1a1a', fontSize: '0.82rem' }}>{formatPeso(item.computed_line_total)}</span>
-                        <button onClick={() => { setItems(prev => prev.filter((_, j) => j !== i)) }} style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: '0.9rem' }}>✕</button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="pf-group-empty">No job order items were added.</div>
+                )}
+                <div className="pf-group-box-actions">
+                  <button type="button" onClick={() => setShowItemForm(true)} className="pf-link-btn">
+                    <IconCirclePlus />Add Job Order Item <span className="pf-req">*</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Payments */}
+            <div className="pf-field">
+              <div className="pf-group-box">
+                {payments.length > 0 ? (
+                  <div style={{ marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {payments.map((p, i) => (
+                      <div key={i} style={{ background: '#f0f0f0', borderRadius: 8, padding: '0.5rem 0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#1a1a1a', fontSize: '0.8rem' }}>{p.method} · {formatPeso(p.amount)}{p.cashback > 0 ? ` · Cashback: ${formatPeso(p.cashback)}` : ''}</span>
+                        <button onClick={() => setPayments(prev => prev.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer' }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                ) : !showPaymentForm && (
+                  <div className="pf-group-empty">No payments were added.</div>
+                )}
+                {showPaymentForm ? (
+                  <div className="pf-payment-panel" style={{ borderRadius: 8, padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <div style={{ flex: 1 }}>
+                        <label className="pf-label">Amount</label>
+                        <input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="0.00" className="pf-input" />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label className="pf-label">Method</label>
+                        <select value={payMethod} onChange={e => setPayMethod(e.target.value)} className="pf-select">
+                          {['Cash','G-Cash','Maya','Bank Transfer via BPI Acct.','Bank Transfer via BDO Acct.','Cheque'].map(m => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-              <button type="button" onClick={() => setShowItemForm(true)} className="pf-link-btn">
-                <IconCirclePlus />Add Job Order Item <span className="pf-req">*</span>
-              </button>
+                    {earnedRewards > 0 && (
+                      <div>
+                        <label className="pf-label">Apply Cashback (Available: {formatPeso(earnedRewards)})</label>
+                        <input type="number" value={payCashback} onChange={e => setPayCashback(Math.min(parseFloat(e.target.value) || 0, earnedRewards))} placeholder="0.00" className="pf-input" />
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button onClick={() => setShowPaymentForm(false)} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
+                      <button onClick={addPayment} className="pf-btn"><IconPlus />Add</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="pf-group-box-actions">
+                    <button type="button" onClick={() => setShowPaymentForm(true)} className="pf-link-btn">
+                      <IconCirclePlus />Add Payment
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Totals */}
@@ -422,52 +516,6 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
               <div className="pf-totals-row"><span>Total Paid</span><span style={{ color: '#000' }}>{formatPeso(totalPaid)}</span></div>
               <div className="pf-totals-row"><span>Balance Due</span><span style={{ color: '#400016', fontWeight: 700 }}>{formatPeso(balanceDue)}</span></div>
               <div className="pf-totals-row" style={{ marginBottom: 0 }}><span>Status</span><span style={{ color: '#000', fontWeight: 600, fontSize: '0.8rem' }}>{paymentStatus}</span></div>
-            </div>
-
-            {/* Payments */}
-            <div className="pf-field">
-              {payments.length > 0 && (
-                <div style={{ marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {payments.map((p, i) => (
-                    <div key={i} style={{ background: '#f0f0f0', borderRadius: 8, padding: '0.5rem 0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: '#1a1a1a', fontSize: '0.8rem' }}>{p.method} · {formatPeso(p.amount)}{p.cashback > 0 ? ` · Cashback: ${formatPeso(p.cashback)}` : ''}</span>
-                      <button onClick={() => setPayments(prev => prev.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer' }}>✕</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {showPaymentForm ? (
-                <div className="pf-payment-panel" style={{ borderRadius: 8, padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <div style={{ flex: 1 }}>
-                      <label className="pf-label">Amount</label>
-                      <input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="0.00" className="pf-input" />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <label className="pf-label">Method</label>
-                      <select value={payMethod} onChange={e => setPayMethod(e.target.value)} className="pf-select">
-                        {['Cash','G-Cash','Maya','Bank Transfer via BPI Acct.','Bank Transfer via BDO Acct.','Cheque'].map(m => (
-                          <option key={m} value={m}>{m}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  {earnedRewards > 0 && (
-                    <div>
-                      <label className="pf-label">Apply Cashback (Available: {formatPeso(earnedRewards)})</label>
-                      <input type="number" value={payCashback} onChange={e => setPayCashback(Math.min(parseFloat(e.target.value) || 0, earnedRewards))} placeholder="0.00" className="pf-input" />
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                    <button onClick={() => setShowPaymentForm(false)} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
-                    <button onClick={addPayment} className="pf-btn"><IconPlus />Add</button>
-                  </div>
-                </div>
-              ) : (
-                <button type="button" onClick={() => setShowPaymentForm(true)} className="pf-link-btn">
-                  <IconCirclePlus />Add Payment
-                </button>
-              )}
             </div>
 
             {/* Override reason */}
@@ -526,6 +574,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
       {/* Add Client Modal */}
       {showAddClient && (
         <AddClientModal
+          currentUser={currentUser}
           onSave={(newClient) => {
             setClients(prev => [...prev, newClient])
             setSelectedClientId(newClient.client_id)

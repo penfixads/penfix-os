@@ -7,11 +7,13 @@ import type { AppUser } from '@/lib/user'
 
 interface Props {
   jobOrders: any[]
+  creditRequests: any[]
   currentUser: AppUser
 }
 
-export default function PendingApprovalClient({ jobOrders: initialJOs, currentUser }: Props) {
+export default function PendingApprovalClient({ jobOrders: initialJOs, creditRequests: initialCreditRequests, currentUser }: Props) {
   const [jos, setJos] = useState(initialJOs)
+  const [creditRequests, setCreditRequests] = useState(initialCreditRequests)
   const [acting, setActing] = useState<string | null>(null)
   const [rejectNote, setRejectNote] = useState<Record<string, string>>({})
   const [showReject, setShowReject] = useState<string | null>(null)
@@ -44,18 +46,72 @@ export default function PendingApprovalClient({ jobOrders: initialJOs, currentUs
     }
   }
 
+  async function approveCredit(clientId: string) {
+    setActing(clientId)
+    try {
+      const supabase = createSupabaseBrowserClient()
+      await supabase.from('clients').update({ credit_line_status: true, credit_line_request_status: 'Approved' }).eq('client_id', clientId)
+      setCreditRequests(prev => prev.filter(c => c.client_id !== clientId))
+    } finally {
+      setActing(null)
+    }
+  }
+
+  async function rejectCredit(clientId: string) {
+    setActing(clientId)
+    try {
+      const supabase = createSupabaseBrowserClient()
+      await supabase.from('clients').update({ credit_line_status: false, credit_line_request_status: 'Rejected' }).eq('client_id', clientId)
+      setCreditRequests(prev => prev.filter(c => c.client_id !== clientId))
+    } finally {
+      setActing(null)
+    }
+  }
+
   return (
     <div>
       <div style={{ marginBottom: '1.25rem' }}>
         <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Pending Approval</h1>
         <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>
-          {jos.length} JO(s) awaiting manager approval
+          {jos.length} JO(s) and {creditRequests.length} credit line request(s) awaiting manager approval
           {!isAdmin && <span style={{ color: '#e67e22', marginLeft: 8 }}>— view only (Admin can approve)</span>}
         </p>
       </div>
 
+      {creditRequests.length > 0 && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h2 style={{ color: '#7A1828', fontSize: '1rem', fontWeight: 700, marginBottom: '0.6rem' }}>Credit Line Requests</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            {creditRequests.map(c => {
+              const clientName = c.client_name || c.company_name || c.client_id
+              const isActing = acting === c.client_id
+              return (
+                <div key={c.client_id} style={{ background: '#FDF5EC', borderRadius: 12, padding: '0.85rem 1rem', border: '1px solid #EDE0CC', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.88rem' }}>{clientName}</div>
+                    <div style={{ color: '#999', fontSize: '0.72rem', marginTop: 1 }}>
+                      {c.client_id} {c.contact_number ? `· ${c.contact_number}` : ''} · requested by {c.credit_line_requested_by || '—'}
+                    </div>
+                  </div>
+                  {isAdmin && (
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => rejectCredit(c.client_id)} disabled={isActing} style={{ background: '#5a1010', border: '1px solid #7A1828', color: '#e74c3c', borderRadius: 8, padding: '0.45rem 0.8rem', cursor: isActing ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.78rem' }}>
+                        Reject
+                      </button>
+                      <button onClick={() => approveCredit(c.client_id)} disabled={isActing} style={{ background: '#1a3a1a', border: '1px solid #27ae60', color: '#2ecc71', borderRadius: 8, padding: '0.45rem 0.8rem', cursor: isActing ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.78rem' }}>
+                        {isActing ? '…' : '✓ Approve'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {jos.length === 0 ? (
-        <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No pending approvals. ✓</div>
+        creditRequests.length === 0 && <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No pending approvals. ✓</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           {jos.map(jo => {

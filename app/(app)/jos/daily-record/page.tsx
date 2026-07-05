@@ -1,9 +1,9 @@
-﻿import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { getCurrentUser } from '@/lib/user'
 import { redirect } from 'next/navigation'
-import AllJOsClient from './AllJOsClient'
+import DailyRecordClient from './DailyRecordClient'
 
-export default async function AllJOsPage() {
+export default async function DailyRecordPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
@@ -12,9 +12,8 @@ export default async function AllJOsPage() {
   const { data: jobOrders, error } = await supabase
     .from('job_orders')
     .select(`
-      job_order_id, date_time_received, received_by, payment_status,
-      grand_total, total_amount_paid, balance_due, job_status, is_for_billing, feedback_requested_at,
-      clients(client_name, company_name, contact_number),
+      job_order_id, date_time_received, received_by,
+      clients(client_name, company_name),
       job_order_items(
         item_id, job_status, quantity,
         subcategories(subcategory_name),
@@ -24,7 +23,7 @@ export default async function AllJOsPage() {
     .order('date_time_received', { ascending: false })
     .limit(500)
 
-  if (error) console.error('All Job Orders query failed:', error.message)
+  if (error) console.error('Daily Job Order Record query failed:', error.message)
 
-  return <AllJOsClient jobOrders={jobOrders || []} currentUser={user} />
+  return <DailyRecordClient jobOrders={jobOrders || []} />
 }

@@ -204,25 +204,21 @@ create table if not exists raw_materials (
   active boolean default true
 );
 
--- PROCESS TYPES
-create table if not exists process_types (
-  process_type_id text primary key,
-  process_type_name text not null,
-  description text,
-  is_active boolean default true
-);
-
--- PROCESS TYPE SOP
-create table if not exists process_type_sop (
+-- SUBCATEGORY SOP — each subcategory owns its own ordered production step chain
+-- (even similar items like tarpaulin vs sticker printing often need different steps,
+-- so this is intentionally per-subcategory rather than a shared "process type" grouping)
+create table if not exists subcategory_sop (
   sop_id text primary key,
-  process_type_id text references process_types(process_type_id),
+  subcategory_id text references subcategories(subcategory_id) on delete cascade,
   status_name text,
   sequence integer,
   is_active boolean default true,
   is_terminal boolean default false,
+  is_production_start boolean default false,
   visible_to_client boolean default false,
   description text
 );
+create index if not exists idx_subcategory_sop_subcategory on subcategory_sop(subcategory_id);
 
 -- INDEXES
 create index if not exists idx_job_orders_client on job_orders(client_id);
@@ -247,8 +243,7 @@ alter table daily_sales_summary enable row level security;
 alter table expenses enable row level security;
 alter table rewards_redemptions enable row level security;
 alter table raw_materials enable row level security;
-alter table process_types enable row level security;
-alter table process_type_sop enable row level security;
+alter table subcategory_sop enable row level security;
 
 -- Authenticated users have full access (role-based logic handled in app layer)
 create policy "auth_users_users" on users for select using (auth.role() = 'authenticated');
@@ -262,8 +257,7 @@ create policy "auth_users_daily_summary" on daily_sales_summary for all using (a
 create policy "auth_users_expenses" on expenses for all using (auth.role() = 'authenticated');
 create policy "auth_users_redemptions" on rewards_redemptions for all using (auth.role() = 'authenticated');
 create policy "auth_users_raw_materials" on raw_materials for select using (auth.role() = 'authenticated');
-create policy "auth_users_process_types" on process_types for select using (auth.role() = 'authenticated');
-create policy "auth_users_sop" on process_type_sop for select using (auth.role() = 'authenticated');
+create policy "auth_users_subcategory_sop" on subcategory_sop for all using (auth.role() = 'authenticated');
 
 -- ============================================================
 -- GRANTS — required for PostgREST (anon / authenticated / service_role)

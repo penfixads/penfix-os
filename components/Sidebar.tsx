@@ -60,16 +60,28 @@ const NAV_ITEMS: NavItem[] = [
     icon: <I><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M20 12h2M2 12h2M17.66 17.66l-1.41-1.41M6.34 17.66l1.41-1.41"/></I>
   },
   {
-    label: 'Ready for Dispatch', href: '/jos/dispatch', roles: ['Admin','GA','Treasury'],
+    label: 'Ready for Dispatch', href: '/jos/dispatch', roles: ['Admin','GA','Treasury','Fabricator'],
     icon: <I><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></I>
+  },
+  {
+    label: 'Daily Job Order Record', href: '/jos/daily-record', roles: ['Admin','GA','Treasury','Fabricator'],
+    icon: <I><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2 2 4-4"/></I>
   },
   {
     label: 'Sales Reports', href: '/sales/reports', roles: ['Admin'],
     icon: <I><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></I>
   },
   {
+    label: 'Client Feedback', href: '/client-feedback', roles: ['Admin','GA','Treasury'],
+    icon: <I fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></I>
+  },
+  {
     label: 'User Management', href: '/admin/users', roles: ['Admin'],
     icon: <I><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></I>
+  },
+  {
+    label: 'Subcategory SOPs', href: '/admin/subcategory-sops', roles: ['Admin'],
+    icon: <I><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></I>
   },
 ]
 

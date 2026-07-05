@@ -4,13 +4,15 @@ import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { generateClientId } from '@/lib/jo-helpers'
 import { IconX, IconCheck } from '@/components/icons'
+import type { AppUser } from '@/lib/user'
 
 interface Props {
+  currentUser: AppUser
   onSave: (client: any) => void
   onClose: () => void
 }
 
-export default function AddClientModal({ onSave, onClose }: Props) {
+export default function AddClientModal({ currentUser, onSave, onClose }: Props) {
   const [clientType, setClientType] = useState<'Individual' | 'Company'>('Individual')
   const [clientName, setClientName] = useState('')
   const [companyName, setCompanyName] = useState('')
@@ -28,6 +30,7 @@ export default function AddClientModal({ onSave, onClose }: Props) {
     try {
       const supabase = createSupabaseBrowserClient()
       const clientId = generateClientId()
+      const isAdmin = currentUser.role === 'Admin'
       const { data, error: err } = await supabase.from('clients').insert({
         client_id: clientId,
         client_type: clientType,
@@ -36,7 +39,11 @@ export default function AddClientModal({ onSave, onClose }: Props) {
         contact_number: contactNumber || null,
         email: email || null,
         address: address || null,
-        credit_line_status: creditLine,
+        // Only Admin can set credit line directly — GA/Treasury checking the box
+        // just files a request for Admin to approve on the Pending Approval page.
+        credit_line_status: isAdmin ? creditLine : false,
+        credit_line_request_status: !isAdmin && creditLine ? 'Pending' : null,
+        credit_line_requested_by: !isAdmin && creditLine ? currentUser.name : null,
         earned_rewards: 0,
         claimed_rewards: 0,
       }).select().single()
@@ -97,8 +104,13 @@ export default function AddClientModal({ onSave, onClose }: Props) {
         </div>
 
         <div className="pf-field" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <input type="checkbox" id="creditLine" checked={creditLine} onChange={e => setCreditLine(e.target.checked)} style={{ accentColor: '#C9A84C', width: 16, height: 16 }} />
-          <label htmlFor="creditLine" className="pf-label" style={{ marginBottom: 0, cursor: 'pointer' }}>Credit Line Client</label>
+          <input type="checkbox" id="creditLine" checked={creditLine}
+            onChange={e => setCreditLine(e.target.checked)} style={{ accentColor: '#C9A84C', width: 16, height: 16 }} />
+          <label htmlFor="creditLine" className="pf-label" style={{ marginBottom: 0, cursor: 'pointer' }}
+            title={currentUser.role === 'Admin' ? undefined : 'This will need Admin approval before it takes effect'}>
+            Credit Line Client
+            {currentUser.role !== 'Admin' && <span style={{ color: '#999', fontWeight: 400 }}> (needs Admin approval)</span>}
+          </label>
         </div>
 
         {error && <div style={{ color: '#e74c3c', fontSize: '0.8rem', marginBottom: '0.75rem' }}>{error}</div>}

@@ -32,31 +32,31 @@ export default function DispatchClient({ items, currentUser }: Props) {
     setMarking(itemId)
     try {
       const supabase = createSupabaseBrowserClient()
-      await supabase.from('job_order_items').update({
+      const { error: markErr } = await supabase.from('job_order_items').update({
         job_status: 'Done',
         dispatch_mode: mode,
         date_time_done: new Date().toISOString(),
       }).eq('item_id', itemId)
+      if (markErr) { alert(markErr.message || 'Failed to mark item as dispatched.'); return }
 
-      // Check if all items in the JO are done → mark JO as done
+      // A JO only becomes fully "Done" once every item has been claimed AND the JO is
+      // settled (fully paid, or on an approved billing arrangement) — dispatching the last
+      // item while a balance remains should not close out the job order.
       const item = items.find(i => i.item_id === itemId)
       if (item?.job_orders?.job_order_id) {
-        const { data: siblings } = await supabase
-          .from('job_order_items')
-          .select('item_id, job_status')
-          .eq('job_order_id', item.job_orders.job_order_id)
-        const allDone = siblings?.every(s => s.job_status === 'Done' || s.job_status === 'Cancelled' || s.item_id === itemId)
-        if (allDone) {
-          await supabase.from('job_orders').update({ job_status: 'Done' }).eq('job_order_id', item.job_orders.job_order_id)
+        const joId = item.job_orders.job_order_id
+        const [{ data: siblings }, { data: jo }] = await Promise.all([
+          supabase.from('job_order_items').select('item_id, job_status').eq('job_order_id', joId),
+          supabase.from('job_orders').select('is_fully_paid, grand_total, client_id, is_for_billing').eq('job_order_id', joId).single(),
+        ])
+        const allClaimed = siblings?.every(s => s.job_status === 'Done' || s.job_status === 'Cancelled' || s.item_id === itemId)
+        const isSettled = !!jo?.is_fully_paid || !!jo?.is_for_billing
+
+        if (allClaimed && isSettled) {
+          await supabase.from('job_orders').update({ job_status: 'Done' }).eq('job_order_id', joId)
 
           // Record earned rewards in ledger only when fully paid AND all done
-          const { data: jo } = await supabase
-            .from('job_orders')
-            .select('is_fully_paid, grand_total, client_id, is_for_billing')
-            .eq('job_order_id', item.job_orders.job_order_id)
-            .single()
           if (jo?.is_fully_paid && !jo?.is_for_billing && jo?.client_id) {
-            const joId = item.job_orders.job_order_id
             const ledgerId = `EARN-${joId}`
             const { data: existing } = await supabase.from('rewards_ledger').select('ledger_id').eq('ledger_id', ledgerId).single()
             if (!existing) {
@@ -126,25 +126,18 @@ export default function DispatchClient({ items, currentUser }: Props) {
                   </div>
                 </div>
 
-                {item.job_status !== 'Done' && (
-                  <div style={{ marginTop: '0.75rem', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {DISPATCH_MODES.map(mode => (
-                      <button
-                        key={mode}
-                        onClick={() => markDispatched(item.item_id, mode)}
-                        disabled={!!isMarking}
-                        style={{ background: '#1a1a2a', border: '1px solid #27ae60', color: '#2ecc71', fontSize: '0.73rem', padding: '0.4rem 0.8rem', borderRadius: 6, cursor: isMarking ? 'not-allowed' : 'pointer', fontWeight: 600 }}
-                      >
-                        {isMarking ? '…' : `✓ ${mode}`}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {item.job_status === 'Done' && (
-                  <div style={{ marginTop: '0.6rem', color: '#27ae60', fontSize: '0.75rem' }}>
-                    ✓ Dispatched via {item.dispatch_mode || 'Pickup'} · {item.date_time_done ? new Date(item.date_time_done).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
-                  </div>
-                )}
+                <div style={{ marginTop: '0.75rem', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {DISPATCH_MODES.map(mode => (
+                    <button
+                      key={mode}
+                      onClick={() => markDispatched(item.item_id, mode)}
+                      disabled={!!isMarking}
+                      style={{ background: '#1a1a2a', border: '1px solid #27ae60', color: '#2ecc71', fontSize: '0.73rem', padding: '0.4rem 0.8rem', borderRadius: 6, cursor: isMarking ? 'not-allowed' : 'pointer', fontWeight: 600 }}
+                    >
+                      {isMarking ? '…' : `✓ ${mode}`}
+                    </button>
+                  ))}
+                </div>
               </div>
             )
           })}

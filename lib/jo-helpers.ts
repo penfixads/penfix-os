@@ -23,8 +23,27 @@ export function generatePaymentId(jobOrderId: string, seq: number): string {
   return `${jobOrderId}-PAY-${seq}`
 }
 
+export function generateFeedbackToken(): string {
+  return Array.from({ length: 12 }, () => Math.floor(Math.random() * 36).toString(36)).join('')
+}
+
+export function buildFeedbackUrl(origin: string, jobOrderId: string, clientName: string): string {
+  const token = generateFeedbackToken()
+  return `${origin}/feedback/${token}?jo=${encodeURIComponent(jobOrderId)}&name=${encodeURIComponent(clientName)}`
+}
+
 export function formatPeso(amount: number): string {
   return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+export function formatAge(dateStr: string): string {
+  const ms = Math.max(0, Date.now() - new Date(dateStr).getTime())
+  const days = Math.floor(ms / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((ms / (1000 * 60 * 60)) % 24)
+  const minutes = Math.floor((ms / (1000 * 60)) % 60)
+  if (days > 0) return `${days}d ${hours}h`
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
 }
 
 export function computeLineTotal(
@@ -66,6 +85,46 @@ export function computeLineTotal(
       total = basePrice * quantity
   }
   return Math.max(0, total - discount)
+}
+
+// Splits the legacy freeform `subcategories.job_flow` text into individual step names,
+// trimmed and de-duped (some entries have "For Production" listed twice, inconsistent
+// spacing, etc.) — used as a fallback status list until real subcategory_sop steps exist.
+export function parseJobFlow(jobFlow: string | null | undefined): string[] {
+  if (!jobFlow) return []
+  const seen = new Set<string>()
+  const result: string[] = []
+  for (const raw of jobFlow.split(',')) {
+    const name = raw.trim()
+    if (name && !seen.has(name)) {
+      seen.add(name)
+      result.push(name)
+    }
+  }
+  return result
+}
+
+export interface StatusStep {
+  status_name: string
+  sequence: number
+  is_terminal: boolean
+  is_production_start: boolean
+  visible_to_client: boolean
+}
+
+// Prefers real subcategory_sop steps; falls back to parsing job_flow (excluding "Done"/
+// "Cancelled", which are handled by the Dispatch flow and Cancel button respectively, not
+// this dropdown) so the status dropdown has real options before SOPs are set up.
+export function getEffectiveSteps(sopSteps: any[], jobFlow: string | null | undefined): StatusStep[] {
+  if (sopSteps.length > 0) return sopSteps
+  const parsed = parseJobFlow(jobFlow).filter(s => s !== 'Done' && s !== 'Cancelled')
+  return parsed.map((status_name, i) => ({
+    status_name,
+    sequence: i + 1,
+    is_terminal: i === parsed.length - 1,
+    is_production_start: false,
+    visible_to_client: false,
+  }))
 }
 
 export function getNextJOSequence(existingIds: string[], dateStr: string): number {

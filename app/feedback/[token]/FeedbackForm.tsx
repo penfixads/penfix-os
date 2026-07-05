@@ -80,7 +80,7 @@ export default function FeedbackForm() {
     try {
       const supabase = getSupabase()
       const { error: dbError } = await supabase.from('client_feedback').insert({
-        token, jo, client_name: name, service, rating,
+        token, jo: jo || null, client_name: name, service, rating,
         best_areas: bestAreas, improve_areas: improveAreas,
         comments, recommend, testimonial_consent: testimonialConsent,
       })

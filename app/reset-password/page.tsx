@@ -1,13 +1,14 @@
 ﻿'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { IconKey } from '@/components/icons'
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
@@ -15,6 +16,19 @@ export default function ResetPasswordPage() {
   const [done, setDone] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [sessionReady, setSessionReady] = useState(false)
+
+  // The emailed reset link redirects here with ?code=... — that code has to be
+  // exchanged for a real session before updateUser() can do anything with it.
+  useEffect(() => {
+    const code = searchParams.get('code')
+    if (!code) { setError('This reset link is invalid or has expired. Please request a new one.'); return }
+    const supabase = createSupabaseBrowserClient()
+    supabase.auth.exchangeCodeForSession(code).then(({ error: exchangeError }) => {
+      if (exchangeError) { setError('This reset link is invalid or has expired. Please request a new one.'); return }
+      setSessionReady(true)
+    })
+  }, [searchParams])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -59,6 +73,17 @@ export default function ResetPasswordPage() {
           <p style={{ textAlign: 'center', color: '#444', fontSize: '0.9rem' }}>
             Password updated! Redirecting to sign in…
           </p>
+        ) : !sessionReady ? (
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ color: error ? '#c00' : '#888', fontSize: '0.9rem', marginBottom: error ? '1rem' : 0 }}>
+              {error || 'Verifying reset link…'}
+            </p>
+            {error && (
+              <a href="/login" className="pf-btn pf-btn-block" style={{ padding: '0.85rem', fontSize: '1rem', letterSpacing: 0.5, display: 'inline-flex', textDecoration: 'none' }}>
+                Back to Sign In
+              </a>
+            )}
+          </div>
         ) : (
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: '1rem' }}>
@@ -116,6 +141,14 @@ export default function ResetPasswordPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense>
+      <ResetPasswordForm />
+    </Suspense>
   )
 }
 
