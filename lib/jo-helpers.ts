@@ -35,6 +35,12 @@ export function formatPeso(amount: number): string {
   return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
+// Multiple proponents on one status step (e.g. "Maria Clara Santos, Juan Dela Cruz, ...")
+// gets unreadable fast on a receipt sized for a phone screen — initials keep it scannable.
+export function nameInitials(name: string): string {
+  return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase()
+}
+
 export function formatAge(dateStr: string): string {
   const ms = Math.max(0, Date.now() - new Date(dateStr).getTime())
   const days = Math.floor(ms / (1000 * 60 * 60 * 24))

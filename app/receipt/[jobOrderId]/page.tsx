@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
-import ReceiptCard from '@/components/ReceiptCard'
+import PublicReceiptView from '@/components/PublicReceiptView'
 
 export default async function ReceiptPage({ params }: { params: { jobOrderId: string } }) {
   const supabase = createSupabaseServerClient()
@@ -20,22 +20,14 @@ export default async function ReceiptPage({ params }: { params: { jobOrderId: st
     supabase.from('public_job_order_payment_methods').select('payment_method').eq('job_order_id', params.jobOrderId),
   ])
 
-  const item = (items || [])[0]
-  const clientName = jo.client_name || jo.company_name || 'Client'
-  const sizeLabel = item?.width && item?.height ? `${item.width} × ${item.height} ft` : (item?.width ? `${item.width} ft` : '')
   const paymentMethods = Array.from(new Set((methodRows || []).map(r => r.payment_method).filter(Boolean))) as string[]
 
-  // "Accomplished By" reflects whoever confirmed the item's current status — blank while it's
-  // still sitting at "Received" (nothing beyond intake has happened yet).
-  let accomplishedBy = ''
-  if (item && item.job_status !== 'Received') {
-    const { data: logs } = await supabase
-      .from('public_job_order_item_status_log')
-      .select('changed_by_name')
-      .eq('item_id', item.item_id)
-      .eq('status_name', item.job_status)
-    accomplishedBy = Array.from(new Set((logs || []).map(l => l.changed_by_name))).join(', ')
-  }
+  // "Accomplished By" per item reflects whoever confirmed that item's current status — fetched
+  // for all items at once so the client can flip between them without extra round-trips.
+  const itemIds = (items || []).map(i => i.item_id)
+  const { data: statusLogs } = itemIds.length > 0
+    ? await supabase.from('public_job_order_item_status_log').select('item_id, status_name, changed_by_name').in('item_id', itemIds)
+    : { data: [] }
 
   return (
     <div style={{
@@ -58,29 +50,7 @@ export default async function ReceiptPage({ params }: { params: { jobOrderId: st
         </div>
       </div>
 
-      <div style={{ width: '100%', maxWidth: 460, boxShadow: '0 4px 20px rgba(0,0,0,0.25)', borderRadius: 12, overflow: 'hidden' }}>
-        <ReceiptCard
-          jobOrderId={jo.job_order_id}
-          dateReceived={jo.date_time_received}
-          clientName={clientName}
-          contactNumber={jo.contact_number}
-          itemPreview={item?.item_preview}
-          itemName={item?.subcategory_name || '—'}
-          categoryName={item?.category_name}
-          size={sizeLabel}
-          quantity={item?.quantity ?? 1}
-          specs={item?.production_specs}
-          remarks={item?.notes}
-          dateNeeded={item?.date_time_needed}
-          receivedBy={jo.received_by}
-          accomplishedBy={accomplishedBy}
-          totalAmount={jo.grand_total || 0}
-          amountPaid={jo.total_amount_paid || 0}
-          balance={jo.balance_due || 0}
-          paymentMethods={paymentMethods}
-          status={jo.payment_status}
-        />
-      </div>
+      <PublicReceiptView jo={jo} items={items || []} statusLogs={statusLogs || []} paymentMethods={paymentMethods} />
 
       <div style={{ textAlign: 'center', marginTop: '1.5rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>
         Penfix Advertising &amp; Business Solutions<br />

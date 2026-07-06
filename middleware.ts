@@ -9,7 +9,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/feedback') ||
     pathname.startsWith('/login') ||
     pathname.startsWith('/reset-password') ||
-    pathname.startsWith('/track')
+    pathname.startsWith('/track') ||
+    pathname.startsWith('/receipt')
   ) {
     return NextResponse.next()
   }

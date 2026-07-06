@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from 'react'
 import html2canvas from 'html2canvas'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { nameInitials } from '@/lib/jo-helpers'
 import ReceiptCard from '@/components/ReceiptCard'
-import { IconX, IconCheck } from '@/components/icons'
+import { IconX, IconDownload } from '@/components/icons'
 
 interface Props {
   jobOrderId: string
@@ -70,17 +71,19 @@ export default function JOReceiptModal({ jobOrderId, onClose }: Props) {
     setWorking('copy')
     setMessage('')
     try {
-      const canvas = await captureCard()
-      if (!canvas) return
-      canvas.toBlob(async blob => {
-        if (!blob) return
-        try {
-          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-          setMessage('Image copied — paste it into Messenger, Viber, or wherever the client is.')
-        } catch {
-          setMessage('Could not copy automatically — use Download Image instead.')
-        }
-      }, 'image/png')
+      // navigator.clipboard.write must be called synchronously within the click's user-gesture
+      // window, or Chrome silently rejects it (leaving whatever was on the clipboard before).
+      // Passing a Promise<Blob> straight into ClipboardItem lets the write "start" immediately
+      // while the (async) html2canvas capture finishes in the background — the documented
+      // workaround for async clipboard writes.
+      const blobPromise = captureCard().then(canvas => new Promise<Blob>((resolve, reject) => {
+        if (!canvas) { reject(new Error('Failed to render receipt.')); return }
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Failed to render receipt.')), 'image/png')
+      }))
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })])
+      setMessage('Image copied — paste it into Messenger, Viber, or wherever the client is.')
+    } catch {
+      setMessage('Could not copy automatically — use Download Image instead.')
     } finally {
       setWorking(null)
     }
@@ -114,7 +117,7 @@ export default function JOReceiptModal({ jobOrderId, onClose }: Props) {
   // "Accomplished By" reflects whoever confirmed the item's current status — blank while it's
   // still sitting at "Received" (nothing beyond intake has happened yet).
   const accomplishedBy = item && item.job_status !== 'Received'
-    ? Array.from(new Set(statusLogs.filter(l => l.item_id === item.item_id && l.status_name === item.job_status).map(l => l.changed_by_name))).join(', ')
+    ? Array.from(new Set(statusLogs.filter(l => l.item_id === item.item_id && l.status_name === item.job_status).map(l => l.changed_by_name))).map(nameInitials).join(', ')
     : ''
 
   return (
@@ -157,11 +160,12 @@ export default function JOReceiptModal({ jobOrderId, onClose }: Props) {
               balance={jo.balance_due || 0}
               paymentMethods={methodsUsed}
               status={jo.payment_status}
+              discount={jo.discount}
             />
           </div>
         </div>
 
-        {message && <div style={{ color: '#2ecc71', fontSize: '0.78rem', marginBottom: '0.75rem', textAlign: 'center' }}>{message}</div>}
+        {message && <div style={{ color: message.startsWith('Could not copy') ? '#f1c40f' : '#2ecc71', fontSize: '0.78rem', marginBottom: '0.75rem', textAlign: 'center' }}>{message}</div>}
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <button onClick={onClose} className="pf-btn pf-btn-secondary"><IconX />Close</button>
@@ -172,7 +176,7 @@ export default function JOReceiptModal({ jobOrderId, onClose }: Props) {
             {working === 'copy' ? 'Copying…' : 'Copy Image'}
           </button>
           <button onClick={downloadImage} disabled={!!working} className="pf-btn">
-            <IconCheck />{working === 'download' ? 'Saving…' : 'Download Image'}
+            <IconDownload />{working === 'download' ? 'Saving…' : 'Download Image'}
           </button>
         </div>
       </div>

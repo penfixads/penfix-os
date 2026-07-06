@@ -23,6 +23,7 @@ export interface ReceiptCardProps {
   balance: number
   paymentMethods: string[]
   status?: string | null
+  discount?: number | null
 }
 
 // Shared by the in-app "Generate Receipt" modal and the public /receipt/[jobOrderId] link so
@@ -32,7 +33,7 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(function Receip
   const {
     jobOrderId, dateReceived, clientName, contactNumber, itemPreview, itemName, categoryName,
     size, quantity, specs, remarks, dateNeeded, receivedBy, accomplishedBy, totalAmount, amountPaid, balance,
-    paymentMethods, status,
+    paymentMethods, status, discount,
   } = props
 
   // html2canvas doesn't reliably respect CSS object-fit, so the image's displayed size is
@@ -51,15 +52,15 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(function Receip
     img.src = itemPreview
   }, [itemPreview])
 
-  const dateLabel = new Date(dateReceived).toLocaleDateString('en-PH', { month: '2-digit', day: '2-digit', year: '2-digit' })
+  const dateLabel = new Date(dateReceived).toLocaleDateString('en-PH', { month: '2-digit', day: '2-digit', year: 'numeric' })
 
   return (
     <div ref={ref} style={{ width: '100%', background: '#fff', fontFamily: 'Arial, sans-serif', border: '1px solid #ddd', borderRadius: 12, overflow: 'hidden' }}>
       <div style={{ background: '#5C001F', color: '#fff', padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <img src="/penfixtwhhite.png" alt="Penfix" style={{ height: 44, width: 'auto', display: 'block' }} />
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '0.68rem', opacity: 0.85 }}>DATE</div>
-          <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>{dateLabel}</div>
+        <div style={{ textAlign: 'right', fontSize: '0.85rem' }}>
+          <span style={{ opacity: 0.85 }}>DATE: </span>
+          <span style={{ fontWeight: 700 }}>{dateLabel}</span>
         </div>
       </div>
 
@@ -102,6 +103,7 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(function Receip
         <Row label="Balance" value={formatPeso(balance)} bold color={balance > 0 ? '#c0392b' : '#1a7a3a'} />
         <Row label="Mode of Payment" value={paymentMethods.length > 0 ? paymentMethods.join(', ') : '—'} />
         {status && <Row label="Status" value={status} />}
+        {!!discount && discount > 0 && <Row label="Discount" value={formatPeso(discount)} />}
       </div>
     </div>
   )
