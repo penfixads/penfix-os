@@ -31,6 +31,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   const [payAmount, setPayAmount] = useState('')
   const [payMethod, setPayMethod] = useState('Cash')
   const [payCashback, setPayCashback] = useState(0)
+  const [payDate, setPayDate] = useState(getPhilippineDateStr())
   const [rewardsBalance, setRewardsBalance] = useState(0)
   const [overrideReason, setOverrideReason] = useState(jo.request_override || '')
   const [editingItem, setEditingItem] = useState<any | null>(null)
@@ -143,9 +144,10 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   function addPayment() {
     const amt = parseFloat(payAmount) || 0
     if (amt <= 0) return
-    setEditPayments(prev => [...prev, { amount: amt, method: payMethod, cashback: payCashback }])
+    setEditPayments(prev => [...prev, { amount: amt, method: payMethod, cashback: payCashback, payment_date: payDate }])
     setPayAmount('')
     setPayCashback(0)
+    setPayDate(getPhilippineDateStr())
     setShowPayForm(false)
   }
 
@@ -184,6 +186,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
           date_time_needed: item.date_time_needed,
           discount: item.discount,
           computed_line_total: item.computed_line_total,
+          item_preview: item.item_preview,
         }).eq('item_id', item.item_id)
       }
 
@@ -197,7 +200,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
           grand_total: grandTotal,
           amount: newPays[i].amount,
           payment_method: newPays[i].method,
-          payment_date: getPhilippineDateStr(),
+          payment_date: newPays[i].payment_date || getPhilippineDateStr(),
           recorded_by: currentUser.name,
         })
       }
@@ -349,6 +352,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                       <thead>
                         <tr style={{ background: '#C9A84C', color: '#3a0a0a' }}>
                           <th style={th}>Method</th>
+                          <th style={th}>Date Paid</th>
                           <th style={{ ...th, textAlign: 'right' }}>Amount</th>
                           <th style={{ ...th, textAlign: 'right' }}>Cashback</th>
                           <th style={{ ...th, width: 32 }}></th>
@@ -358,6 +362,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                         {editPayments.map((p, i) => (
                           <tr key={p.payment_id || i} style={{ borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
                             <td style={{ ...td, fontWeight: 600, color: '#fff' }}>{p.method || p.payment_method}</td>
+                            <td style={{ ...td, color: '#E8B9C6' }}>{p.payment_date ? new Date(p.payment_date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</td>
                             <td style={{ ...td, textAlign: 'right', color: '#fff' }}>{formatPeso(p.amount)}</td>
                             <td style={{ ...td, textAlign: 'right', color: '#E8B9C6' }}>{p.cashback > 0 ? formatPeso(p.cashback) : '—'}</td>
                             <td style={{ ...td, textAlign: 'center' }}>
@@ -389,6 +394,10 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                           ))}
                         </select>
                       </div>
+                    </div>
+                    <div>
+                      <label className="pf-label">Date Paid</label>
+                      <input type="date" value={payDate} max={getPhilippineDateStr()} onChange={e => setPayDate(e.target.value)} className="pf-input" />
                     </div>
                     {rewardsBalance > 0 && (
                       <div>

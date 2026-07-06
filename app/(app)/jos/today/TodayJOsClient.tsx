@@ -49,6 +49,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
   const [payAmount, setPayAmount] = useState('')
   const [payMethod, setPayMethod] = useState('Cash')
   const [payCashback, setPayCashback] = useState(0)
+  const [payDate, setPayDate] = useState(getPhilippineDateStr())
 
   const selectedClient = clients.find(c => c.client_id === selectedClientId)
   const [rewardsBalance, setRewardsBalance] = useState(0)
@@ -168,7 +169,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
           grand_total: grandTotal,
           amount: pay.amount,
           payment_method: pay.method,
-          payment_date: getPhilippineDateStr(now),
+          payment_date: pay.payment_date || getPhilippineDateStr(now),
           recorded_by: currentUser.name,
           remarks: pay.remarks || null,
         })
@@ -261,9 +262,10 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
   function addPayment() {
     const amt = parseFloat(payAmount) || 0
     if (amt <= 0) return
-    setPayments(prev => [...prev, { amount: amt, method: payMethod, cashback: payCashback }])
+    setPayments(prev => [...prev, { amount: amt, method: payMethod, cashback: payCashback, payment_date: payDate }])
     setPayAmount('')
     setPayCashback(0)
+    setPayDate(getPhilippineDateStr())
     setShowPaymentForm(false)
   }
 
@@ -462,7 +464,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                   <div style={{ marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {payments.map((p, i) => (
                       <div key={i} style={{ background: '#f0f0f0', borderRadius: 8, padding: '0.5rem 0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#1a1a1a', fontSize: '0.8rem' }}>{p.method} · {formatPeso(p.amount)}{p.cashback > 0 ? ` · Cashback: ${formatPeso(p.cashback)}` : ''}</span>
+                        <span style={{ color: '#1a1a1a', fontSize: '0.8rem' }}>{p.method} · {formatPeso(p.amount)}{p.cashback > 0 ? ` · Cashback: ${formatPeso(p.cashback)}` : ''} · <span style={{ color: '#777' }}>Paid {new Date(p.payment_date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}</span></span>
                         <button onClick={() => setPayments(prev => prev.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer' }}>✕</button>
                       </div>
                     ))}
@@ -485,6 +487,10 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
                           ))}
                         </select>
                       </div>
+                    </div>
+                    <div>
+                      <label className="pf-label">Date Paid</label>
+                      <input type="date" value={payDate} max={getPhilippineDateStr()} onChange={e => setPayDate(e.target.value)} className="pf-input" />
                     </div>
                     {earnedRewards > 0 && (
                       <div>

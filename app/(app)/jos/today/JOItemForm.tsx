@@ -31,6 +31,51 @@ interface Props {
   statusChecklist?: StatusChecklistProps
 }
 
+const MAX_LAYOUT_BYTES = 20 * 1024
+
+// Resizes/re-encodes as JPEG, backing off dimensions then quality, until the data URL's
+// underlying byte size is under the target (20KB) — approved layouts get stored inline in
+// job_order_items.item_preview (a text column), not a storage bucket, so they need to stay small.
+async function compressImageToDataUrl(file: File, maxBytes = MAX_LAYOUT_BYTES): Promise<{ dataUrl: string; bytes: number }> {
+  const objectUrl = URL.createObjectURL(file)
+  let img: HTMLImageElement
+  try {
+    img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image()
+      image.onload = () => resolve(image)
+      image.onerror = () => reject(new Error('Could not read image file.'))
+      image.src = objectUrl
+    })
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
+
+  let maxDim = Math.min(1200, Math.max(img.width, img.height))
+  let quality = 0.85
+  let dataUrl = ''
+  let bytes = Infinity
+
+  for (let i = 0; i < 25 && bytes > maxBytes && maxDim >= 20; i++) {
+    const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
+    const w = Math.max(1, Math.round(img.width * scale))
+    const h = Math.max(1, Math.round(img.height * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) break
+    ctx.drawImage(img, 0, 0, w, h)
+    dataUrl = canvas.toDataURL('image/jpeg', quality)
+    bytes = Math.round((dataUrl.length - (dataUrl.indexOf(',') + 1)) * 0.75)
+
+    if (bytes > maxBytes) {
+      if (quality > 0.35) quality -= 0.1
+      else maxDim = Math.round(maxDim * 0.85)
+    }
+  }
+  return { dataUrl, bytes }
+}
+
 function toLocalDateTimeInput(isoString: string): string {
   const d = new Date(isoString)
   const pad = (n: number) => String(n).padStart(2, '0')
@@ -151,6 +196,10 @@ export default function JOItemForm({ categories, editingItem, onSave, onClose, c
   const [dateNeeded, setDateNeeded] = useState(editingItem?.date_time_needed ? toLocalDateTimeInput(editingItem.date_time_needed) : '')
   const [jobStatus] = useState('Received')
   const [discount, setDiscount] = useState(editingItem?.discount != null ? String(editingItem.discount) : '0')
+  const [layoutPreview, setLayoutPreview] = useState(editingItem?.item_preview || '')
+  const [layoutBytes, setLayoutBytes] = useState<number | null>(null)
+  const [compressing, setCompressing] = useState(false)
+  const [layoutError, setLayoutError] = useState('')
 
   const supabase = createSupabaseBrowserClient()
   const hasLoadedInitialSubs = useRef(false)
@@ -201,8 +250,23 @@ export default function JOItemForm({ categories, editingItem, onSave, onClose, c
   const needsMins = effectivePricing === 'per_minute'
   const needsLetters = effectivePricing === 'per_lettersqft'
 
+  async function handleLayoutFile(file: File | null) {
+    if (!file) return
+    setLayoutError('')
+    setCompressing(true)
+    try {
+      const { dataUrl, bytes } = await compressImageToDataUrl(file)
+      setLayoutPreview(dataUrl)
+      setLayoutBytes(bytes)
+    } catch (e: any) {
+      setLayoutError(e.message || 'Failed to process image.')
+    } finally {
+      setCompressing(false)
+    }
+  }
+
   function handleSave() {
-    if (!subcategoryId || !dateNeeded) return
+    if (!subcategoryId || !dateNeeded || !layoutPreview) return
     const selectedCat = categories.find(c => c.category_id === categoryId)
     onSave({
       ...(isEditing ? { item_id: editingItem.item_id } : { job_status: jobStatus }),
@@ -222,6 +286,7 @@ export default function JOItemForm({ categories, editingItem, onSave, onClose, c
       date_time_needed: dateNeeded ? new Date(dateNeeded).toISOString() : null,
       discount: parseFloat(discount) || 0,
       computed_line_total: lineTotal,
+      item_preview: layoutPreview,
     })
   }
 
@@ -272,6 +337,33 @@ export default function JOItemForm({ categories, editingItem, onSave, onClose, c
             <div className="pf-field">
               <label className="pf-label">Pricing Model</label>
               <input type="text" value={PRICING_LABELS[effectivePricing] || effectivePricing || '—'} disabled className="pf-input" />
+            </div>
+
+            <div className="pf-field">
+              <label className="pf-label">Approved Layout <span className="pf-req">*</span></label>
+              {layoutPreview ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <img src={layoutPreview} alt="Approved layout preview" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)' }} />
+                  <div style={{ flex: 1 }}>
+                    {layoutBytes != null && (
+                      <div style={{ color: '#E8B9C6', fontSize: '0.72rem' }}>Compressed to {(layoutBytes / 1024).toFixed(1)} KB</div>
+                    )}
+                    {!readOnly && (
+                      <label className="pf-link-btn" style={{ cursor: 'pointer', fontSize: '0.78rem' }}>
+                        Change image
+                        <input type="file" accept="image/*" onChange={e => handleLayoutFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              ) : !readOnly && (
+                <input type="file" accept="image/*" onChange={e => handleLayoutFile(e.target.files?.[0] || null)} className="pf-input" />
+              )}
+              {compressing && <div style={{ color: '#E8B9C6', fontSize: '0.72rem', marginTop: 4 }}>Compressing image…</div>}
+              {layoutError && <div style={{ color: '#e74c3c', fontSize: '0.72rem', marginTop: 4 }}>{layoutError}</div>}
+              {!readOnly && !layoutPreview && !compressing && (
+                <div style={{ color: '#E8B9C6', fontSize: '0.7rem', marginTop: 4 }}>Upload the client-approved layout before saving this item.</div>
+              )}
             </div>
 
             <div className="pf-grid-2" style={{ marginBottom: '0.85rem' }}>
@@ -356,7 +448,7 @@ export default function JOItemForm({ categories, editingItem, onSave, onClose, c
           ) : (
             <>
               <button onClick={onClose} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
-              <button onClick={handleSave} disabled={!subcategoryId || !dateNeeded} className="pf-btn">
+              <button onClick={handleSave} disabled={!subcategoryId || !dateNeeded || !layoutPreview || compressing} className="pf-btn">
                 {isEditing ? <><IconCheck />Save Changes</> : <><IconPlus />Add Item</>}
               </button>
             </>
