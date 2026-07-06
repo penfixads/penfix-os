@@ -1,6 +1,7 @@
 ﻿import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { getCurrentUser } from '@/lib/user'
 import { redirect } from 'next/navigation'
+import { getPhilippineDateStr } from '@/lib/jo-helpers'
 import SalesReportsClient from './SalesReportsClient'
 
 export default async function SalesReportsPage() {
@@ -11,9 +12,10 @@ export default async function SalesReportsPage() {
   const supabase = createSupabaseServerClient()
 
   // Pull last 365 days of payments and JOs
-  const yearAgo = new Date()
-  yearAgo.setFullYear(yearAgo.getFullYear() - 1)
-  const since = yearAgo.toISOString().split('T')[0]
+  const today = getPhilippineDateStr()
+  const yearAgo = new Date(`${today}T00:00:00+08:00`)
+  yearAgo.setUTCFullYear(yearAgo.getUTCFullYear() - 1)
+  const since = getPhilippineDateStr(yearAgo)
 
   const [{ data: payments }, { data: jobOrders }, { data: expenses }] = await Promise.all([
     supabase

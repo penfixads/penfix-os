@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { generateJobOrderId, generateItemId, generateClientId, generatePaymentId, computeLineTotal, formatPeso, getNextJOSequence, buildFeedbackUrl } from '@/lib/jo-helpers'
+import { generateJobOrderId, generateItemId, generateClientId, generatePaymentId, computeLineTotal, formatPeso, getNextJOSequence, buildFeedbackUrl, getPhilippineDateStr } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from './JOItemForm'
 import { IconPlus, IconCirclePlus, IconX, IconCheck } from '@/components/icons'
@@ -168,7 +168,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
           grand_total: grandTotal,
           amount: pay.amount,
           payment_method: pay.method,
-          payment_date: now.toISOString().split('T')[0],
+          payment_date: getPhilippineDateStr(now),
           recorded_by: currentUser.name,
           remarks: pay.remarks || null,
         })

@@ -95,8 +95,26 @@ export default function Sidebar({ role, name }: Props) {
   const router = useRouter()
   const items = NAV_ITEMS.filter(i => i.roles.includes(role))
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [pendingCount, setPendingCount] = useState(0)
 
   useEffect(() => { setMobileOpen(false) }, [pathname])
+
+  useEffect(() => {
+    if (role !== 'Admin') return
+    const supabase = createSupabaseBrowserClient()
+
+    async function loadPendingCount() {
+      const [{ count: joCount }, { count: creditCount }] = await Promise.all([
+        supabase.from('job_orders').select('*', { count: 'exact', head: true }).eq('override_status', 'Pending'),
+        supabase.from('clients').select('*', { count: 'exact', head: true }).eq('credit_line_request_status', 'Pending'),
+      ])
+      setPendingCount((joCount || 0) + (creditCount || 0))
+    }
+
+    loadPendingCount()
+    const interval = setInterval(loadPendingCount, 30000)
+    return () => clearInterval(interval)
+  }, [role, pathname])
 
   async function handleSignOut() {
     const supabase = createSupabaseBrowserClient()
@@ -196,7 +214,22 @@ export default function Sidebar({ role, name }: Props) {
                 }}
               >
                 <span style={{ color: active ? '#C9A84C' : '#ccc', display: 'flex' }}>{item.icon}</span>
-                {item.label}
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {item.href === '/jos/pending-approval' && pendingCount > 0 && (
+                  <span style={{
+                    background: '#e74c3c',
+                    color: '#fff',
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    borderRadius: 999,
+                    padding: '0.2rem 0.42rem',
+                    minWidth: 18,
+                    textAlign: 'center',
+                  }}>
+                    {pendingCount > 99 ? '99+' : pendingCount}
+                  </span>
+                )}
               </Link>
             )
           })}

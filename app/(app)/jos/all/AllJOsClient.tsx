@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import { useState } from 'react'
-import { formatPeso, buildFeedbackUrl } from '@/lib/jo-helpers'
+import { formatPeso, buildFeedbackUrl, getPhilippineDateStr } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
@@ -23,7 +23,7 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, currentUser 
     const q = search.toLowerCase()
     const matchSearch = !q || client.toLowerCase().includes(q) || jo.job_order_id.toLowerCase().includes(q) || (jo.received_by || '').toLowerCase().includes(q)
     const matchStatus = statusFilter === 'all' || jo.payment_status === statusFilter
-    const d = jo.date_time_received?.split('T')[0]
+    const d = jo.date_time_received ? getPhilippineDateStr(new Date(jo.date_time_received)) : undefined
     const matchFrom = !dateFrom || d >= dateFrom
     const matchTo = !dateTo || d <= dateTo
     return matchSearch && matchStatus && matchFrom && matchTo

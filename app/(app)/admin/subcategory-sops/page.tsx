@@ -10,10 +10,11 @@ export default async function SubcategorySopsPage() {
 
   const supabase = createSupabaseServerClient()
 
-  const [{ data: subcategories }, { data: categories }, { data: sopSteps }] = await Promise.all([
+  const [{ data: subcategories }, { data: categories }, { data: sopSteps }, { data: procedures }] = await Promise.all([
     supabase.from('subcategories').select('subcategory_id, subcategory_name, category_id').order('subcategory_name'),
     supabase.from('categories').select('category_id, category_name').order('category_name'),
     supabase.from('subcategory_sop').select('*').order('subcategory_id').order('sequence'),
+    supabase.from('subcategory_sop_procedures').select('*').eq('is_active', true).order('sequence'),
   ])
 
   return (
@@ -21,6 +22,7 @@ export default async function SubcategorySopsPage() {
       subcategories={subcategories || []}
       categories={categories || []}
       sopSteps={sopSteps || []}
+      procedures={procedures || []}
     />
   )
 }

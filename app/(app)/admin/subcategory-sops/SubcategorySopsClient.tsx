@@ -8,9 +8,10 @@ interface Props {
   subcategories: any[]
   categories: any[]
   sopSteps: any[]
+  procedures: any[]
 }
 
-export default function SubcategorySopsClient({ subcategories, categories, sopSteps: initialSteps }: Props) {
+export default function SubcategorySopsClient({ subcategories, categories, sopSteps: initialSteps, procedures: initialProcedures }: Props) {
   const [sopSteps, setSopSteps] = useState(initialSteps)
   const [selectedSubId, setSelectedSubId] = useState<string>('')
   const [search, setSearch] = useState('')
@@ -25,8 +26,8 @@ export default function SubcategorySopsClient({ subcategories, categories, sopSt
   const [stepProductionStart, setStepProductionStart] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  const [showCopyFrom, setShowCopyFrom] = useState(false)
-  const [copySearch, setCopySearch] = useState('')
+  const [procedures, setProcedures] = useState(initialProcedures)
+  const [expandedStepId, setExpandedStepId] = useState<string | null>(null)
 
   const filteredSubs = subcategories.filter(s => {
     const q = search.toLowerCase()
@@ -121,40 +122,56 @@ export default function SubcategorySopsClient({ subcategories, categories, sopSt
     }))
   }
 
-  async function copyStepsFrom(sourceSubId: string) {
-    if (!selectedSubId || sourceSubId === selectedSubId) return
-    const sourceSteps = sopSteps.filter(s => s.subcategory_id === sourceSubId).sort((a, b) => a.sequence - b.sequence)
-    if (sourceSteps.length === 0) return
-    if (stepsForSub.length > 0 && !confirm(`This will add ${sourceSteps.length} step(s) after the existing ones on this subcategory. Continue?`)) return
-    const supabase = createSupabaseBrowserClient()
-    const startSeq = (stepsForSub[stepsForSub.length - 1]?.sequence || 0) + 1
-    const inserts = sourceSteps.map((s, i) => ({
-      sop_id: `${selectedSubId}-STEP-${startSeq + i}`,
-      subcategory_id: selectedSubId,
-      status_name: s.status_name,
-      sequence: startSeq + i,
-      is_active: true,
-      is_terminal: s.is_terminal,
-      visible_to_client: s.visible_to_client,
-      is_production_start: s.is_production_start,
-      description: s.description,
-    }))
-    const { data, error } = await supabase.from('subcategory_sop').insert(inserts).select()
-    if (!error && data) setSopSteps(prev => [...prev, ...data])
-    setShowCopyFrom(false)
+  function proceduresForStep(sopId: string) {
+    return procedures.filter(p => p.sop_id === sopId).sort((a, b) => a.sequence - b.sequence)
   }
 
-  const copyFromOptions = subcategories.filter(s =>
-    s.subcategory_id !== selectedSubId &&
-    subStepCount(s.subcategory_id) > 0 &&
-    (!copySearch || (s.subcategory_name || '').toLowerCase().includes(copySearch.toLowerCase()))
-  )
+  async function addProcedure(sopId: string) {
+    const stepProcedures = proceduresForStep(sopId)
+    const nextSeq = (stepProcedures[stepProcedures.length - 1]?.sequence || 0) + 1
+    const procedureId = `${sopId}-PROC-${nextSeq}`
+    const supabase = createSupabaseBrowserClient()
+    const { data, error } = await supabase.from('subcategory_sop_procedures').insert({
+      procedure_id: procedureId, sop_id: sopId, sequence: nextSeq, instruction: '', is_active: true,
+    }).select().single()
+    if (error) return
+    setProcedures(prev => [...prev, data])
+  }
+
+  async function saveProcedureText(procedureId: string, instruction: string) {
+    const supabase = createSupabaseBrowserClient()
+    await supabase.from('subcategory_sop_procedures').update({ instruction }).eq('procedure_id', procedureId)
+    setProcedures(prev => prev.map(p => p.procedure_id === procedureId ? { ...p, instruction } : p))
+  }
+
+  async function deleteProcedure(procedureId: string) {
+    const supabase = createSupabaseBrowserClient()
+    await supabase.from('subcategory_sop_procedures').delete().eq('procedure_id', procedureId)
+    setProcedures(prev => prev.filter(p => p.procedure_id !== procedureId))
+  }
+
+  async function moveProcedure(procedure: any, direction: -1 | 1) {
+    const stepProcedures = proceduresForStep(procedure.sop_id)
+    const idx = stepProcedures.findIndex(p => p.procedure_id === procedure.procedure_id)
+    const swapWith = stepProcedures[idx + direction]
+    if (!swapWith) return
+    const supabase = createSupabaseBrowserClient()
+    await Promise.all([
+      supabase.from('subcategory_sop_procedures').update({ sequence: swapWith.sequence }).eq('procedure_id', procedure.procedure_id),
+      supabase.from('subcategory_sop_procedures').update({ sequence: procedure.sequence }).eq('procedure_id', swapWith.procedure_id),
+    ])
+    setProcedures(prev => prev.map(p => {
+      if (p.procedure_id === procedure.procedure_id) return { ...p, sequence: swapWith.sequence }
+      if (p.procedure_id === swapWith.procedure_id) return { ...p, sequence: procedure.sequence }
+      return p
+    }))
+  }
 
   return (
     <div>
       <div style={{ marginBottom: '1.25rem' }}>
-        <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Subcategory SOPs</h1>
-        <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>Each subcategory gets its own step-by-step production flow — even similar items (e.g. tarpaulin vs sticker printing) often need different steps</p>
+        <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Job Flow</h1>
+        <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>Each subcategory gets its own step-by-step production flow — even similar items (e.g. tarpaulin vs sticker printing) often need different steps. Expand a step to attach its own detailed SOP checklist.</p>
       </div>
 
       <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
@@ -199,9 +216,6 @@ export default function SubcategorySopsClient({ subcategories, categories, sopSt
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: 8 }}>
                 <h2 style={{ color: '#7A1828', fontSize: '1rem', fontWeight: 700 }}>{selectedSub.subcategory_name}</h2>
                 <div style={{ display: 'flex', gap: 12 }}>
-                  <button onClick={() => setShowCopyFrom(true)} className="pf-link-btn" style={{ color: '#666', fontSize: '0.85rem' }}>
-                    Copy steps from…
-                  </button>
                   <button onClick={openAddStep} className="pf-link-btn" style={{ color: '#7A1828' }}>
                     <IconPlus />Add Step
                   </button>
@@ -212,26 +226,68 @@ export default function SubcategorySopsClient({ subcategories, categories, sopSt
                 <div style={{ color: '#aaa', fontSize: '0.85rem', padding: '1.5rem 0', textAlign: 'center' }}>No SOP steps defined yet for this subcategory.</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {stepsForSub.map((step, i) => (
-                    <div key={step.sop_id} style={{ background: '#FDF5EC', border: '1px solid #EDE0CC', borderRadius: 8, padding: '0.6rem 0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <button onClick={() => moveStep(step, -1)} disabled={i === 0} style={{ background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? '#ccc' : '#7A1828', padding: 0, lineHeight: 1 }}>▲</button>
-                        <button onClick={() => moveStep(step, 1)} disabled={i === stepsForSub.length - 1} style={{ background: 'none', border: 'none', cursor: i === stepsForSub.length - 1 ? 'default' : 'pointer', color: i === stepsForSub.length - 1 ? '#ccc' : '#7A1828', padding: 0, lineHeight: 1 }}>▼</button>
-                      </div>
-                      <div style={{ color: '#999', fontSize: '0.7rem', minWidth: 20 }}>#{step.sequence}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ color: '#1a1a1a', fontWeight: 600, fontSize: '0.85rem' }}>
-                          {step.status_name}
-                          {step.is_production_start && <span style={{ marginLeft: 6, background: '#4a3a1a', color: '#f39c12', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>FABRICATORS START HERE</span>}
-                          {step.is_terminal && <span style={{ marginLeft: 6, background: '#1a4a1a', color: '#2ecc71', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>TERMINAL</span>}
-                          {step.visible_to_client && <span style={{ marginLeft: 6, background: '#1a2a4a', color: '#3498db', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>VISIBLE TO CLIENT</span>}
+                  {stepsForSub.map((step, i) => {
+                    const stepProcedures = proceduresForStep(step.sop_id)
+                    const isExpanded = expandedStepId === step.sop_id
+                    return (
+                      <div key={step.sop_id} style={{ background: '#FDF5EC', border: '1px solid #EDE0CC', borderRadius: 8, overflow: 'hidden' }}>
+                        <div style={{ padding: '0.6rem 0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <button onClick={() => moveStep(step, -1)} disabled={i === 0} style={{ background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? '#ccc' : '#7A1828', padding: 0, lineHeight: 1 }}>▲</button>
+                            <button onClick={() => moveStep(step, 1)} disabled={i === stepsForSub.length - 1} style={{ background: 'none', border: 'none', cursor: i === stepsForSub.length - 1 ? 'default' : 'pointer', color: i === stepsForSub.length - 1 ? '#ccc' : '#7A1828', padding: 0, lineHeight: 1 }}>▼</button>
+                          </div>
+                          <div style={{ color: '#999', fontSize: '0.7rem', minWidth: 20 }}>#{step.sequence}</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ color: '#1a1a1a', fontWeight: 600, fontSize: '0.85rem' }}>
+                              {step.status_name}
+                              {step.is_production_start && <span style={{ marginLeft: 6, background: '#4a3a1a', color: '#f39c12', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>FABRICATORS START HERE</span>}
+                              {step.is_terminal && <span style={{ marginLeft: 6, background: '#1a4a1a', color: '#2ecc71', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>TERMINAL</span>}
+                              {step.visible_to_client && <span style={{ marginLeft: 6, background: '#1a2a4a', color: '#3498db', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>VISIBLE TO CLIENT</span>}
+                            </div>
+                            {step.description && <div style={{ color: '#777', fontSize: '0.72rem', marginTop: 1 }}>{step.description}</div>}
+                            <button onClick={() => setExpandedStepId(isExpanded ? null : step.sop_id)}
+                              style={{ background: 'none', border: 'none', color: '#7A1828', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700, padding: 0, marginTop: 4 }}>
+                              {isExpanded ? '▼' : '▶'} {stepProcedures.length} SOP item(s)
+                            </button>
+                          </div>
+                          <button onClick={() => openEditStep(step)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7A1828', padding: 2 }}><IconEdit /></button>
+                          <button onClick={() => deleteStep(step.sop_id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c', padding: 2, fontSize: '0.9rem' }}>✕</button>
                         </div>
-                        {step.description && <div style={{ color: '#777', fontSize: '0.72rem', marginTop: 1 }}>{step.description}</div>}
+
+                        {isExpanded && (
+                          <div style={{ borderTop: '1px dashed #EDE0CC', background: '#fff8ee', padding: '0.6rem 0.85rem 0.75rem 2.6rem' }}>
+                            {stepProcedures.length === 0 && (
+                              <div style={{ color: '#aaa', fontSize: '0.75rem', marginBottom: 6 }}>No SOP items yet for this step.</div>
+                            )}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              {stepProcedures.map((proc, pi) => (
+                                <div key={proc.procedure_id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <button onClick={() => moveProcedure(proc, -1)} disabled={pi === 0}
+                                      style={{ background: 'none', border: 'none', cursor: pi === 0 ? 'default' : 'pointer', color: pi === 0 ? '#ccc' : '#7A1828', padding: 0, fontSize: '0.65rem', lineHeight: 1 }}>▲</button>
+                                    <button onClick={() => moveProcedure(proc, 1)} disabled={pi === stepProcedures.length - 1}
+                                      style={{ background: 'none', border: 'none', cursor: pi === stepProcedures.length - 1 ? 'default' : 'pointer', color: pi === stepProcedures.length - 1 ? '#ccc' : '#7A1828', padding: 0, fontSize: '0.65rem', lineHeight: 1 }}>▼</button>
+                                  </div>
+                                  <input
+                                    type="text"
+                                    value={proc.instruction}
+                                    onChange={e => setProcedures(prev => prev.map(p => p.procedure_id === proc.procedure_id ? { ...p, instruction: e.target.value } : p))}
+                                    onBlur={e => saveProcedureText(proc.procedure_id, e.target.value)}
+                                    placeholder="e.g. Confirm file resolution is at least 150dpi"
+                                    style={{ flex: 1, background: '#fff', border: '1px solid #EDE0CC', borderRadius: 6, padding: '0.35rem 0.55rem', fontSize: '0.78rem', color: '#1a1a1a', outline: 'none' }}
+                                  />
+                                  <button onClick={() => deleteProcedure(proc.procedure_id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c', padding: 2, fontSize: '0.85rem' }}>✕</button>
+                                </div>
+                              ))}
+                            </div>
+                            <button onClick={() => addProcedure(step.sop_id)} className="pf-link-btn" style={{ color: '#7A1828', marginTop: 8, fontSize: '0.78rem' }}>
+                              <IconPlus />Add SOP Item
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      <button onClick={() => openEditStep(step)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7A1828', padding: 2 }}><IconEdit /></button>
-                      <button onClick={() => deleteStep(step.sop_id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c', padding: 2, fontSize: '0.9rem' }}>✕</button>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </>
@@ -240,32 +296,6 @@ export default function SubcategorySopsClient({ subcategories, categories, sopSt
           )}
         </div>
       </div>
-
-      {/* Copy steps from another subcategory */}
-      {showCopyFrom && (
-        <div className="pf-modal-overlay" style={{ background: 'rgba(0,0,0,0.8)' }}>
-          <div className="pf-modal-card pf-modal-wine" style={{ maxWidth: 420 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h3 style={{ color: '#fff', fontWeight: 700, fontSize: '1.5rem' }}>Copy Steps From</h3>
-              <button onClick={() => setShowCopyFrom(false)} style={{ background: 'none', border: 'none', color: '#E8B9C6', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
-            </div>
-            <div className="pf-field">
-              <input type="text" placeholder="Search subcategory with existing steps…" value={copySearch} onChange={e => setCopySearch(e.target.value)} className="pf-input" />
-            </div>
-            <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {copyFromOptions.length === 0 ? (
-                <div style={{ color: '#E8B9C6', fontSize: '0.82rem', textAlign: 'center', padding: '1rem 0' }}>No other subcategory has steps defined yet.</div>
-              ) : copyFromOptions.map(s => (
-                <button key={s.subcategory_id} onClick={() => copyStepsFrom(s.subcategory_id)}
-                  style={{ textAlign: 'left', background: '#3a3a3a', border: '1px solid #4a4a4a', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#fff', cursor: 'pointer', fontSize: '0.82rem' }}>
-                  {s.subcategory_name}
-                  <span style={{ color: '#999', fontSize: '0.7rem', marginLeft: 6 }}>({subStepCount(s.subcategory_id)} steps)</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Add/edit SOP step modal */}
       {showStepForm && (
@@ -302,9 +332,16 @@ export default function SubcategorySopsClient({ subcategories, categories, sopSt
                 Steps before this one (e.g. layout, client approval) stay GA-only. Only one step per subcategory can be marked.
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowStepForm(false)} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
-              <button onClick={saveStep} disabled={saving} className="pf-btn"><IconCheck />{saving ? 'Saving…' : 'Save'}</button>
+            <div style={{ display: 'flex', gap: 8, justifyContent: editingStep ? 'space-between' : 'flex-end' }}>
+              {editingStep && (
+                <button onClick={() => { setShowStepForm(false); deleteStep(editingStep.sop_id) }} style={{ background: 'none', border: '1px solid #7A1828', color: '#e74c3c', borderRadius: 8, padding: '0.55rem 1rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                  Delete Step
+                </button>
+              )}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setShowStepForm(false)} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
+                <button onClick={saveStep} disabled={saving} className="pf-btn"><IconCheck />{saving ? 'Saving…' : 'Save'}</button>
+              </div>
             </div>
           </div>
         </div>

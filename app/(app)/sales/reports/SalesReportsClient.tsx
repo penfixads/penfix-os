@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import { useState, useMemo } from 'react'
-import { formatPeso } from '@/lib/jo-helpers'
+import { formatPeso, getPhilippineDateStr } from '@/lib/jo-helpers'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts'
@@ -45,7 +45,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
     }
 
     for (const jo of jobOrders) {
-      const d = jo.date_time_received?.split('T')[0]
+      const d = jo.date_time_received ? getPhilippineDateStr(new Date(jo.date_time_received)) : undefined
       if (!d) continue
       const key = getPeriodKey(d, period)
       if (!map[key]) map[key] = { collections: 0, sales: 0, expenses: 0, joCount: 0, byMethod: {} }

@@ -135,3 +135,21 @@ export function getNextJOSequence(existingIds: string[], dateStr: string): numbe
     .map(id => parseInt(id.replace(prefix, '')) || 0)
   return seqs.length > 0 ? Math.max(...seqs) + 1 : 1
 }
+
+// The Node process running this code (dev, or Vercel) may run in UTC, not Philippine Time —
+// `new Date().toISOString().split('T')[0]` silently lags PH by up to 8 hours. These force
+// Asia/Manila (UTC+8, same offset as Singapore) regardless of the server/browser's own timezone.
+export function getPhilippineDateStr(date: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date)
+}
+
+export function getPhilippineDayBoundsUTC(dateStr: string): { startUTC: string; endUTC: string } {
+  const start = new Date(`${dateStr}T00:00:00+08:00`)
+  const end = new Date(`${dateStr}T23:59:59.999+08:00`)
+  return { startUTC: start.toISOString(), endUTC: end.toISOString() }
+}
+
+export function getPhilippineDayOfWeek(dateStr: string): number {
+  // 0=Sun...6=Sat. Noon UTC avoids any day-boundary edge case entirely.
+  return new Date(`${dateStr}T12:00:00Z`).getUTCDay()
+}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { getPhilippineDateStr } from '@/lib/jo-helpers'
 
 interface Props { jobOrders: any[] }
 
@@ -15,7 +16,7 @@ export default function DailyRecordClient({ jobOrders }: Props) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
   const filtered = jobOrders.filter(jo => {
-    const d = jo.date_time_received?.split('T')[0]
+    const d = jo.date_time_received ? getPhilippineDateStr(new Date(jo.date_time_received)) : undefined
     const matchDate = !date || d === date
     const client = jo.clients?.client_name || jo.clients?.company_name || ''
     const q = search.toLowerCase()

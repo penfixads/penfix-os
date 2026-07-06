@@ -1,6 +1,7 @@
 ﻿import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { getCurrentUser } from '@/lib/user'
 import { redirect } from 'next/navigation'
+import { getPhilippineDateStr, getPhilippineDayBoundsUTC } from '@/lib/jo-helpers'
 import TodayJOsClient from './TodayJOsClient'
 
 export default async function TodayJOsPage() {
@@ -8,14 +9,15 @@ export default async function TodayJOsPage() {
   if (!user) redirect('/login')
 
   const supabase = createSupabaseServerClient()
-  const today = new Date().toISOString().split('T')[0]
+  const today = getPhilippineDateStr()
+  const { startUTC, endUTC } = getPhilippineDayBoundsUTC(today)
 
   const [{ data: jobOrders }, { data: clients }, { data: categories }, { data: subcategories }, { data: ledger }] = await Promise.all([
     supabase
       .from('job_orders')
       .select(`*, clients(client_name, company_name), job_order_items(item_id, job_status, computed_line_total)`)
-      .gte('date_time_received', `${today}T00:00:00`)
-      .lte('date_time_received', `${today}T23:59:59`)
+      .gte('date_time_received', startUTC)
+      .lte('date_time_received', endUTC)
       .order('date_time_received', { ascending: false }),
     supabase
       .from('clients')

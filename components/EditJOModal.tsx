@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { generateItemId, generatePaymentId, formatPeso } from '@/lib/jo-helpers'
+import { generateItemId, generatePaymentId, formatPeso, getEffectiveSteps, getPhilippineDateStr } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
 import { IconPlus, IconCirclePlus, IconEdit, IconX, IconCheck } from '@/components/icons'
@@ -34,17 +34,25 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   const [rewardsBalance, setRewardsBalance] = useState(0)
   const [overrideReason, setOverrideReason] = useState(jo.request_override || '')
   const [editingItem, setEditingItem] = useState<any | null>(null)
+  const [sopSteps, setSopSteps] = useState<any[]>([])
+  const [staff, setStaff] = useState<any[]>([])
+  const [statusLogs, setStatusLogs] = useState<any[]>([])
+  const [advancingItemId, setAdvancingItemId] = useState<string | null>(null)
+  const [pendingChange, setPendingChange] = useState<{ itemId: string; completedStatus: string; targetStatus: string } | null>(null)
+  const [selectedProponents, setSelectedProponents] = useState<string[]>([])
 
   const client = jo.clients
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient()
     Promise.all([
-      supabase.from('job_order_items').select('*, subcategories(subcategory_name, category_id)').eq('job_order_id', jo.job_order_id).order('item_id'),
+      supabase.from('job_order_items').select('*, subcategories(subcategory_name, category_id, job_flow)').eq('job_order_id', jo.job_order_id).order('item_id'),
       supabase.from('payments').select('*').eq('job_order_id', jo.job_order_id).order('payment_date'),
       supabase.from('rewards_ledger').select('type, amount').eq('client_id', jo.client_id),
       supabase.from('clients').select('credit_line_status').eq('client_id', jo.client_id).single(),
-    ]).then(([{ data: items }, { data: pays }, { data: rewards }, { data: clientRow }]) => {
+      supabase.from('subcategory_sop').select('*').eq('is_active', true).order('sequence'),
+      supabase.from('users').select('user_email, name, role').in('role', ['Fabricator', 'GA']).eq('is_active', true).order('name'),
+    ]).then(async ([{ data: items }, { data: pays }, { data: rewards }, { data: clientRow }, { data: sops }, { data: staffRows }]) => {
       setEditItems((items || []).map(i => ({ ...i, subcategory_name: i.subcategories?.subcategory_name || i.item_id, _existing: true })))
       setEditPayments((pays || []).map(p => ({ ...p, method: p.payment_method, cashback: p.cashback_amount || 0, _existing: true })))
       const earned = (rewards || []).filter(r => r.type === 'earned').reduce((s, r) => s + (r.amount || 0), 0)
@@ -52,9 +60,67 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
       setRewardsBalance(Math.max(0, earned - redeemed))
       // "For Billing" mirrors the client's current credit line status — not editable from here.
       setEditIsForBilling(!!clientRow?.credit_line_status)
+      setSopSteps(sops || [])
+      setStaff(staffRows || [])
+      const itemIds = (items || []).map(i => i.item_id)
+      const { data: logs } = itemIds.length > 0
+        ? await supabase.from('job_order_item_status_log').select('item_id, status_name, changed_by_name').in('item_id', itemIds)
+        : { data: [] }
+      setStatusLogs(logs || [])
       setLoading(false)
     })
   }, [jo.job_order_id, jo.client_id])
+
+  // SOP steps grouped by subcategory, and who-worked-on-what per item — feeds the status checklist.
+  const sopBySubcategory: Record<string, any[]> = {}
+  for (const s of sopSteps) {
+    if (!sopBySubcategory[s.subcategory_id]) sopBySubcategory[s.subcategory_id] = []
+    sopBySubcategory[s.subcategory_id].push(s)
+  }
+  const namesByItemStatus: Record<string, Record<string, string[]>> = {}
+  for (const log of statusLogs) {
+    if (!namesByItemStatus[log.item_id]) namesByItemStatus[log.item_id] = {}
+    if (!namesByItemStatus[log.item_id][log.status_name]) namesByItemStatus[log.item_id][log.status_name] = []
+    namesByItemStatus[log.item_id][log.status_name].push(log.changed_by_name)
+  }
+
+  function requestStatusChange(itemId: string, completedStatus: string, targetStatus: string) {
+    setPendingChange({ itemId, completedStatus, targetStatus })
+    setSelectedProponents([currentUser.email])
+  }
+
+  function toggleProponent(email: string) {
+    setSelectedProponents(prev => prev.includes(email) ? prev.filter(e => e !== email) : [...prev, email])
+  }
+
+  async function confirmStatusChange() {
+    if (!pendingChange) return
+    const { itemId, completedStatus, targetStatus } = pendingChange
+    const proponents = selectedProponents.length > 0 ? selectedProponents : [currentUser.email]
+    setAdvancingItemId(itemId)
+    try {
+      const supabase = createSupabaseBrowserClient()
+      const { error } = await supabase.from('job_order_items').update({ job_status: targetStatus }).eq('item_id', itemId)
+      if (error) { alert(error.message || 'Failed to advance status.'); return }
+      setEditItems(prev => prev.map(i => i.item_id === itemId ? { ...i, job_status: targetStatus } : i))
+      const newLogs = proponents.map(email => {
+        const person = staff.find(s => s.user_email === email)
+        return {
+          item_id: itemId,
+          job_order_id: jo.job_order_id,
+          status_name: completedStatus,
+          changed_by_email: email,
+          changed_by_name: person?.name || (email === currentUser.email ? currentUser.name : email),
+          changed_by_role: person?.role || (email === currentUser.email ? currentUser.role : null),
+        }
+      })
+      await supabase.from('job_order_item_status_log').insert(newLogs)
+      setStatusLogs(prev => [...prev, ...newLogs])
+      setPendingChange(null)
+    } finally {
+      setAdvancingItemId(null)
+    }
+  }
 
   function saveEditedItem(updated: any) {
     setEditItems(prev => prev.map(i => i.item_id === updated.item_id ? { ...i, ...updated, subcategory_name: updated.subcategory_name || i.subcategory_name } : i))
@@ -131,7 +197,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
           grand_total: grandTotal,
           amount: newPays[i].amount,
           payment_method: newPays[i].method,
-          payment_date: new Date().toISOString().split('T')[0],
+          payment_date: getPhilippineDateStr(),
           recorded_by: currentUser.name,
         })
       }
@@ -399,16 +465,39 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
         />
       )}
 
-      {editingItem && (
-        <JOItemForm
-          categories={categories}
-          subcategories={subcategories}
-          editingItem={editingItem}
-          currentUser={currentUser}
-          onSave={saveEditedItem}
-          onClose={() => setEditingItem(null)}
-        />
-      )}
+      {editingItem && (() => {
+        // editItems may have advanced since the modal opened (checklist clicks update it) —
+        // always read the live copy so the modal reflects the current status.
+        const liveItem = { ...(editItems.find(i => i.item_id === editingItem.item_id) || editingItem), category_id: editingItem.category_id }
+        const subcategoryId = liveItem.subcategory_id
+        const jobFlow = liveItem.subcategories?.job_flow
+        const currentStatus = liveItem.job_status || 'Received'
+        const steps = getEffectiveSteps(sopBySubcategory[subcategoryId] || [], jobFlow)
+        const isPendingHere = pendingChange?.itemId === liveItem.item_id
+        return (
+          <JOItemForm
+            categories={categories}
+            subcategories={subcategories}
+            editingItem={liveItem}
+            currentUser={currentUser}
+            onSave={saveEditedItem}
+            onClose={() => setEditingItem(null)}
+            statusChecklist={{
+              steps,
+              currentStatus,
+              namesByStatus: namesByItemStatus[liveItem.item_id] || {},
+              staff,
+              pendingStatus: isPendingHere ? pendingChange!.completedStatus : null,
+              selectedProponents,
+              advancing: advancingItemId === liveItem.item_id,
+              onRequestAdvance: (completedStatus, targetStatus) => requestStatusChange(liveItem.item_id, completedStatus, targetStatus),
+              onToggleProponent: toggleProponent,
+              onConfirmAdvance: confirmStatusChange,
+              onCancelPending: () => setPendingChange(null),
+            }}
+          />
+        )
+      })()}
     </div>
   )
 }
