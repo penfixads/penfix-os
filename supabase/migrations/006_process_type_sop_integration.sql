@@ -1,7 +1,8 @@
--- Links each subcategory to the process type whose SOP steps it should follow in production
--- (subcategories.job_flow was the old freeform-text version of this; nothing in the app reads
--- it anymore, so this supersedes it).
-alter table subcategories add column if not exists process_type_id text references process_types(process_type_id);
+-- This migration originally linked subcategories to a process_types table (created via ad-hoc
+-- SQL that predates this migrations folder) as an intermediate step before migration 007
+-- replaced it with direct per-subcategory SOP. schema.sql now bakes in that final shape
+-- directly, so the process_types/process_type_id plumbing is omitted here — replaying it on a
+-- fresh database would create structure that migration 007 immediately tears down anyway.
 
 -- job_status used to be a fixed 6-value enum, but the Fabricator's Production panel drives
 -- status advancement from each item's process_type_sop steps (many more granular names than

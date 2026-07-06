@@ -1,7 +1,6 @@
 'use client'
 
-import { IconStar, IconSend } from '@/components/icons'
-import { generateFeedbackToken } from '@/lib/jo-helpers'
+import { IconStar } from '@/components/icons'
 
 interface Props { feedback: any[] }
 
@@ -36,28 +35,11 @@ export default function ClientFeedbackClient({ feedback }: Props) {
   const overallCount = feedback.length
   const overallAvg = overallCount > 0 ? feedback.reduce((s, f) => s + (f.rating || 0), 0) / overallCount : 0
 
-  function openTestForm() {
-    // No `jo` param on purpose — a fake JO id would violate the client_feedback.jo
-    // foreign key, so test submissions land under "Unassigned" instead of a real JO.
-    const token = generateFeedbackToken()
-    const url = `/feedback/${token}?name=${encodeURIComponent('Test Client')}`
-    window.open(url, '_blank')
-  }
-
   return (
     <div>
-      <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-        <div>
-          <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Client Feedback</h1>
-          <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>How clients rate the service they received, by GA</p>
-        </div>
-        <button
-          onClick={openTestForm}
-          title="Open the public feedback form in a new tab with test data, to verify submissions work"
-          style={{ background: '#f0f0f0', border: '1px solid #d0d0d0', color: '#7A1828', borderRadius: 7, padding: '0.4rem 0.75rem', cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}
-        >
-          <IconSend />Test Feedback Form
-        </button>
+      <div style={{ marginBottom: '1.25rem' }}>
+        <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Client Feedback</h1>
+        <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>How clients rate the service they received, by GA</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: '1.5rem' }}>
@@ -82,7 +64,7 @@ export default function ClientFeedbackClient({ feedback }: Props) {
             const isTop = i === 0
             return (
               <div key={ga.name} style={{
-                background: isTop ? '#4a2800' : '#3a3a3a',
+                background: isTop ? '#5C001F' : '#3a3a3a',
                 borderRadius: 12,
                 padding: '1rem 1.25rem',
                 border: `1px solid ${isTop ? '#7A1828' : '#2a2a2a'}`,

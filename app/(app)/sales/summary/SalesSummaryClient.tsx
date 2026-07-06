@@ -19,6 +19,15 @@ interface Props {
 
 const PAY_METHODS = ['Cash', 'G-Cash', 'Maya', 'Bank Transfer via BPI Acct.', 'Bank Transfer via BDO Acct.', 'Cheque']
 
+// Exactly 0 means cash on hand matched what was expected — that's a distinct, good outcome
+// from "Excess" (more cash than expected, usually an unrecorded job order) and shouldn't be
+// lumped in with it just because 0 >= 0.
+function reconciliationBadge(excessDeficit: number): { label: string; bg: string; color: string } {
+  if (excessDeficit === 0) return { label: 'Balance', bg: '#3a3010', color: '#C9A84C' }
+  if (excessDeficit > 0) return { label: 'Excess', bg: '#1a4a1a', color: '#2ecc71' }
+  return { label: 'Deficit', bg: '#4a1a1a', color: '#e74c3c' }
+}
+
 function HistoryRow({ row, isAdmin }: { row: any; isAdmin: boolean }) {
   const [expanded, setExpanded] = useState(false)
   const [rowExpenses, setRowExpenses] = useState<any[] | null>(null)
@@ -71,11 +80,11 @@ function HistoryRow({ row, isAdmin }: { row: any; isAdmin: boolean }) {
         </div>
         <div style={{ textAlign: 'right' }}>
           <span style={{
-            background: (saved.excess_deficit || 0) >= 0 ? '#1a4a1a' : '#4a1a1a',
-            color: (saved.excess_deficit || 0) >= 0 ? '#2ecc71' : '#e74c3c',
+            background: reconciliationBadge(saved.excess_deficit || 0).bg,
+            color: reconciliationBadge(saved.excess_deficit || 0).color,
             borderRadius: 20, padding: '0.15rem 0.55rem', fontSize: '0.68rem', fontWeight: 700,
           }}>
-            {(saved.excess_deficit || 0) >= 0 ? 'Excess' : 'Deficit'} {formatPeso(Math.abs(saved.excess_deficit || 0))}
+            {reconciliationBadge(saved.excess_deficit || 0).label} {formatPeso(Math.abs(saved.excess_deficit || 0))}
           </span>
           <div style={{ color: '#999', fontSize: '0.68rem', marginTop: 3 }}>Next Day: {formatPeso(saved.next_day_fund || 0)}</div>
         </div>
@@ -140,6 +149,12 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
   const [overridingFund, setOverridingFund] = useState(false)
   const [fundOverride, setFundOverride] = useState('')
   const [showJOTable, setShowJOTable] = useState(false)
+  const [searchDate, setSearchDate] = useState('')
+  const [searchResult, setSearchResult] = useState<any | null | 'not_found'>(null)
+  const [searching, setSearching] = useState(false)
+  const [filterType, setFilterType] = useState<'all' | 'deficit' | 'excess'>('all')
+  const [filterResults, setFilterResults] = useState<any[] | null>(null)
+  const [filtering, setFiltering] = useState(false)
 
   const isAdmin = currentUser.role === 'Admin'
   const summaryId = `DSS-${today}`
@@ -233,6 +248,48 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
     const supabase = createSupabaseBrowserClient()
     await supabase.from('expenses').delete().eq('expense_id', expenseId)
     setExpenses(prev => prev.filter(e => e.expense_id !== expenseId))
+  }
+
+  // Looks up any date directly, not just whatever happens to be in the last-30-days list —
+  // useful once there are months of history (e.g. from the AppSheet migration) to dig through.
+  async function searchByDate() {
+    if (!searchDate) return
+    setSearching(true)
+    setSearchResult(null)
+    setFilterType('all')
+    setFilterResults(null)
+    try {
+      const supabase = createSupabaseBrowserClient()
+      const { data } = await supabase.from('daily_sales_summary').select('*').eq('date', searchDate).maybeSingle()
+      setSearchResult(data || 'not_found')
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  // Filters across the whole history (not just the last-30-days list) for every day that
+  // ran a deficit or an excess — a different question from "what happened on date X".
+  async function filterByType(type: 'deficit' | 'excess') {
+    setFilterType(type)
+    setFiltering(true)
+    setSearchDate('')
+    setSearchResult(null)
+    try {
+      const supabase = createSupabaseBrowserClient()
+      let query = supabase.from('daily_sales_summary').select('*').order('date', { ascending: false })
+      query = type === 'deficit' ? query.lt('excess_deficit', 0) : query.gt('excess_deficit', 0)
+      const { data } = await query
+      setFilterResults(data || [])
+    } finally {
+      setFiltering(false)
+    }
+  }
+
+  function clearSearch() {
+    setSearchDate('')
+    setSearchResult(null)
+    setFilterType('all')
+    setFilterResults(null)
   }
 
   const dateLabel = new Date(today + 'T00:00:00').toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
@@ -348,10 +405,10 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
             <input type="number" value={remittedCash} onChange={e => setRemittedCash(e.target.value)} placeholder="0.00" className="pf-input" />
           </div>
           <div>
-            <label className="pf-label">{excessDeficit >= 0 ? 'Excess' : 'Deficit'}</label>
-            <div className={excessDeficit >= 0 ? 'money-green' : 'money-red'} style={{ fontWeight: 700, padding: '0.4rem 0' }}>{formatPeso(excessDeficit)}</div>
+            <label className="pf-label">{excessDeficit === 0 ? 'Balance' : excessDeficit > 0 ? 'Excess' : 'Deficit'}</label>
+            <div className={excessDeficit === 0 ? 'money' : excessDeficit > 0 ? 'money-green' : 'money-red'} style={{ fontWeight: 700, padding: '0.4rem 0' }}>{formatPeso(excessDeficit)}</div>
             <div style={{ color: '#999', fontSize: '0.68rem' }}>
-              {excessDeficit >= 0 ? 'More cash than expected — check for an unrecorded job order.' : 'Less cash than expected — a shortfall.'}
+              {excessDeficit === 0 ? 'Cash on hand matches what was expected.' : excessDeficit > 0 ? 'More cash than expected — check for an unrecorded job order.' : 'Less cash than expected — a shortfall.'}
             </div>
           </div>
           <div>
@@ -472,8 +529,64 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
         <div style={{ color: '#999', fontSize: '0.7rem', marginTop: 6 }}>Saved together with "Save Summary" above.</div>
       </div>
 
+      {/* Search / filter */}
+      <div style={{ background: '#FDF5EC', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem', border: '1px solid #EDE0CC' }}>
+        <div style={{ color: '#666', fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.75rem' }}>Search Sales Summary</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '0.65rem' }}>
+          <input
+            type="date"
+            value={searchDate}
+            max={today}
+            onChange={e => setSearchDate(e.target.value)}
+            className="pf-input"
+            style={{ flex: 1, minWidth: 160 }}
+          />
+          <button onClick={searchByDate} disabled={!searchDate || searching} className="pf-btn">
+            {searching ? 'Searching…' : 'Search Date'}
+          </button>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ color: '#999', fontSize: '0.72rem' }}>Or filter every recorded day by:</span>
+          <button onClick={() => filterByType('deficit')} disabled={filtering} className={filterType === 'deficit' ? 'pf-btn' : 'pf-btn pf-btn-secondary'} style={{ fontSize: '0.75rem', padding: '0.35rem 0.7rem' }}>
+            {filtering && filterType === 'deficit' ? '…' : 'Deficits'}
+          </button>
+          <button onClick={() => filterByType('excess')} disabled={filtering} className={filterType === 'excess' ? 'pf-btn' : 'pf-btn pf-btn-secondary'} style={{ fontSize: '0.75rem', padding: '0.35rem 0.7rem' }}>
+            {filtering && filterType === 'excess' ? '…' : 'Excess'}
+          </button>
+          {(searchResult !== null || searchDate || filterType !== 'all') && (
+            <button onClick={clearSearch} className="pf-btn pf-btn-secondary" style={{ fontSize: '0.75rem', padding: '0.35rem 0.7rem' }}><IconX />Clear</button>
+          )}
+        </div>
+
+        {searchResult === 'not_found' && (
+          <div style={{ color: '#e67e22', fontSize: '0.8rem', marginTop: '0.85rem' }}>
+            No sales summary recorded for {new Date(searchDate + 'T00:00:00').toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })}.
+          </div>
+        )}
+        {searchResult && searchResult !== 'not_found' && (
+          <div style={{ marginTop: '0.85rem' }}>
+            <HistoryRow row={searchResult} isAdmin={isAdmin} />
+          </div>
+        )}
+
+        {filterType !== 'all' && filterResults && (
+          <div style={{ marginTop: '0.85rem' }}>
+            <div style={{ color: '#666', fontSize: '0.75rem', marginBottom: 8 }}>
+              {filterResults.length} day(s) with {filterType === 'deficit' ? 'a deficit' : 'an excess'}
+            </div>
+            {filterResults.length === 0 ? (
+              <div style={{ color: '#aaa', fontSize: '0.8rem' }}>None found.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {filterResults.map(row => <HistoryRow key={row.summary_id} row={row} isAdmin={isAdmin} />)}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Recent Days history */}
-      {recentSummaries.filter(r => r.date !== today).length > 0 && (
+      {!searchResult && filterType === 'all' && recentSummaries.filter(r => r.date !== today).length > 0 && (
         <div>
           <div style={{ color: '#7A1828', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.6rem' }}>Recent Days</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
