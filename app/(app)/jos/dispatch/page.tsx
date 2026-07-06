@@ -10,21 +10,26 @@ export default async function DispatchPage() {
 
   const supabase = createSupabaseServerClient()
 
-  const [{ data: items }, { data: sopSteps }] = await Promise.all([
-    supabase
-      .from('job_order_items')
-      .select(`
-        *,
-        job_orders(
-          job_order_id, payment_status, balance_due, grand_total,
-          clients(client_name, company_name, contact_number)
-        ),
-        subcategories(subcategory_name, job_flow)
-      `)
-      .not('job_status', 'in', '("Done","Cancelled")')
-      .order('date_time_needed', { ascending: true, nullsFirst: false }),
-    supabase.from('subcategory_sop').select('*').eq('is_active', true).order('sequence'),
-  ])
+  const { data: items } = await supabase
+    .from('job_order_items')
+    .select(`
+      *,
+      job_orders(
+        job_order_id, payment_status, balance_due, grand_total,
+        clients(client_name, company_name, contact_number)
+      ),
+      subcategories(subcategory_name, job_flow)
+    `)
+    .not('job_status', 'in', '("Done","Cancelled")')
+    .order('date_time_needed', { ascending: true, nullsFirst: false })
+
+  // subcategory_sop has 1200+ rows across all 221 subcategories — well past Supabase's
+  // 1000-row-per-request cap, which was silently truncating the terminal step off of most
+  // subcategories' checklists. Scope the query to only the subcategories actually in play.
+  const subcategoryIds = Array.from(new Set((items || []).map(i => i.subcategory_id).filter(Boolean)))
+  const { data: sopSteps } = subcategoryIds.length > 0
+    ? await supabase.from('subcategory_sop').select('*').eq('is_active', true).in('subcategory_id', subcategoryIds).order('sequence')
+    : { data: [] }
 
   const sopBySubcategory: Record<string, any[]> = {}
   for (const s of sopSteps || []) {

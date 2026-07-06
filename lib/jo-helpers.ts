@@ -1,8 +1,7 @@
-export function generateJobOrderId(seq: number): string {
-  const now = new Date()
-  const mm = String(now.getMonth() + 1).padStart(2, '0')
-  const dd = String(now.getDate()).padStart(2, '0')
-  const yyyy = now.getFullYear()
+export function generateJobOrderId(seq: number, date: Date = new Date()): string {
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  const yyyy = date.getFullYear()
   return `JO-${mm}${dd}${yyyy}-${String(seq).padStart(3, '0')}`
 }
 
@@ -152,4 +151,11 @@ export function getPhilippineDayBoundsUTC(dateStr: string): { startUTC: string; 
 export function getPhilippineDayOfWeek(dateStr: string): number {
   // 0=Sun...6=Sat. Noon UTC avoids any day-boundary edge case entirely.
   return new Date(`${dateStr}T12:00:00Z`).getUTCDay()
+}
+
+// Formats an ISO string for a <input type="datetime-local"> value, in the browser's local time.
+export function toLocalDateTimeInput(isoString: string): string {
+  const d = new Date(isoString)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }

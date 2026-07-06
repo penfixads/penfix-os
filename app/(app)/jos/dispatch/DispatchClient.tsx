@@ -13,6 +13,10 @@ interface Props {
 
 const DISPATCH_MODES = ['Pickup', 'Delivery', 'Installation']
 
+// Loyalty program start — purchases before this date don't earn rewards, even if the JO
+// happens to get dispatched (and its rewards recorded) after this date.
+const REWARDS_START_DATE = new Date('2026-05-01T00:00:00+08:00')
+
 export default function DispatchClient({ items, currentUser }: Props) {
   const router = useRouter()
   const [marking, setMarking] = useState<string | null>(null)
@@ -47,7 +51,7 @@ export default function DispatchClient({ items, currentUser }: Props) {
         const joId = item.job_orders.job_order_id
         const [{ data: siblings }, { data: jo }] = await Promise.all([
           supabase.from('job_order_items').select('item_id, job_status').eq('job_order_id', joId),
-          supabase.from('job_orders').select('is_fully_paid, grand_total, client_id, is_for_billing').eq('job_order_id', joId).single(),
+          supabase.from('job_orders').select('is_fully_paid, grand_total, client_id, is_for_billing, date_time_received').eq('job_order_id', joId).single(),
         ])
         const allClaimed = siblings?.every(s => s.job_status === 'Done' || s.job_status === 'Cancelled' || s.item_id === itemId)
         const isSettled = !!jo?.is_fully_paid || !!jo?.is_for_billing
@@ -55,8 +59,12 @@ export default function DispatchClient({ items, currentUser }: Props) {
         if (allClaimed && isSettled) {
           await supabase.from('job_orders').update({ job_status: 'Done' }).eq('job_order_id', joId)
 
-          // Record earned rewards in ledger only when fully paid AND all done
-          if (jo?.is_fully_paid && !jo?.is_for_billing && jo?.client_id) {
+          // Record earned rewards in ledger only when fully paid, all done, and the JO was
+          // actually received on/after the loyalty program's start date — a JO backdated to
+          // before then (e.g. via Add Historical Records) shouldn't earn rewards just because
+          // it happens to get dispatched today.
+          const purchasedAfterRewardsStart = !!jo?.date_time_received && new Date(jo.date_time_received) >= REWARDS_START_DATE
+          if (jo?.is_fully_paid && !jo?.is_for_billing && jo?.client_id && purchasedAfterRewardsStart) {
             const ledgerId = `EARN-${joId}`
             const { data: existing } = await supabase.from('rewards_ledger').select('ledger_id').eq('ledger_id', ledgerId).single()
             if (!existing) {

@@ -5,6 +5,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso, generateItemId, buildFeedbackUrl, formatAge } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import EditJOModal from '@/components/EditJOModal'
+import JOReceiptModal from '@/components/JOReceiptModal'
 import JOItemForm from '../today/JOItemForm'
 
 interface Props {
@@ -28,6 +29,7 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
   const [statusFilter, setStatusFilter] = useState('all')
   const [editingJO, setEditingJO] = useState<any | null>(null)
   const [addingItemToJO, setAddingItemToJO] = useState<string | null>(null)
+  const [receiptJOId, setReceiptJOId] = useState<string | null>(null)
 
   const filtered = jobOrders.filter(jo => {
     const client = jo.clients?.client_name || jo.clients?.company_name || ''
@@ -53,6 +55,15 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
     const seq = (existingItems?.length || 0) + 1
     const itemId = generateItemId(joId, seq)
     await supabase.from('job_order_items').insert({ ...item, item_id: itemId, job_order_id: joId })
+    // "Received" is auto-logged to whoever is adding this item right now, same as a brand-new JO.
+    await supabase.from('job_order_item_status_log').insert({
+      item_id: itemId,
+      job_order_id: joId,
+      status_name: 'Received',
+      changed_by_email: currentUser.email,
+      changed_by_name: currentUser.name,
+      changed_by_role: currentUser.role,
+    })
     const { data: allItems } = await supabase.from('job_order_items').select('computed_line_total').eq('job_order_id', joId)
     const newTotal = (allItems || []).reduce((s: number, i: any) => s + (i.computed_line_total || 0), 0)
     await supabase.from('job_orders').update({ grand_total: newTotal }).eq('job_order_id', joId)
@@ -178,6 +189,10 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2980b9', padding: 2, display: 'flex', alignItems: 'center' }}>
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                       </button>
+                      <button title="Generate job order receipt to send for client approval" onClick={() => setReceiptJOId(jo.job_order_id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e44ad', padding: 2, display: 'flex', alignItems: 'center' }}>
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+                      </button>
                       {isDone && (
                         <button title="Send feedback link to be pasted on social media platform" onClick={() => copyFeedbackLink(jo.job_order_id, clientName)}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c9a84c', padding: 2, display: 'flex', alignItems: 'center' }}>
@@ -221,6 +236,10 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
           onSave={(item) => handleAddItemToExistingJO(addingItemToJO, item)}
           onClose={() => setAddingItemToJO(null)}
         />
+      )}
+
+      {receiptJOId && (
+        <JOReceiptModal jobOrderId={receiptJOId} onClose={() => setReceiptJOId(null)} />
       )}
     </div>
   )

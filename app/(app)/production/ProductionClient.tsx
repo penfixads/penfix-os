@@ -277,7 +277,10 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
                       const isToday = group.key === 'today'
 
                       const currentIndex = itemSteps.findIndex(s => s.status_name === status)
-                      const doneCount = currentIndex >= 0 ? currentIndex + (isTerminal ? 1 : 0) : 0
+                      // The terminal step needs its own logged proponent, same as every other
+                      // step — arriving at it isn't enough to count it as done.
+                      const terminalConfirmed = isTerminal && !!(namesByItemStatus[item.item_id]?.[status]?.length)
+                      const doneCount = currentIndex >= 0 ? currentIndex + (terminalConfirmed ? 1 : 0) : 0
 
                       return (
                         <div key={item.item_id}
@@ -334,7 +337,11 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
                           </div>
 
                           {isTerminal && (
-                            <div style={{ marginTop: '0.6rem', color: '#27ae60', fontSize: '0.75rem', fontWeight: 600 }}>✓ Complete — Ready for dispatch</div>
+                            terminalConfirmed ? (
+                              <div style={{ marginTop: '0.6rem', color: '#27ae60', fontSize: '0.75rem', fontWeight: 600 }}>✓ Complete — Ready for dispatch</div>
+                            ) : (
+                              <div style={{ marginTop: '0.6rem', color: '#e67e22', fontSize: '0.75rem', fontWeight: 600 }}>⚠ Open the checklist to confirm who marked this ready</div>
+                            )
                           )}
                         </div>
                       )

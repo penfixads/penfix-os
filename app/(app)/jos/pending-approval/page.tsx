@@ -9,7 +9,7 @@ export default async function PendingApprovalPage() {
 
   const supabase = createSupabaseServerClient()
 
-  const [{ data: jobOrders }, { data: creditRequests }] = await Promise.all([
+  const [{ data: jobOrders }, { data: creditRequests }, { data: unlockRequests }] = await Promise.all([
     supabase
       .from('job_orders')
       .select(`*, clients(client_name, company_name, contact_number), job_order_items(item_id, computed_line_total)`)
@@ -20,7 +20,12 @@ export default async function PendingApprovalPage() {
       .select('client_id, client_name, company_name, contact_number, credit_line_requested_by')
       .eq('credit_line_request_status', 'Pending')
       .order('client_name'),
+    supabase
+      .from('historical_unlock_requests')
+      .select('*')
+      .eq('status', 'Pending')
+      .order('created_at', { ascending: true }),
   ])
 
-  return <PendingApprovalClient jobOrders={jobOrders || []} creditRequests={creditRequests || []} currentUser={user} />
+  return <PendingApprovalClient jobOrders={jobOrders || []} creditRequests={creditRequests || []} unlockRequests={unlockRequests || []} currentUser={user} />
 }

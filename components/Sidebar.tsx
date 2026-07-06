@@ -104,15 +104,18 @@ export default function Sidebar({ role, name }: Props) {
     const supabase = createSupabaseBrowserClient()
 
     async function loadPendingCount() {
-      const [{ count: joCount }, { count: creditCount }] = await Promise.all([
+      const [{ count: joCount }, { count: creditCount }, { count: unlockCount }] = await Promise.all([
         supabase.from('job_orders').select('*', { count: 'exact', head: true }).eq('override_status', 'Pending'),
         supabase.from('clients').select('*', { count: 'exact', head: true }).eq('credit_line_request_status', 'Pending'),
+        supabase.from('historical_unlock_requests').select('*', { count: 'exact', head: true }).eq('status', 'Pending'),
       ])
-      setPendingCount((joCount || 0) + (creditCount || 0))
+      setPendingCount((joCount || 0) + (creditCount || 0) + (unlockCount || 0))
     }
 
     loadPendingCount()
-    const interval = setInterval(loadPendingCount, 30000)
+    // Historical-unlock requests need faster feedback than the other two — the GA is
+    // actively waiting on this one (it blocks their form), not just checking back later.
+    const interval = setInterval(loadPendingCount, 10000)
     return () => clearInterval(interval)
   }, [role, pathname])
 

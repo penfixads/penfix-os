@@ -46,30 +46,38 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient()
-    Promise.all([
-      supabase.from('job_order_items').select('*, subcategories(subcategory_name, category_id, job_flow)').eq('job_order_id', jo.job_order_id).order('item_id'),
-      supabase.from('payments').select('*').eq('job_order_id', jo.job_order_id).order('payment_date'),
-      supabase.from('rewards_ledger').select('type, amount').eq('client_id', jo.client_id),
-      supabase.from('clients').select('credit_line_status').eq('client_id', jo.client_id).single(),
-      supabase.from('subcategory_sop').select('*').eq('is_active', true).order('sequence'),
-      supabase.from('users').select('user_email, name, role').in('role', ['Fabricator', 'GA']).eq('is_active', true).order('name'),
-    ]).then(async ([{ data: items }, { data: pays }, { data: rewards }, { data: clientRow }, { data: sops }, { data: staffRows }]) => {
-      setEditItems((items || []).map(i => ({ ...i, subcategory_name: i.subcategories?.subcategory_name || i.item_id, _existing: true })))
-      setEditPayments((pays || []).map(p => ({ ...p, method: p.payment_method, cashback: p.cashback_amount || 0, _existing: true })))
-      const earned = (rewards || []).filter(r => r.type === 'earned').reduce((s, r) => s + (r.amount || 0), 0)
-      const redeemed = (rewards || []).filter(r => r.type === 'redeemed').reduce((s, r) => s + (r.amount || 0), 0)
-      setRewardsBalance(Math.max(0, earned - redeemed))
-      // "For Billing" mirrors the client's current credit line status — not editable from here.
-      setEditIsForBilling(!!clientRow?.credit_line_status)
-      setSopSteps(sops || [])
-      setStaff(staffRows || [])
-      const itemIds = (items || []).map(i => i.item_id)
-      const { data: logs } = itemIds.length > 0
-        ? await supabase.from('job_order_item_status_log').select('item_id, status_name, changed_by_name').in('item_id', itemIds)
-        : { data: [] }
-      setStatusLogs(logs || [])
-      setLoading(false)
-    })
+    // Items need to be fetched first — the SOP query below filters by their subcategory_ids
+    // rather than pulling the whole subcategory_sop table (1200+ rows across all 221
+    // subcategories, well past Supabase's 1000-row-per-request cap, which was silently
+    // truncating the terminal step off of most subcategories' checklists).
+    supabase.from('job_order_items').select('*, subcategories(subcategory_name, category_id, job_flow)').eq('job_order_id', jo.job_order_id).order('item_id')
+      .then(async ({ data: items }) => {
+        const subcategoryIds = Array.from(new Set((items || []).map(i => i.subcategory_id).filter(Boolean)))
+        const [{ data: pays }, { data: rewards }, { data: clientRow }, { data: sops }, { data: staffRows }] = await Promise.all([
+          supabase.from('payments').select('*').eq('job_order_id', jo.job_order_id).order('payment_date'),
+          supabase.from('rewards_ledger').select('type, amount').eq('client_id', jo.client_id),
+          supabase.from('clients').select('credit_line_status').eq('client_id', jo.client_id).single(),
+          subcategoryIds.length > 0
+            ? supabase.from('subcategory_sop').select('*').eq('is_active', true).in('subcategory_id', subcategoryIds).order('sequence')
+            : Promise.resolve({ data: [] }),
+          supabase.from('users').select('user_email, name, role').in('role', ['Fabricator', 'GA']).eq('is_active', true).order('name'),
+        ])
+        setEditItems((items || []).map(i => ({ ...i, subcategory_name: i.subcategories?.subcategory_name || i.item_id, _existing: true })))
+        setEditPayments((pays || []).map(p => ({ ...p, method: p.payment_method, cashback: p.cashback_amount || 0, _existing: true })))
+        const earned = (rewards || []).filter(r => r.type === 'earned').reduce((s, r) => s + (r.amount || 0), 0)
+        const redeemed = (rewards || []).filter(r => r.type === 'redeemed').reduce((s, r) => s + (r.amount || 0), 0)
+        setRewardsBalance(Math.max(0, earned - redeemed))
+        // "For Billing" mirrors the client's current credit line status — not editable from here.
+        setEditIsForBilling(!!clientRow?.credit_line_status)
+        setSopSteps(sops || [])
+        setStaff(staffRows || [])
+        const itemIds = (items || []).map(i => i.item_id)
+        const { data: logs } = itemIds.length > 0
+          ? await supabase.from('job_order_item_status_log').select('item_id, status_name, changed_by_name').in('item_id', itemIds)
+          : { data: [] }
+        setStatusLogs(logs || [])
+        setLoading(false)
+      })
   }, [jo.job_order_id, jo.client_id])
 
   // SOP steps grouped by subcategory, and who-worked-on-what per item — feeds the status checklist.
@@ -269,9 +277,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                 <div style={{ display: 'inline-block', background: '#f0ece3', color: '#1a1a1a', borderRadius: 20, padding: '0.3rem 0.85rem', fontSize: '0.8rem' }}>
                   {client?.client_name || client?.company_name || jo.client_id}
                 </div>
-                {rewardsBalance > 0 && (
-                  <div style={{ color: '#2ecc71', fontSize: '0.75rem' }}>Total Rewards Earned: {formatPeso(rewardsBalance)}</div>
-                )}
+                <div style={{ color: '#2ecc71', fontSize: '0.75rem' }}>Total Rewards Earned: {formatPeso(rewardsBalance)}</div>
               </div>
             </div>
 
@@ -353,6 +359,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                         <tr style={{ background: '#C9A84C', color: '#3a0a0a' }}>
                           <th style={th}>Method</th>
                           <th style={th}>Date Paid</th>
+                          <th style={th}>Date Recorded</th>
                           <th style={{ ...th, textAlign: 'right' }}>Amount</th>
                           <th style={{ ...th, textAlign: 'right' }}>Cashback</th>
                           <th style={{ ...th, width: 32 }}></th>
@@ -363,6 +370,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                           <tr key={p.payment_id || i} style={{ borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
                             <td style={{ ...td, fontWeight: 600, color: '#fff' }}>{p.method || p.payment_method}</td>
                             <td style={{ ...td, color: '#E8B9C6' }}>{p.payment_date ? new Date(p.payment_date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</td>
+                            <td style={{ ...td, color: '#E8B9C6' }}>{p.created_at ? new Date(p.created_at).toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'On save'}</td>
                             <td style={{ ...td, textAlign: 'right', color: '#fff' }}>{formatPeso(p.amount)}</td>
                             <td style={{ ...td, textAlign: 'right', color: '#E8B9C6' }}>{p.cashback > 0 ? formatPeso(p.cashback) : '—'}</td>
                             <td style={{ ...td, textAlign: 'center' }}>

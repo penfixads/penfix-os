@@ -8,17 +8,45 @@ import type { AppUser } from '@/lib/user'
 interface Props {
   jobOrders: any[]
   creditRequests: any[]
+  unlockRequests: any[]
   currentUser: AppUser
 }
 
-export default function PendingApprovalClient({ jobOrders: initialJOs, creditRequests: initialCreditRequests, currentUser }: Props) {
+export default function PendingApprovalClient({ jobOrders: initialJOs, creditRequests: initialCreditRequests, unlockRequests: initialUnlockRequests, currentUser }: Props) {
   const [jos, setJos] = useState(initialJOs)
   const [creditRequests, setCreditRequests] = useState(initialCreditRequests)
+  const [unlockRequests, setUnlockRequests] = useState(initialUnlockRequests)
   const [acting, setActing] = useState<string | null>(null)
   const [rejectNote, setRejectNote] = useState<Record<string, string>>({})
   const [showReject, setShowReject] = useState<string | null>(null)
 
   const isAdmin = currentUser.role === 'Admin'
+
+  async function approveUnlock(requestId: string) {
+    setActing(requestId)
+    try {
+      const supabase = createSupabaseBrowserClient()
+      await supabase.from('historical_unlock_requests').update({
+        status: 'Approved', approved_by: currentUser.name, resolved_at: new Date().toISOString(),
+      }).eq('request_id', requestId)
+      setUnlockRequests(prev => prev.filter(r => r.request_id !== requestId))
+    } finally {
+      setActing(null)
+    }
+  }
+
+  async function rejectUnlock(requestId: string) {
+    setActing(requestId)
+    try {
+      const supabase = createSupabaseBrowserClient()
+      await supabase.from('historical_unlock_requests').update({
+        status: 'Rejected', approved_by: currentUser.name, resolved_at: new Date().toISOString(),
+      }).eq('request_id', requestId)
+      setUnlockRequests(prev => prev.filter(r => r.request_id !== requestId))
+    } finally {
+      setActing(null)
+    }
+  }
 
   async function approve(joId: string) {
     setActing(joId)
@@ -73,10 +101,41 @@ export default function PendingApprovalClient({ jobOrders: initialJOs, creditReq
       <div style={{ marginBottom: '1.25rem' }}>
         <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Pending Approval</h1>
         <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>
-          {jos.length} JO(s) and {creditRequests.length} credit line request(s) awaiting manager approval
+          {jos.length} JO(s), {creditRequests.length} credit line request(s), and {unlockRequests.length} historical-record unlock request(s) awaiting manager approval
           {!isAdmin && <span style={{ color: '#e67e22', marginLeft: 8 }}>— view only (Admin can approve)</span>}
         </p>
       </div>
+
+      {unlockRequests.length > 0 && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h2 style={{ color: '#7A1828', fontSize: '1rem', fontWeight: 700, marginBottom: '0.6rem' }}>Historical Record Unlock Requests</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            {unlockRequests.map(r => {
+              const isActing = acting === r.request_id
+              return (
+                <div key={r.request_id} style={{ background: '#FDF5EC', borderRadius: 12, padding: '0.85rem 1rem', border: '1px solid #EDE0CC', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.88rem' }}>{r.requested_by_name}</div>
+                    <div style={{ color: '#999', fontSize: '0.72rem', marginTop: 1 }}>
+                      wants to backdate a job order · requested {new Date(r.created_at).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                  {isAdmin && (
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => rejectUnlock(r.request_id)} disabled={isActing} style={{ background: '#5a1010', border: '1px solid #7A1828', color: '#e74c3c', borderRadius: 8, padding: '0.45rem 0.8rem', cursor: isActing ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.78rem' }}>
+                        Reject
+                      </button>
+                      <button onClick={() => approveUnlock(r.request_id)} disabled={isActing} style={{ background: '#1a3a1a', border: '1px solid #27ae60', color: '#2ecc71', borderRadius: 8, padding: '0.45rem 0.8rem', cursor: isActing ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.78rem' }}>
+                        {isActing ? '…' : '✓ Approve'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {creditRequests.length > 0 && (
         <div style={{ marginBottom: '1.5rem' }}>
@@ -111,7 +170,7 @@ export default function PendingApprovalClient({ jobOrders: initialJOs, creditReq
       )}
 
       {jos.length === 0 ? (
-        creditRequests.length === 0 && <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No pending approvals. ✓</div>
+        creditRequests.length === 0 && unlockRequests.length === 0 && <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No pending approvals. ✓</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           {jos.map(jo => {

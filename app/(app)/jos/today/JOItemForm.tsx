@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { computeLineTotal, formatPeso, type StatusStep } from '@/lib/jo-helpers'
+import { computeLineTotal, formatPeso, toLocalDateTimeInput, type StatusStep } from '@/lib/jo-helpers'
 import { IconPlus, IconCheck, IconX } from '@/components/icons'
 import type { AppUser } from '@/lib/user'
 
@@ -76,12 +76,6 @@ async function compressImageToDataUrl(file: File, maxBytes = MAX_LAYOUT_BYTES): 
   return { dataUrl, bytes }
 }
 
-function toLocalDateTimeInput(isoString: string): string {
-  const d = new Date(isoString)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
 const PRICING_LABELS: Record<string, string> = {
   per_piece: 'Per Piece',
   area: 'Area (W × H × Price)',
@@ -100,10 +94,9 @@ function StatusChecklist({ statusChecklist }: { statusChecklist: StatusChecklist
     onRequestAdvance, onToggleProponent, onConfirmAdvance, onCancelPending } = statusChecklist
   if (steps.length === 0) return null
   const currentIndex = steps.findIndex(s => s.status_name === currentStatus)
-  const isTerminal = steps.find(s => s.status_name === currentStatus)?.is_terminal
   // Steps from is_production_start up to (but excluding) the terminal step are the actual
   // fabrication checklist — grouped visually under a "Production" heading. Steps before that
-  // (Received, layout/design, etc.) and the terminal step itself render as flat milestones.
+  // (Received, layout/design, etc.) render as flat milestones.
   const productionStartIndex = steps.findIndex(s => s.is_production_start)
 
   return (
@@ -111,9 +104,14 @@ function StatusChecklist({ statusChecklist }: { statusChecklist: StatusChecklist
       <label className="pf-label">Status</label>
       <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, overflow: 'hidden' }}>
         {steps.map((step, i) => {
-          const isDone = currentIndex >= 0 && i < currentIndex
-          const isCurrent = i === currentIndex && !isTerminal
-          const isReachedTerminal = i === currentIndex && isTerminal
+          const isPast = currentIndex >= 0 && i < currentIndex
+          const isCurrentRow = i === currentIndex
+          // The terminal step (e.g. "Ready For Pickup/Delivery/Installation") is a real action
+          // someone performs, not an automatic side-effect of arriving at it — it only counts
+          // as done once it has its own logged proponent(s), same as every other step.
+          const terminalConfirmed = step.is_terminal && !!(namesByStatus[step.status_name]?.length)
+          const isDone = isPast || (isCurrentRow && step.is_terminal && terminalConfirmed)
+          const isActionable = isCurrentRow && (!step.is_terminal || !terminalConfirmed)
           const names = namesByStatus[step.status_name]
           const nextStep = steps[i + 1]
           const inProductionPhase = productionStartIndex !== -1 && i >= productionStartIndex && !step.is_terminal
@@ -128,25 +126,25 @@ function StatusChecklist({ statusChecklist }: { statusChecklist: StatusChecklist
                 display: 'flex', alignItems: 'flex-start', gap: 8, padding: '0.45rem 0.65rem',
                 paddingLeft: inProductionPhase ? '1.5rem' : '0.65rem',
                 borderTop: i > 0 && i !== productionStartIndex ? '1px solid rgba(255,255,255,0.1)' : 'none',
-                background: isCurrent ? 'rgba(201,168,76,0.18)' : 'transparent',
-                opacity: (isDone || isCurrent || isReachedTerminal) ? 1 : 0.45,
+                background: isActionable ? 'rgba(201,168,76,0.18)' : 'transparent',
+                opacity: (isDone || isActionable) ? 1 : 0.45,
               }}>
                 <input
                   type="checkbox"
-                  checked={isDone || isReachedTerminal}
-                  disabled={!isCurrent || advancing}
-                  onChange={() => nextStep && onRequestAdvance(step.status_name, nextStep.status_name)}
-                  style={{ accentColor: '#C9A84C', width: 15, height: 15, marginTop: 1, cursor: isCurrent ? 'pointer' : 'default' }}
+                  checked={isDone}
+                  disabled={!isActionable || advancing}
+                  onChange={() => onRequestAdvance(step.status_name, nextStep ? nextStep.status_name : step.status_name)}
+                  style={{ accentColor: '#C9A84C', width: 15, height: 15, marginTop: 1, cursor: isActionable ? 'pointer' : 'default' }}
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: isCurrent ? 700 : 400, color: isCurrent ? '#fff' : '#E8B9C6', textDecoration: isDone ? 'line-through' : 'none' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: isActionable ? 700 : 400, color: isActionable ? '#fff' : '#E8B9C6', textDecoration: isDone ? 'line-through' : 'none' }}>
                     {step.status_name}
                   </span>
                   {names && names.length > 0 && (
                     <div style={{ color: '#c99', fontSize: '0.68rem', marginTop: 1 }}>by {names.join(', ')}</div>
                   )}
                 </div>
-                {advancing && isCurrent && <span style={{ color: '#E8B9C6', fontSize: '0.7rem' }}>Saving…</span>}
+                {advancing && isActionable && <span style={{ color: '#E8B9C6', fontSize: '0.7rem' }}>Saving…</span>}
               </div>
             </div>
           )
@@ -232,6 +230,9 @@ export default function JOItemForm({ categories, editingItem, onSave, onClose, c
   const selectedSub = filteredSubs.find(s => s.subcategory_id === subcategoryId)
   const effectivePricing = pricingModel || selectedSub?.pricing_model || ''
   const effectivePrice = parseFloat(basePrice) || selectedSub?.base_price || 0
+  // Production Services (e.g. laser cutting, plotting done on materials the client already
+  // brought/owns) has nothing to preview at intake — there's no layout or purchased item yet.
+  const isProductionServices = categoryId === 'CAT_FPS'
 
   const lineTotal = useMemo(() => computeLineTotal(
     effectivePricing,
@@ -266,7 +267,7 @@ export default function JOItemForm({ categories, editingItem, onSave, onClose, c
   }
 
   function handleSave() {
-    if (!subcategoryId || !dateNeeded || !layoutPreview) return
+    if (!subcategoryId || !dateNeeded || (!isProductionServices && !layoutPreview)) return
     const selectedCat = categories.find(c => c.category_id === categoryId)
     onSave({
       ...(isEditing ? { item_id: editingItem.item_id } : { job_status: jobStatus }),
@@ -339,32 +340,34 @@ export default function JOItemForm({ categories, editingItem, onSave, onClose, c
               <input type="text" value={PRICING_LABELS[effectivePricing] || effectivePricing || '—'} disabled className="pf-input" />
             </div>
 
-            <div className="pf-field">
-              <label className="pf-label">Approved Layout <span className="pf-req">*</span></label>
-              {layoutPreview ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <img src={layoutPreview} alt="Approved layout preview" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)' }} />
-                  <div style={{ flex: 1 }}>
-                    {layoutBytes != null && (
-                      <div style={{ color: '#E8B9C6', fontSize: '0.72rem' }}>Compressed to {(layoutBytes / 1024).toFixed(1)} KB</div>
-                    )}
-                    {!readOnly && (
-                      <label className="pf-link-btn" style={{ cursor: 'pointer', fontSize: '0.78rem' }}>
-                        Change image
-                        <input type="file" accept="image/*" onChange={e => handleLayoutFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
-                      </label>
-                    )}
+            {!isProductionServices && (
+              <div className="pf-field">
+                <label className="pf-label">Item Preview <span className="pf-req">*</span></label>
+                {layoutPreview ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <img src={layoutPreview} alt="Item preview" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)' }} />
+                    <div style={{ flex: 1 }}>
+                      {layoutBytes != null && (
+                        <div style={{ color: '#E8B9C6', fontSize: '0.72rem' }}>Compressed to {(layoutBytes / 1024).toFixed(1)} KB</div>
+                      )}
+                      {!readOnly && (
+                        <label className="pf-link-btn" style={{ cursor: 'pointer', fontSize: '0.78rem' }}>
+                          Change image
+                          <input type="file" accept="image/*" onChange={e => handleLayoutFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
+                        </label>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ) : !readOnly && (
-                <input type="file" accept="image/*" onChange={e => handleLayoutFile(e.target.files?.[0] || null)} className="pf-input" />
-              )}
-              {compressing && <div style={{ color: '#E8B9C6', fontSize: '0.72rem', marginTop: 4 }}>Compressing image…</div>}
-              {layoutError && <div style={{ color: '#e74c3c', fontSize: '0.72rem', marginTop: 4 }}>{layoutError}</div>}
-              {!readOnly && !layoutPreview && !compressing && (
-                <div style={{ color: '#E8B9C6', fontSize: '0.7rem', marginTop: 4 }}>Upload the client-approved layout before saving this item.</div>
-              )}
-            </div>
+                ) : !readOnly && (
+                  <input type="file" accept="image/*" onChange={e => handleLayoutFile(e.target.files?.[0] || null)} className="pf-input" />
+                )}
+                {compressing && <div style={{ color: '#E8B9C6', fontSize: '0.72rem', marginTop: 4 }}>Compressing image…</div>}
+                {layoutError && <div style={{ color: '#e74c3c', fontSize: '0.72rem', marginTop: 4 }}>{layoutError}</div>}
+                {!readOnly && !layoutPreview && !compressing && (
+                  <div style={{ color: '#E8B9C6', fontSize: '0.7rem', marginTop: 4 }}>Upload a preview of the layout or item before saving.</div>
+                )}
+              </div>
+            )}
 
             <div className="pf-grid-2" style={{ marginBottom: '0.85rem' }}>
               <div>
@@ -448,7 +451,7 @@ export default function JOItemForm({ categories, editingItem, onSave, onClose, c
           ) : (
             <>
               <button onClick={onClose} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
-              <button onClick={handleSave} disabled={!subcategoryId || !dateNeeded || !layoutPreview || compressing} className="pf-btn">
+              <button onClick={handleSave} disabled={!subcategoryId || !dateNeeded || (!isProductionServices && !layoutPreview) || compressing} className="pf-btn">
                 {isEditing ? <><IconCheck />Save Changes</> : <><IconPlus />Add Item</>}
               </button>
             </>
