@@ -72,6 +72,10 @@ const NAV_ITEMS: NavItem[] = [
     icon: <I><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></I>
   },
   {
+    label: 'Overhead Expenses', href: '/sales/overhead', roles: ['Admin'],
+    icon: <I><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></I>
+  },
+  {
     label: 'Client Feedback', href: '/client-feedback', roles: ['Admin','GA','Treasury'],
     icon: <I fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></I>
   },

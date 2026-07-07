@@ -40,6 +40,15 @@ export function generatePurchaseId(): string {
   return `PUR${mm}${dd}${yy}-${rand}`
 }
 
+export function generateOverheadId(): string {
+  const now = new Date()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const dd = String(now.getDate()).padStart(2, '0')
+  const yy = String(now.getFullYear()).slice(2)
+  const rand = String(Math.floor(Math.random() * 9000000) + 1000000)
+  return `OVH${mm}${dd}${yy}-${rand}`
+}
+
 // A delivery received this month is billed via next month's cheque — "2026-07-15" received
 // becomes billing_month "2026-08-01" (always normalized to the 1st, since only the month matters).
 export function nextMonthFirst(dateStr: string): string {

@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts'
 
-interface Props { payments: any[]; jobOrders: any[]; expenses: any[]; purchases: any[]; supplierDeliveries: any[] }
+interface Props { payments: any[]; jobOrders: any[]; expenses: any[]; purchases: any[]; supplierDeliveries: any[]; overheadExpenses: any[] }
 
 type Period = 'weekly' | 'monthly' | 'yearly'
 
@@ -29,17 +29,18 @@ function periodLabel(key: string, period: Period): string {
   return key
 }
 
-export default function SalesReportsClient({ payments, jobOrders, expenses, purchases, supplierDeliveries }: Props) {
+export default function SalesReportsClient({ payments, jobOrders, expenses, purchases, supplierDeliveries, overheadExpenses }: Props) {
   const [period, setPeriod] = useState<Period>('monthly')
 
   const report = useMemo(() => {
-    const map: Record<string, { collections: number; sales: number; expenses: number; joCount: number; byMethod: Record<string, number> }> = {}
+    const map: Record<string, { collections: number; sales: number; expenses: number; overhead: number; joCount: number; byMethod: Record<string, number> }> = {}
+    const blank = () => ({ collections: 0, sales: 0, expenses: 0, overhead: 0, joCount: 0, byMethod: {} })
 
     for (const p of payments) {
       const d = p.payment_date
       if (!d) continue
       const key = getPeriodKey(d, period)
-      if (!map[key]) map[key] = { collections: 0, sales: 0, expenses: 0, joCount: 0, byMethod: {} }
+      if (!map[key]) map[key] = blank()
       map[key].collections += p.amount || 0
       map[key].byMethod[p.payment_method] = (map[key].byMethod[p.payment_method] || 0) + (p.amount || 0)
     }
@@ -48,7 +49,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
       const d = jo.date_time_received ? getPhilippineDateStr(new Date(jo.date_time_received)) : undefined
       if (!d) continue
       const key = getPeriodKey(d, period)
-      if (!map[key]) map[key] = { collections: 0, sales: 0, expenses: 0, joCount: 0, byMethod: {} }
+      if (!map[key]) map[key] = blank()
       map[key].sales += jo.grand_total || 0
       map[key].joCount += 1
     }
@@ -57,7 +58,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
       const d = e.expense_date || e.date
       if (!d) continue
       const key = getPeriodKey(d, period)
-      if (!map[key]) map[key] = { collections: 0, sales: 0, expenses: 0, joCount: 0, byMethod: {} }
+      if (!map[key]) map[key] = blank()
       map[key].expenses += e.amount || 0
     }
 
@@ -67,7 +68,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
       const d = p.purchase_date
       if (!d) continue
       const key = getPeriodKey(d, period)
-      if (!map[key]) map[key] = { collections: 0, sales: 0, expenses: 0, joCount: 0, byMethod: {} }
+      if (!map[key]) map[key] = blank()
       map[key].expenses += p.total_amount || 0
     }
 
@@ -75,16 +76,30 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
       const d = sd.billing_month
       if (!d) continue
       const key = getPeriodKey(d, period)
-      if (!map[key]) map[key] = { collections: 0, sales: 0, expenses: 0, joCount: 0, byMethod: {} }
+      if (!map[key]) map[key] = blank()
       map[key].expenses += sd.total_amount || 0
     }
 
+    // Fixed monthly overhead (utilities, salaries, BIR, etc.) — kept separate from
+    // Expenses so Net Profit (Sales - Expenses) and final Profit (- Overhead) show
+    // as two tiers, matching how the business actually tracks profitability.
+    for (const oh of overheadExpenses) {
+      const d = oh.month
+      if (!d) continue
+      const key = getPeriodKey(d, period)
+      if (!map[key]) map[key] = blank()
+      map[key].overhead += oh.amount || 0
+    }
+
     return Object.entries(map).sort((a, b) => b[0].localeCompare(a[0]))
-  }, [payments, jobOrders, expenses, purchases, supplierDeliveries, period])
+  }, [payments, jobOrders, expenses, purchases, supplierDeliveries, overheadExpenses, period])
 
   const grandCollections = report.reduce((s, [, r]) => s + r.collections, 0)
   const grandSales = report.reduce((s, [, r]) => s + r.sales, 0)
   const grandExpenses = report.reduce((s, [, r]) => s + r.expenses, 0)
+  const grandOverhead = report.reduce((s, [, r]) => s + r.overhead, 0)
+  const grandNetProfit = grandSales - grandExpenses
+  const grandProfit = grandNetProfit - grandOverhead
   const grandJOs = report.reduce((s, [, r]) => s + r.joCount, 0)
 
   return (
@@ -139,10 +154,13 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
           { label: 'Total Sales', value: formatPeso(grandSales) },
           { label: 'Total Collections', value: formatPeso(grandCollections) },
           { label: 'Total Expenses', value: formatPeso(grandExpenses), warn: true },
+          { label: 'Net Profit', value: formatPeso(grandNetProfit), profit: grandNetProfit >= 0 },
+          { label: 'Overhead', value: formatPeso(grandOverhead), warn: true },
+          { label: 'Profit', value: formatPeso(grandProfit), profit: grandProfit >= 0 },
         ].map(c => (
           <div key={c.label} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.75rem', border: '1px solid #EDE0CC' }}>
             <div style={{ color: '#aaa', fontSize: '0.68rem' }}>{c.label}</div>
-            <div style={{ color: c.warn ? '#e74c3c' : '#1a1a1a', fontWeight: 700, fontSize: '0.95rem', marginTop: 2 }}>{c.value}</div>
+            <div style={{ color: c.warn ? '#e74c3c' : c.profit !== undefined ? (c.profit ? '#27ae60' : '#e74c3c') : '#1a1a1a', fontWeight: 700, fontSize: '0.95rem', marginTop: 2 }}>{c.value}</div>
           </div>
         ))}
       </div>
@@ -151,6 +169,8 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
         {report.map(([key, r]) => {
           const netCash = r.collections - r.expenses
+          const netProfit = r.sales - r.expenses
+          const profit = netProfit - r.overhead
           const maxVal = Math.max(r.sales, 1)
           return (
             <div key={key} style={{ background: '#FDF5EC', borderRadius: 12, padding: '1rem', border: '1px solid #EDE0CC' }}>
@@ -171,6 +191,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
                   { label: 'Sales', value: r.sales, color: '#2980b9' },
                   { label: 'Collections', value: r.collections, color: '#27ae60' },
                   { label: 'Expenses', value: r.expenses, color: '#e74c3c' },
+                  { label: 'Overhead', value: r.overhead, color: '#c0392b' },
                 ].map(bar => (
                   <div key={bar.label}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
@@ -184,9 +205,19 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
                 ))}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem', paddingTop: '0.65rem', borderTop: '1px solid #e5e5e5' }}>
-                <span style={{ color: '#777', fontSize: '0.72rem' }}>Net Cash</span>
-                <span style={{ color: netCash >= 0 ? '#2ecc71' : '#e74c3c', fontWeight: 700, fontSize: '0.78rem' }}>{formatPeso(netCash)}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: '0.75rem', paddingTop: '0.65rem', borderTop: '1px solid #e5e5e5' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#777', fontSize: '0.72rem' }}>Net Cash</span>
+                  <span style={{ color: netCash >= 0 ? '#2ecc71' : '#e74c3c', fontWeight: 700, fontSize: '0.78rem' }}>{formatPeso(netCash)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#777', fontSize: '0.72rem' }}>Net Profit</span>
+                  <span style={{ color: netProfit >= 0 ? '#2ecc71' : '#e74c3c', fontWeight: 700, fontSize: '0.78rem' }}>{formatPeso(netProfit)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#777', fontSize: '0.72rem', fontWeight: 700 }}>Profit</span>
+                  <span style={{ color: profit >= 0 ? '#2ecc71' : '#e74c3c', fontWeight: 700, fontSize: '0.85rem' }}>{formatPeso(profit)}</span>
+                </div>
               </div>
             </div>
           )

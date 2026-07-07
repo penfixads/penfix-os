@@ -7,7 +7,8 @@ import SalesReportsClient from './SalesReportsClient'
 export default async function SalesReportsPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
-  if (user.role !== 'Admin' && user.role !== 'Treasury') redirect('/jos/active')
+  // Admin-only — this page now pulls Overhead Expenses (includes salary data).
+  if (user.role !== 'Admin') redirect('/jos/active')
 
   const supabase = createSupabaseServerClient()
 
@@ -17,7 +18,7 @@ export default async function SalesReportsPage() {
   yearAgo.setUTCFullYear(yearAgo.getUTCFullYear() - 1)
   const since = getPhilippineDateStr(yearAgo)
 
-  const [{ data: payments }, { data: jobOrders }, { data: expenses }, { data: purchases }, { data: supplierDeliveries }] = await Promise.all([
+  const [{ data: payments }, { data: jobOrders }, { data: expenses }, { data: purchases }, { data: supplierDeliveries }, { data: overheadExpenses }] = await Promise.all([
     supabase
       .from('payments')
       .select('payment_date, amount, payment_method')
@@ -44,6 +45,11 @@ export default async function SalesReportsPage() {
       .select('billing_month, total_amount')
       .gte('billing_month', since)
       .order('billing_month'),
+    supabase
+      .from('overhead_expenses')
+      .select('month, amount')
+      .gte('month', since)
+      .order('month'),
   ])
 
   return (
@@ -53,6 +59,7 @@ export default async function SalesReportsPage() {
       expenses={expenses || []}
       purchases={purchases || []}
       supplierDeliveries={supplierDeliveries || []}
+      overheadExpenses={overheadExpenses || []}
     />
   )
 }

@@ -58,10 +58,11 @@ export async function middleware(request: NextRequest) {
   const role = userData?.role as string | undefined
 
   const ROLE_RESTRICTIONS: Record<string, string[]> = {
-    // Purchases/Supplier Deliveries are Admin + Treasury only.
-    GA:        ['/jos/pending-approval', '/sales/summary', '/sales/reports', '/admin', '/purchases'],
-    Treasury:  ['/jos/pending-approval', '/sales/reports', '/admin'],
-    Fabricator:['/jos/active', '/jos/today', '/sales/summary', '/jos/pending-approval', '/mvp', '/jos/historical', '/jos/items', '/jos/all', '/clients', '/sales/reports', '/admin', '/client-feedback', '/purchases'],
+    // Purchases/Supplier Deliveries are Admin + Treasury only. Overhead Expenses
+    // (carries salary data) is Admin-only — also enforced at the DB layer via RLS.
+    GA:        ['/jos/pending-approval', '/sales/summary', '/sales/reports', '/sales/overhead', '/admin', '/purchases'],
+    Treasury:  ['/jos/pending-approval', '/sales/reports', '/sales/overhead', '/admin'],
+    Fabricator:['/jos/active', '/jos/today', '/sales/summary', '/jos/pending-approval', '/mvp', '/jos/historical', '/jos/items', '/jos/all', '/clients', '/sales/reports', '/sales/overhead', '/admin', '/client-feedback', '/purchases'],
   }
 
   if (role && ROLE_RESTRICTIONS[role]) {
