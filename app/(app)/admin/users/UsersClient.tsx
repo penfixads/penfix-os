@@ -69,30 +69,28 @@ export default function UsersClient({ users: initialUsers }: Props) {
   async function handleCreate() {
     if (!name || !email || !password) { setError('All fields are required.'); return }
     setSaving(true); setError(''); setSuccess('')
-    try {
-      await createUser({ name, email, password, role })
+    const result = await createUser({ name, email, password, role })
+    if (!result.success) {
+      setError(result.message)
+    } else {
       setUsers(prev => [...prev, { user_email: email, name, role, is_active: true }])
       setSuccess(`User ${name} created successfully.`)
       resetForm()
       setShowForm(false)
-    } catch (e: any) {
-      setError(e.message)
-    } finally {
-      setSaving(false)
     }
+    setSaving(false)
   }
 
   async function handleToggleActive(email: string, current: boolean) {
     if (!confirm(`${current ? 'Deactivate' : 'Activate'} user ${email}?`)) return
     setActingOn(email)
-    try {
-      await toggleUserActive(email, !current)
+    const result = await toggleUserActive(email, !current)
+    if (!result.success) {
+      alert(result.message)
+    } else {
       setUsers(prev => prev.map(u => u.user_email === email ? { ...u, is_active: !current } : u))
-    } catch (e: any) {
-      alert(e.message)
-    } finally {
-      setActingOn(null)
     }
+    setActingOn(null)
   }
 
   function openEdit(u: any) {
@@ -108,46 +106,43 @@ export default function UsersClient({ users: initialUsers }: Props) {
     if (!editName || !editEmail) { setEditError('Name and email are required.'); return }
     setActingOn(editingUser.user_email)
     setEditError('')
-    try {
-      await updateUserInfo(editingUser.user_email, { name: editName, email: editEmail, role: editRole })
+    const result = await updateUserInfo(editingUser.user_email, { name: editName, email: editEmail, role: editRole })
+    if (!result.success) {
+      setEditError(result.message)
+    } else {
       const oldEmail = editingUser.user_email
       setUsers(prev => prev.map(u => u.user_email === oldEmail ? { ...u, name: editName, user_email: editEmail, role: editRole } : u))
       setEditingUser(null)
       setSuccess(`User ${editName} updated successfully.`)
-    } catch (e: any) {
-      setEditError(e.message)
-    } finally {
-      setActingOn(null)
     }
+    setActingOn(null)
   }
 
   async function handleDelete(u: any) {
     if (!confirm(`Delete user ${u.name} (${u.user_email})? This cannot be undone.`)) return
     setActingOn(u.user_email)
-    try {
-      await deleteUser(u.user_email)
+    const result = await deleteUser(u.user_email)
+    if (!result.success) {
+      alert(result.message)
+    } else {
       setUsers(prev => prev.filter(x => x.user_email !== u.user_email))
       setSuccess(`User ${u.name} deleted.`)
-    } catch (e: any) {
-      alert(e.message)
-    } finally {
-      setActingOn(null)
     }
+    setActingOn(null)
   }
 
   async function handleResetPassword() {
     if (!resetTarget || !newPassword) return
     setActingOn(resetTarget)
-    try {
-      await resetUserPassword(resetTarget, newPassword)
+    const result = await resetUserPassword(resetTarget, newPassword)
+    if (!result.success) {
+      alert(result.message)
+    } else {
       setResetTarget(null)
       setNewPassword('')
       setSuccess(`Password reset for ${resetTarget}.`)
-    } catch (e: any) {
-      alert(e.message)
-    } finally {
-      setActingOn(null)
     }
+    setActingOn(null)
   }
 
   return (
