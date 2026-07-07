@@ -22,6 +22,32 @@ export function generatePaymentId(jobOrderId: string, seq: number): string {
   return `${jobOrderId}-PAY-${seq}`
 }
 
+export function generateDeliveryId(): string {
+  const now = new Date()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const dd = String(now.getDate()).padStart(2, '0')
+  const yy = String(now.getFullYear()).slice(2)
+  const rand = String(Math.floor(Math.random() * 9000000) + 1000000)
+  return `DEL${mm}${dd}${yy}-${rand}`
+}
+
+export function generatePurchaseId(): string {
+  const now = new Date()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const dd = String(now.getDate()).padStart(2, '0')
+  const yy = String(now.getFullYear()).slice(2)
+  const rand = String(Math.floor(Math.random() * 9000000) + 1000000)
+  return `PUR${mm}${dd}${yy}-${rand}`
+}
+
+// A delivery received this month is billed via next month's cheque — "2026-07-15" received
+// becomes billing_month "2026-08-01" (always normalized to the 1st, since only the month matters).
+export function nextMonthFirst(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  const next = new Date(d.getFullYear(), d.getMonth() + 1, 1)
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-01`
+}
+
 export function generateFeedbackToken(): string {
   return Array.from({ length: 12 }, () => Math.floor(Math.random() * 36).toString(36)).join('')
 }

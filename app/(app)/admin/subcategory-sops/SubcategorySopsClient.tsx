@@ -25,6 +25,7 @@ export default function SubcategorySopsClient({ subcategories, categories, sopSt
   const [stepVisible, setStepVisible] = useState(false)
   const [stepProductionStart, setStepProductionStart] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [stepError, setStepError] = useState('')
 
   const [procedures, setProcedures] = useState(initialProcedures)
   const [expandedStepId, setExpandedStepId] = useState<string | null>(null)
@@ -46,6 +47,7 @@ export default function SubcategorySopsClient({ subcategories, categories, sopSt
   function openAddStep() {
     setEditingStep(null)
     setStepName(''); setStepDesc(''); setStepTerminal(false); setStepVisible(false); setStepProductionStart(false)
+    setStepError('')
     setShowStepForm(true)
   }
 
@@ -56,12 +58,15 @@ export default function SubcategorySopsClient({ subcategories, categories, sopSt
     setStepTerminal(!!step.is_terminal)
     setStepVisible(!!step.visible_to_client)
     setStepProductionStart(!!step.is_production_start)
+    setStepError('')
     setShowStepForm(true)
   }
 
   async function saveStep() {
-    if (!stepName.trim() || !selectedSubId) return
+    if (!stepName.trim()) { setStepError('Please enter a status name.'); return }
+    if (!selectedSubId) { setStepError('Please select a subcategory first.'); return }
     setSaving(true)
+    setStepError('')
     try {
       const supabase = createSupabaseBrowserClient()
       // Only one step per subcategory can be the production-start marker.
@@ -94,6 +99,8 @@ export default function SubcategorySopsClient({ subcategories, categories, sopSt
         ])
       }
       setShowStepForm(false)
+    } catch (e: any) {
+      setStepError(e.message || 'Failed to save step.')
     } finally {
       setSaving(false)
     }
@@ -332,6 +339,8 @@ export default function SubcategorySopsClient({ subcategories, categories, sopSt
                 Steps before this one (e.g. layout, client approval) stay GA-only. Only one step per subcategory can be marked.
               </div>
             </div>
+            {stepError && <div style={{ color: '#e74c3c', fontSize: '0.8rem', marginBottom: '0.75rem' }}>{stepError}</div>}
+
             <div style={{ display: 'flex', gap: 8, justifyContent: editingStep ? 'space-between' : 'flex-end' }}>
               {editingStep && (
                 <button onClick={() => { setShowStepForm(false); deleteStep(editingStep.sop_id) }} style={{ background: 'none', border: '1px solid #7A1828', color: '#e74c3c', borderRadius: 8, padding: '0.55rem 1rem', cursor: 'pointer', fontSize: '0.85rem' }}>

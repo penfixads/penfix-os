@@ -198,6 +198,7 @@ export default function JOItemForm({ categories, editingItem, onSave, onClose, c
   const [layoutBytes, setLayoutBytes] = useState<number | null>(null)
   const [compressing, setCompressing] = useState(false)
   const [layoutError, setLayoutError] = useState('')
+  const [formError, setFormError] = useState('')
 
   const supabase = createSupabaseBrowserClient()
   const hasLoadedInitialSubs = useRef(false)
@@ -267,7 +268,10 @@ export default function JOItemForm({ categories, editingItem, onSave, onClose, c
   }
 
   function handleSave() {
-    if (!subcategoryId || !dateNeeded || (!isProductionServices && !layoutPreview)) return
+    if (!subcategoryId) { setFormError('Please select a subcategory/item.'); return }
+    if (!isProductionServices && !layoutPreview) { setFormError('Please upload an item preview image.'); return }
+    if (!dateNeeded) { setFormError('Please set a deadline/date needed.'); return }
+    setFormError('')
     const selectedCat = categories.find(c => c.category_id === categoryId)
     onSave({
       ...(isEditing ? { item_id: editingItem.item_id } : { job_status: jobStatus }),
@@ -445,13 +449,15 @@ export default function JOItemForm({ categories, editingItem, onSave, onClose, c
           </>
         )}
 
+        {formError && <div style={{ color: '#e74c3c', fontSize: '0.82rem', marginBottom: '0.75rem', textAlign: 'right' }}>{formError}</div>}
+
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           {readOnly ? (
             <button onClick={onClose} className="pf-btn"><IconX />Close</button>
           ) : (
             <>
               <button onClick={onClose} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
-              <button onClick={handleSave} disabled={!subcategoryId || !dateNeeded || (!isProductionServices && !layoutPreview) || compressing} className="pf-btn">
+              <button onClick={handleSave} disabled={compressing} className="pf-btn">
                 {isEditing ? <><IconCheck />Save Changes</> : <><IconPlus />Add Item</>}
               </button>
             </>

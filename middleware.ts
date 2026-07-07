@@ -58,9 +58,10 @@ export async function middleware(request: NextRequest) {
   const role = userData?.role as string | undefined
 
   const ROLE_RESTRICTIONS: Record<string, string[]> = {
-    GA:        ['/jos/pending-approval', '/sales/summary', '/sales/reports', '/admin'],
+    // Purchases/Supplier Deliveries are Admin + Treasury only.
+    GA:        ['/jos/pending-approval', '/sales/summary', '/sales/reports', '/admin', '/purchases'],
     Treasury:  ['/jos/pending-approval', '/sales/reports', '/admin'],
-    Fabricator:['/jos/active', '/jos/today', '/sales/summary', '/jos/pending-approval', '/mvp', '/jos/historical', '/jos/items', '/jos/all', '/clients', '/sales/reports', '/admin', '/client-feedback'],
+    Fabricator:['/jos/active', '/jos/today', '/sales/summary', '/jos/pending-approval', '/mvp', '/jos/historical', '/jos/items', '/jos/all', '/clients', '/sales/reports', '/admin', '/client-feedback', '/purchases'],
   }
 
   if (role && ROLE_RESTRICTIONS[role]) {

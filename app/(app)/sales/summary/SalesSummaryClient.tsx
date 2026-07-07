@@ -36,6 +36,7 @@ function HistoryRow({ row, isAdmin }: { row: any; isAdmin: boolean }) {
   const [remark, setRemark] = useState(row.remark || '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(row)
+  const [error, setError] = useState('')
 
   const expectedCashOnHand = saved.expected_cash_on_hand || 0
   const cashOnHandNum = parseFloat(cashOnHand) || 0
@@ -55,17 +56,24 @@ function HistoryRow({ row, isAdmin }: { row: any; isAdmin: boolean }) {
 
   async function save() {
     setSaving(true)
-    const supabase = createSupabaseBrowserClient()
-    const updates = {
-      cash_on_hand: cashOnHandNum,
-      remitted_cash: remittedCashNum,
-      excess_deficit: excessDeficit,
-      next_day_fund: nextDayFund,
-      remark,
+    setError('')
+    try {
+      const supabase = createSupabaseBrowserClient()
+      const updates = {
+        cash_on_hand: cashOnHandNum,
+        remitted_cash: remittedCashNum,
+        excess_deficit: excessDeficit,
+        next_day_fund: nextDayFund,
+        remark,
+      }
+      const { data, error: err } = await supabase.from('daily_sales_summary').update(updates).eq('summary_id', saved.summary_id).select().single()
+      if (err) throw err
+      if (data) setSaved(data)
+    } catch (e: any) {
+      setError(e.message || 'Failed to save changes.')
+    } finally {
+      setSaving(false)
     }
-    const { data } = await supabase.from('daily_sales_summary').update(updates).eq('summary_id', saved.summary_id).select().single()
-    if (data) setSaved(data)
-    setSaving(false)
   }
 
   const dateLabel = new Date(row.date + 'T00:00:00').toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
@@ -111,6 +119,7 @@ function HistoryRow({ row, isAdmin }: { row: any; isAdmin: boolean }) {
             </div>
           </div>
           <textarea value={remark} disabled={!isAdmin} onChange={e => setRemark(e.target.value)} rows={2} placeholder="Remark..." className="pf-textarea" style={{ marginBottom: 8 }} />
+          {error && <div style={{ color: '#e74c3c', fontSize: '0.78rem', marginBottom: 8 }}>{error}</div>}
           {isAdmin && (
             <button onClick={save} disabled={saving} className="pf-btn" style={{ marginBottom: 10 }}>
               <IconCheck />{saving ? 'Saving…' : 'Save Changes'}
@@ -142,7 +151,9 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
   const [expCategory, setExpCategory] = useState('Operations')
   const [remark, setRemark] = useState(summary?.remark || '')
   const [savingExp, setSavingExp] = useState(false)
+  const [expError, setExpError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [summaryError, setSummaryError] = useState('')
   const [summaryExists, setSummaryExists] = useState(!!summary)
   const [cashOnHand, setCashOnHand] = useState(summary?.cash_on_hand != null ? String(summary.cash_on_hand) : '')
   const [remittedCash, setRemittedCash] = useState(summary?.remitted_cash != null ? String(summary.remitted_cash) : '')
@@ -196,9 +207,10 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
 
   async function saveSummary() {
     setSaving(true)
+    setSummaryError('')
     try {
       const supabase = createSupabaseBrowserClient()
-      await supabase.from('daily_sales_summary').upsert({
+      const { error } = await supabase.from('daily_sales_summary').upsert({
         summary_id: summaryId,
         date: today,
         initial_fund: initialFund,
@@ -213,19 +225,24 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
         next_day_fund: nextDayFund,
         remark,
       }, { onConflict: 'date' })
+      if (error) throw error
       setSummaryExists(true)
+    } catch (e: any) {
+      setSummaryError(e.message || 'Failed to save summary.')
     } finally {
       setSaving(false)
     }
   }
 
   async function addExpense() {
-    if (!expDesc || !expAmount) return
+    if (!expDesc) { setExpError('Please enter a description.'); return }
+    if (!expAmount || parseFloat(expAmount) <= 0) { setExpError('Please enter a valid amount.'); return }
     setSavingExp(true)
+    setExpError('')
     try {
       await ensureSummaryRow()
       const supabase = createSupabaseBrowserClient()
-      const { data } = await supabase.from('expenses').insert({
+      const { data, error } = await supabase.from('expenses').insert({
         expense_date: today,
         date: today,
         expense_name: expDesc,
@@ -235,10 +252,13 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
         recorded_by: currentUser.name,
         summary_id: summaryId,
       }).select().single()
+      if (error) throw error
       if (data) setExpenses(prev => [...prev, data])
       setExpDesc('')
       setExpAmount('')
       setShowExpenseForm(false)
+    } catch (e: any) {
+      setExpError(e.message || 'Failed to save expense.')
     } finally {
       setSavingExp(false)
     }
@@ -417,6 +437,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
             <div style={{ color: '#999', fontSize: '0.68rem' }}>Becomes tomorrow's Initial Fund.</div>
           </div>
         </div>
+        {summaryError && <div style={{ color: '#e74c3c', fontSize: '0.8rem', marginBottom: '0.5rem' }}>{summaryError}</div>}
         <button onClick={saveSummary} disabled={saving} className="pf-btn">
           <IconCheck />{saving ? 'Saving…' : 'Save Summary'}
         </button>
@@ -460,7 +481,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
       <div style={{ background: '#FDF5EC', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem', border: '1px solid #EDE0CC' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
           <div style={{ color: '#666', fontWeight: 700, fontSize: '0.8rem' }}>Expenses</div>
-          <button onClick={() => setShowExpenseForm(v => !v)} className="pf-btn" style={{ padding: '0.3rem 0.7rem', fontSize: '0.75rem' }}><IconPlus />Add</button>
+          <button onClick={() => { setExpError(''); setShowExpenseForm(v => !v) }} className="pf-btn" style={{ padding: '0.3rem 0.7rem', fontSize: '0.75rem' }}><IconPlus />Add</button>
         </div>
 
         {showExpenseForm && (
@@ -481,8 +502,10 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
                 {['Operations','Supplies','Utilities','Transport','Miscellaneous'].map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
+            {expError && <div style={{ color: '#e74c3c', fontSize: '0.78rem' }}>{expError}</div>}
+
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setShowExpenseForm(false)} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
+              <button onClick={() => { setExpError(''); setShowExpenseForm(false) }} className="pf-btn" style={{ flex: 1 }}><IconX />Cancel</button>
               <button onClick={addExpense} disabled={savingExp} className="pf-btn" style={{ flex: 2 }}>
                 <IconCheck />{savingExp ? '…' : 'Save Expense'}
               </button>
