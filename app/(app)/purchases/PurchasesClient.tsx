@@ -28,7 +28,6 @@ export default function PurchasesClient({ purchases: initialPurchases, currentUs
   const [supplierName, setSupplierName] = useState('')
   const [specs, setSpecs] = useState('')
   const [size, setSize] = useState('')
-  const [materials, setMaterials] = useState('')
   const [amount, setAmount] = useState('')
   const [quantity, setQuantity] = useState('1')
   const [remarks, setRemarks] = useState('')
@@ -49,7 +48,7 @@ export default function PurchasesClient({ purchases: initialPurchases, currentUs
   function openAdd() {
     setEditing(null)
     setPurchaseDate(getPhilippineDateStr())
-    setSupplierName(''); setSpecs(''); setSize(''); setMaterials('')
+    setSupplierName(''); setSpecs(''); setSize('')
     setAmount(''); setQuantity('1'); setRemarks('')
     setError('')
     setShowForm(true)
@@ -61,7 +60,6 @@ export default function PurchasesClient({ purchases: initialPurchases, currentUs
     setSupplierName(p.supplier_name || '')
     setSpecs(p.specs || '')
     setSize(p.size || '')
-    setMaterials(p.materials || '')
     setAmount(String(p.amount ?? ''))
     setQuantity(String(p.quantity ?? 1))
     setRemarks(p.remarks || '')
@@ -83,7 +81,6 @@ export default function PurchasesClient({ purchases: initialPurchases, currentUs
         supplier_name: supplierName.trim(),
         specs: specs.trim(),
         size: size || null,
-        materials: materials || null,
         amount: parseFloat(amount) || 0,
         quantity: parseFloat(quantity) || 1,
         total_amount: totalAmount,
@@ -223,15 +220,9 @@ export default function PurchasesClient({ purchases: initialPurchases, currentUs
               <input type="text" value={specs} onChange={e => setSpecs(e.target.value)} placeholder="e.g. X-Banner" className="pf-input" />
             </div>
 
-            <div className="pf-grid-2" style={{ marginBottom: '0.85rem' }}>
-              <div>
-                <label className="pf-label">Size</label>
-                <input type="text" value={size} onChange={e => setSize(e.target.value)} placeholder="e.g. 2x5" className="pf-input" />
-              </div>
-              <div>
-                <label className="pf-label">Materials</label>
-                <input type="text" value={materials} onChange={e => setMaterials(e.target.value)} placeholder="Optional" className="pf-input" />
-              </div>
+            <div className="pf-field">
+              <label className="pf-label">Size</label>
+              <input type="text" value={size} onChange={e => setSize(e.target.value)} placeholder="e.g. 2x5" className="pf-input" />
             </div>
 
             <div className="pf-grid-2" style={{ marginBottom: '0.85rem' }}>

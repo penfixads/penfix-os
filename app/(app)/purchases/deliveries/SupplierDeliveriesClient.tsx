@@ -28,7 +28,6 @@ export default function SupplierDeliveriesClient({ deliveries: initialDeliveries
   const [supplierName, setSupplierName] = useState('')
   const [specs, setSpecs] = useState('')
   const [size, setSize] = useState('')
-  const [materials, setMaterials] = useState('')
   const [unitPrice, setUnitPrice] = useState('')
   const [quantity, setQuantity] = useState('1')
   const [remarks, setRemarks] = useState('')
@@ -50,7 +49,7 @@ export default function SupplierDeliveriesClient({ deliveries: initialDeliveries
   function openAdd() {
     setEditing(null)
     setDeliveryDate(getPhilippineDateStr())
-    setSupplierName(''); setSpecs(''); setSize(''); setMaterials('')
+    setSupplierName(''); setSpecs(''); setSize('')
     setUnitPrice(''); setQuantity('1'); setRemarks('')
     setBillingMonth(nextMonthFirst(getPhilippineDateStr()))
     setBillingOverridden(false)
@@ -64,7 +63,6 @@ export default function SupplierDeliveriesClient({ deliveries: initialDeliveries
     setSupplierName(d.supplier_name || '')
     setSpecs(d.specs || '')
     setSize(d.size || '')
-    setMaterials(d.materials || '')
     setUnitPrice(String(d.unit_price ?? ''))
     setQuantity(String(d.quantity ?? 1))
     setRemarks(d.remarks || '')
@@ -93,7 +91,6 @@ export default function SupplierDeliveriesClient({ deliveries: initialDeliveries
         supplier_name: supplierName.trim(),
         specs: specs.trim(),
         size: size || null,
-        materials: materials || null,
         unit_price: parseFloat(unitPrice) || 0,
         quantity: parseFloat(quantity) || 1,
         total_amount: totalAmount,
@@ -240,15 +237,9 @@ export default function SupplierDeliveriesClient({ deliveries: initialDeliveries
               <input type="text" value={specs} onChange={e => setSpecs(e.target.value)} placeholder="e.g. Acryglass Sheet 6mm (CW)" className="pf-input" />
             </div>
 
-            <div className="pf-grid-2" style={{ marginBottom: '0.85rem' }}>
-              <div>
-                <label className="pf-label">Size</label>
-                <input type="text" value={size} onChange={e => setSize(e.target.value)} placeholder="e.g. 4x8" className="pf-input" />
-              </div>
-              <div>
-                <label className="pf-label">Materials</label>
-                <input type="text" value={materials} onChange={e => setMaterials(e.target.value)} placeholder="Optional" className="pf-input" />
-              </div>
+            <div className="pf-field">
+              <label className="pf-label">Size</label>
+              <input type="text" value={size} onChange={e => setSize(e.target.value)} placeholder="e.g. 4x8" className="pf-input" />
             </div>
 
             <div className="pf-grid-2" style={{ marginBottom: '0.85rem' }}>

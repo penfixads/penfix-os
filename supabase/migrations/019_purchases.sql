@@ -7,7 +7,6 @@ create table if not exists purchases (
   supplier_name text not null,
   specs text not null,
   size text,
-  materials text,
   amount numeric(10,2) not null default 0,
   quantity numeric(10,2) not null default 1,
   total_amount numeric(10,2) not null default 0,
