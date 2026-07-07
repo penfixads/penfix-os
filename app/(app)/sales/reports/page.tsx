@@ -17,7 +17,7 @@ export default async function SalesReportsPage() {
   yearAgo.setUTCFullYear(yearAgo.getUTCFullYear() - 1)
   const since = getPhilippineDateStr(yearAgo)
 
-  const [{ data: payments }, { data: jobOrders }, { data: expenses }] = await Promise.all([
+  const [{ data: payments }, { data: jobOrders }, { data: expenses }, { data: purchases }, { data: supplierDeliveries }] = await Promise.all([
     supabase
       .from('payments')
       .select('payment_date, amount, payment_method')
@@ -33,6 +33,17 @@ export default async function SalesReportsPage() {
       .select('expense_date, date, amount')
       .gte('expense_date', since)
       .order('expense_date'),
+    supabase
+      .from('purchases')
+      .select('purchase_date, total_amount')
+      .gte('purchase_date', since)
+      .order('purchase_date'),
+    // Billed via next month's cheque, so the cash outflow lands in billing_month, not delivery_date.
+    supabase
+      .from('supplier_deliveries')
+      .select('billing_month, total_amount')
+      .gte('billing_month', since)
+      .order('billing_month'),
   ])
 
   return (
@@ -40,6 +51,8 @@ export default async function SalesReportsPage() {
       payments={payments || []}
       jobOrders={jobOrders || []}
       expenses={expenses || []}
+      purchases={purchases || []}
+      supplierDeliveries={supplierDeliveries || []}
     />
   )
 }

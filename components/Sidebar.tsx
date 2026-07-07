@@ -102,6 +102,13 @@ export default function Sidebar({ role, name }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const items = NAV_ITEMS.filter(i => i.roles.includes(role))
+  // Pick the longest matching href so sibling routes sharing a prefix (e.g. /purchases
+  // and /purchases/deliveries) don't both light up when only one is actually active.
+  const activeHref = items.reduce<string | null>((best, item) => {
+    const matches = pathname === item.href || pathname.startsWith(item.href + '/')
+    if (!matches) return best
+    return !best || item.href.length > best.length ? item.href : best
+  }, null)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
 
@@ -211,7 +218,7 @@ export default function Sidebar({ role, name }: Props) {
         {/* Nav */}
         <nav style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0' }}>
           {items.map(item => {
-            const active = pathname === item.href || pathname.startsWith(item.href + '/')
+            const active = item.href === activeHref
             return (
               <Link
                 key={item.href}

@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts'
 
-interface Props { payments: any[]; jobOrders: any[]; expenses: any[] }
+interface Props { payments: any[]; jobOrders: any[]; expenses: any[]; purchases: any[]; supplierDeliveries: any[] }
 
 type Period = 'weekly' | 'monthly' | 'yearly'
 
@@ -29,7 +29,7 @@ function periodLabel(key: string, period: Period): string {
   return key
 }
 
-export default function SalesReportsClient({ payments, jobOrders, expenses }: Props) {
+export default function SalesReportsClient({ payments, jobOrders, expenses, purchases, supplierDeliveries }: Props) {
   const [period, setPeriod] = useState<Period>('monthly')
 
   const report = useMemo(() => {
@@ -61,8 +61,26 @@ export default function SalesReportsClient({ payments, jobOrders, expenses }: Pr
       map[key].expenses += e.amount || 0
     }
 
+    // Purchases (same-day cash) and Supplier Deliveries (billed via next month's cheque)
+    // are both real cash-out overhead — folded into the same Expenses bucket.
+    for (const p of purchases) {
+      const d = p.purchase_date
+      if (!d) continue
+      const key = getPeriodKey(d, period)
+      if (!map[key]) map[key] = { collections: 0, sales: 0, expenses: 0, joCount: 0, byMethod: {} }
+      map[key].expenses += p.total_amount || 0
+    }
+
+    for (const sd of supplierDeliveries) {
+      const d = sd.billing_month
+      if (!d) continue
+      const key = getPeriodKey(d, period)
+      if (!map[key]) map[key] = { collections: 0, sales: 0, expenses: 0, joCount: 0, byMethod: {} }
+      map[key].expenses += sd.total_amount || 0
+    }
+
     return Object.entries(map).sort((a, b) => b[0].localeCompare(a[0]))
-  }, [payments, jobOrders, expenses, period])
+  }, [payments, jobOrders, expenses, purchases, supplierDeliveries, period])
 
   const grandCollections = report.reduce((s, [, r]) => s + r.collections, 0)
   const grandSales = report.reduce((s, [, r]) => s + r.sales, 0)
