@@ -32,14 +32,6 @@ const NAV_ITEMS: NavItem[] = [
     icon: <I><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></I>
   },
   {
-    label: 'Purchases', href: '/purchases', roles: ['Admin','Treasury'],
-    icon: <I><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></I>
-  },
-  {
-    label: 'Supplier Deliveries', href: '/purchases/deliveries', roles: ['Admin','Treasury'],
-    icon: <I><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></I>
-  },
-  {
     label: 'Pending Approval', href: '/jos/pending-approval', roles: ['Admin'],
     icon: <I><path d="M10 15l-3-3 3-3M14 9l3 3-3 3"/><circle cx="12" cy="12" r="10"/></I>
   },
@@ -82,6 +74,14 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: 'Client Feedback', href: '/client-feedback', roles: ['Admin','GA','Treasury'],
     icon: <I fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></I>
+  },
+  {
+    label: 'Purchases', href: '/purchases', roles: ['Admin','Treasury'],
+    icon: <I><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></I>
+  },
+  {
+    label: 'Supplier Deliveries', href: '/purchases/deliveries', roles: ['Admin','Treasury'],
+    icon: <I><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></I>
   },
   {
     label: 'User Management', href: '/admin/users', roles: ['Admin'],
