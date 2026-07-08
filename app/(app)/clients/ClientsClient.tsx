@@ -6,6 +6,9 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso, generateClientId } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import { IconUserPlus, IconEdit, IconCheck, IconX } from '@/components/icons'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 10
 
 interface Props { clients: any[]; currentUser: AppUser }
 
@@ -18,6 +21,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
   const [editing, setEditing] = useState<any | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [page, setPage] = useState(1)
 
   // Form state
   const [clientType, setClientType] = useState<'Individual' | 'Company'>('Individual')
@@ -95,6 +99,9 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
     return matchSearch && matchType
   })
 
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)))
+  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
@@ -109,9 +116,9 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: '1rem', flexWrap: 'wrap' }}>
-        <input type="text" placeholder="Search name or ID…" value={search} onChange={e => setSearch(e.target.value)}
+        <input type="text" placeholder="Search name or ID…" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
           style={{ flex: 1, minWidth: 180, background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }} />
-        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+        <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setPage(1) }}
           style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }}>
           <option value="all">All Types</option>
           <option value="Individual">Individual</option>
@@ -121,7 +128,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
 
       {/* List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {filtered.map(c => {
+        {pageItems.map(c => {
           const totalSales = (c.job_orders || []).reduce((s: number, j: any) => s + (j.grand_total || 0), 0)
           const totalJOs = c.job_orders?.length || 0
           return (
@@ -148,6 +155,8 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
           )
         })}
       </div>
+
+      <Pagination page={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       {/* Form Modal */}
       {showForm && (

@@ -3,8 +3,12 @@
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso, getEffectiveSteps } from '@/lib/jo-helpers'
+import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 10
 
 interface Props {
   items: any[]
@@ -90,6 +94,7 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
   const [advancing, setAdvancing] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const [groupPage, setGroupPage] = useState<Record<string, number>>({})
   const [viewingItem, setViewingItem] = useState<any | null>(null)
   // completedStatus = the step being marked done (attribution is logged against this);
   // targetStatus = the step job_status advances to once confirmed.
@@ -164,16 +169,18 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
       await supabase.from('job_order_item_status_log').insert(newLogs)
       setLocalLogs(prev => [...prev, ...newLogs])
       setPendingChange(null)
+      await syncJobOrderDoneStatus(supabase, jobOrderId)
     } finally {
       setAdvancing(null)
     }
   }
 
-  async function markCancelled(itemId: string) {
+  async function markCancelled(itemId: string, jobOrderId: string) {
     if (!confirm('Mark this item as Cancelled?')) return
     const supabase = createSupabaseBrowserClient()
     await supabase.from('job_order_items').update({ job_status: 'Cancelled' }).eq('item_id', itemId)
     setLocalItems(prev => prev.filter(i => i.item_id !== itemId))
+    await syncJobOrderDoneStatus(supabase, jobOrderId)
   }
 
   // GA/Admin/Treasury can edit an item's fields from this panel too — Fabricators open the
@@ -235,7 +242,7 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
           type="text"
           placeholder="Search client, JO, item..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => { setSearch(e.target.value); setGroupPage({}) }}
           style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.85rem', color: '#1a1a1a', fontSize: '0.82rem', width: 220, outline: 'none' }}
         />
       </div>
@@ -248,6 +255,8 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
             const groupItems = grouped[group.key]
             if (groupItems.length === 0) return null
             const isCollapsed = collapsed[group.key]
+            const groupCurrentPage = Math.min(groupPage[group.key] || 1, Math.max(1, Math.ceil(groupItems.length / PAGE_SIZE)))
+            const groupPageItems = groupItems.slice((groupCurrentPage - 1) * PAGE_SIZE, groupCurrentPage * PAGE_SIZE)
 
             return (
               <div key={group.key}>
@@ -263,8 +272,9 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
 
                 {/* Cards */}
                 {!isCollapsed && (
+                  <>
                   <div style={{ border: `1px solid ${group.border}`, borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
-                    {groupItems.map((item, idx) => {
+                    {groupPageItems.map((item, idx) => {
                       const jo = item.job_orders
                       const clientName = jo?.clients?.client_name || jo?.clients?.company_name || jo?.client_id
                       const subcategoryId = item.subcategory_id
@@ -328,7 +338,7 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
                               {!isFabricator && <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.85rem' }}>{formatPeso(item.computed_line_total || 0)}</div>}
                               <div style={{ color: '#aaa', fontSize: '0.68rem' }}>qty: {item.quantity || 1}</div>
                               <button
-                                onClick={e => { e.stopPropagation(); markCancelled(item.item_id) }}
+                                onClick={e => { e.stopPropagation(); markCancelled(item.item_id, item.job_order_id) }}
                                 style={{ marginTop: 6, background: 'none', border: '1px solid #3a0000', color: '#7A1828', fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: 6, cursor: 'pointer' }}
                               >
                                 Cancel
@@ -347,6 +357,13 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
                       )
                     })}
                   </div>
+                  <Pagination
+                    page={groupCurrentPage}
+                    totalItems={groupItems.length}
+                    pageSize={PAGE_SIZE}
+                    onPageChange={p => setGroupPage(prev => ({ ...prev, [group.key]: p }))}
+                  />
+                  </>
                 )}
               </div>
             )

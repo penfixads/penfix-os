@@ -5,6 +5,9 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso, getPhilippineDayOfWeek } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import { IconPlus, IconX, IconCheck, IconEdit } from '@/components/icons'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 10
 
 interface Props {
   payments: any[]
@@ -166,6 +169,11 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
   const [filterType, setFilterType] = useState<'all' | 'deficit' | 'excess'>('all')
   const [filterResults, setFilterResults] = useState<any[] | null>(null)
   const [filtering, setFiltering] = useState(false)
+  const [recentPage, setRecentPage] = useState(1)
+
+  const recentDays = recentSummaries.filter(r => r.date !== today)
+  const recentCurrentPage = Math.min(recentPage, Math.max(1, Math.ceil(recentDays.length / PAGE_SIZE)))
+  const recentPageItems = recentDays.slice((recentCurrentPage - 1) * PAGE_SIZE, recentCurrentPage * PAGE_SIZE)
 
   const isAdmin = currentUser.role === 'Admin'
   const summaryId = `DSS-${today}`
@@ -609,14 +617,15 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
       </div>
 
       {/* Recent Days history */}
-      {!searchResult && filterType === 'all' && recentSummaries.filter(r => r.date !== today).length > 0 && (
+      {!searchResult && filterType === 'all' && recentDays.length > 0 && (
         <div>
           <div style={{ color: '#7A1828', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.6rem' }}>Recent Days</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {recentSummaries.filter(r => r.date !== today).map(row => (
+            {recentPageItems.map(row => (
               <HistoryRow key={row.summary_id} row={row} isAdmin={isAdmin} />
             ))}
           </div>
+          <Pagination page={recentCurrentPage} totalItems={recentDays.length} pageSize={PAGE_SIZE} onPageChange={setRecentPage} />
         </div>
       )}
     </div>

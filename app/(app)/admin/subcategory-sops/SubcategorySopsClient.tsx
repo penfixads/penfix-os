@@ -3,6 +3,9 @@
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { IconPlus, IconEdit, IconCheck, IconX } from '@/components/icons'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 10
 
 interface Props {
   subcategories: any[]
@@ -29,6 +32,7 @@ export default function SubcategorySopsClient({ subcategories, categories, sopSt
 
   const [procedures, setProcedures] = useState(initialProcedures)
   const [expandedStepId, setExpandedStepId] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
 
   const filteredSubs = subcategories.filter(s => {
     const q = search.toLowerCase()
@@ -36,6 +40,9 @@ export default function SubcategorySopsClient({ subcategories, categories, sopSt
     const matchCategory = categoryFilter === 'all' || s.category_id === categoryFilter
     return matchSearch && matchCategory
   })
+
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(filteredSubs.length / PAGE_SIZE)))
+  const pageSubs = filteredSubs.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   const selectedSub = subcategories.find(s => s.subcategory_id === selectedSubId)
   const stepsForSub = sopSteps.filter(s => s.subcategory_id === selectedSubId).sort((a, b) => a.sequence - b.sequence)
@@ -185,16 +192,16 @@ export default function SubcategorySopsClient({ subcategories, categories, sopSt
         {/* Subcategory list */}
         <div style={{ flex: '0 0 280px', minWidth: 240 }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-            <input type="text" placeholder="Search subcategory…" value={search} onChange={e => setSearch(e.target.value)}
+            <input type="text" placeholder="Search subcategory…" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
               style={{ flex: 1, minWidth: 140, background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.45rem 0.65rem', color: '#1a1a1a', fontSize: '0.78rem', outline: 'none' }} />
           </div>
-          <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}
+          <select value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setPage(1) }}
             style={{ width: '100%', background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.45rem 0.65rem', color: '#1a1a1a', fontSize: '0.78rem', outline: 'none', marginBottom: 8 }}>
             <option value="all">All Categories</option>
             {categories.map(c => <option key={c.category_id} value={c.category_id}>{c.category_name}</option>)}
           </select>
-          <div style={{ maxHeight: 520, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {filteredSubs.map(s => {
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {pageSubs.map(s => {
               const count = subStepCount(s.subcategory_id)
               return (
                 <button
@@ -214,6 +221,7 @@ export default function SubcategorySopsClient({ subcategories, categories, sopSt
               )
             })}
           </div>
+          <Pagination page={currentPage} totalItems={filteredSubs.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </div>
 
         {/* SOP steps for selected subcategory */}

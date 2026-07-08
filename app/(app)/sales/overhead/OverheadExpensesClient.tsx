@@ -5,6 +5,9 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso, generateOverheadId } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import { IconCirclePlus, IconEdit, IconCheck, IconX } from '@/components/icons'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 10
 
 interface Props {
   overheadExpenses: any[]
@@ -28,6 +31,7 @@ export default function OverheadExpensesClient({ overheadExpenses: initial, curr
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [deleteError, setDeleteError] = useState('')
+  const [page, setPage] = useState(1)
 
   const [month, setMonth] = useState(currentMonthFirst())
   const [expenseName, setExpenseName] = useState('')
@@ -37,8 +41,11 @@ export default function OverheadExpensesClient({ overheadExpenses: initial, curr
   const months = Array.from(new Set(items.map(i => i.month.slice(0, 7)))).sort((a, b) => b.localeCompare(a))
   const filtered = monthFilter === 'all' ? items : items.filter(i => i.month.slice(0, 7) === monthFilter)
 
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)))
+  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
   const grouped: Record<string, any[]> = {}
-  for (const i of filtered) {
+  for (const i of pageItems) {
     const key = i.month.slice(0, 7)
     if (!grouped[key]) grouped[key] = []
     grouped[key].push(i)
@@ -85,6 +92,7 @@ export default function OverheadExpensesClient({ overheadExpenses: initial, curr
         const { data, error: err } = await supabase.from('overhead_expenses').insert({ ...payload, overhead_id: generateOverheadId() }).select().single()
         if (err) throw err
         setItems(prev => [data, ...prev])
+        setPage(1)
       }
       setShowForm(false)
     } catch (e: any) {
@@ -122,7 +130,7 @@ export default function OverheadExpensesClient({ overheadExpenses: initial, curr
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: '1rem', flexWrap: 'wrap' }}>
-        <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)}
+        <select value={monthFilter} onChange={e => { setMonthFilter(e.target.value); setPage(1) }}
           style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }}>
           <option value="all">All Months</option>
           {months.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
@@ -176,6 +184,8 @@ export default function OverheadExpensesClient({ overheadExpenses: initial, curr
           })}
         </div>
       )}
+
+      <Pagination page={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       {showForm && (
         <div className="pf-modal-overlay">

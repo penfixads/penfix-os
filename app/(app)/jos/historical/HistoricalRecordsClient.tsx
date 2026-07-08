@@ -5,6 +5,9 @@ import { formatPeso } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import NewJOModal from '@/components/NewJOModal'
 import { IconPlus } from '@/components/icons'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 10
 
 interface Props {
   clients: any[]
@@ -17,6 +20,9 @@ interface Props {
 export default function HistoricalRecordsClient({ clients, categories, subcategories, backdatedJOs: initialBackdated, currentUser }: Props) {
   const [backdatedJOs, setBackdatedJOs] = useState(initialBackdated)
   const [showForm, setShowForm] = useState(false)
+  const [page, setPage] = useState(1)
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(backdatedJOs.length / PAGE_SIZE)))
+  const pageItems = backdatedJOs.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   return (
     <div>
@@ -41,7 +47,7 @@ export default function HistoricalRecordsClient({ clients, categories, subcatego
         <div style={{ color: '#aaa', textAlign: 'center', marginTop: '2rem', fontSize: '0.9rem' }}>No historical job orders have been added yet.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-          {backdatedJOs.map(jo => {
+          {pageItems.map(jo => {
             const clientName = jo.clients?.client_name || jo.clients?.company_name || jo.client_id
             return (
               <div key={jo.job_order_id} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.75rem 1rem', border: '1px solid #EDE0CC', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -65,6 +71,8 @@ export default function HistoricalRecordsClient({ clients, categories, subcatego
         </div>
       )}
 
+      <Pagination page={currentPage} totalItems={backdatedJOs.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+
       {showForm && (
         <NewJOModal
           clients={clients}
@@ -76,6 +84,7 @@ export default function HistoricalRecordsClient({ clients, categories, subcatego
           onCreated={(newJO) => {
             if (newJO.date_override_authorized_by) {
               setBackdatedJOs(prev => [{ ...newJO, created_at: new Date().toISOString() }, ...prev])
+              setPage(1)
             }
             setShowForm(false)
           }}

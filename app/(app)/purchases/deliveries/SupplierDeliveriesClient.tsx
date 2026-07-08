@@ -5,6 +5,9 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso, generateDeliveryId, getPhilippineDateStr, nextMonthFirst } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import { IconPlus, IconCirclePlus, IconEdit, IconCheck, IconX } from '@/components/icons'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 10
 
 interface Props {
   deliveries: any[]
@@ -23,6 +26,7 @@ export default function SupplierDeliveriesClient({ deliveries: initialDeliveries
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [deleteError, setDeleteError] = useState('')
+  const [page, setPage] = useState(1)
 
   const [deliveryDate, setDeliveryDate] = useState(getPhilippineDateStr())
   const [supplierName, setSupplierName] = useState('')
@@ -39,8 +43,11 @@ export default function SupplierDeliveriesClient({ deliveries: initialDeliveries
   const billingMonths = Array.from(new Set(deliveries.map(d => d.billing_month))).sort((a, b) => b.localeCompare(a))
   const filtered = monthFilter === 'all' ? deliveries : deliveries.filter(d => d.billing_month === monthFilter)
 
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)))
+  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
   const grouped: Record<string, any[]> = {}
-  for (const d of filtered) {
+  for (const d of pageItems) {
     if (!grouped[d.billing_month]) grouped[d.billing_month] = []
     grouped[d.billing_month].push(d)
   }
@@ -106,6 +113,7 @@ export default function SupplierDeliveriesClient({ deliveries: initialDeliveries
         const { data, error: err } = await supabase.from('supplier_deliveries').insert({ ...payload, delivery_id: generateDeliveryId() }).select().single()
         if (err) throw err
         setDeliveries(prev => [data, ...prev])
+        setPage(1)
       }
       setShowForm(false)
     } catch (e: any) {
@@ -143,7 +151,7 @@ export default function SupplierDeliveriesClient({ deliveries: initialDeliveries
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: '1rem', flexWrap: 'wrap' }}>
-        <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)}
+        <select value={monthFilter} onChange={e => { setMonthFilter(e.target.value); setPage(1) }}
           style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }}>
           <option value="all">All Billing Months</option>
           {billingMonths.map(m => <option key={m} value={m}>{monthLabel(m)} Billing</option>)}
@@ -207,6 +215,8 @@ export default function SupplierDeliveriesClient({ deliveries: initialDeliveries
           })}
         </div>
       )}
+
+      <Pagination page={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       {showForm && (
         <div className="pf-modal-overlay">

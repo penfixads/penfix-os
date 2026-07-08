@@ -2,6 +2,9 @@
 
 import { useState } from 'react'
 import { getPhilippineDateStr, fuzzyMatch } from '@/lib/jo-helpers'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 10
 
 interface Props { jobOrders: any[] }
 
@@ -14,6 +17,7 @@ export default function DailyRecordClient({ jobOrders }: Props) {
   const [date, setDate] = useState(todayStr())
   const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [page, setPage] = useState(1)
 
   const filtered = jobOrders.filter(jo => {
     const d = jo.date_time_received ? getPhilippineDateStr(new Date(jo.date_time_received)) : undefined
@@ -22,6 +26,9 @@ export default function DailyRecordClient({ jobOrders }: Props) {
     const matchSearch = !search || fuzzyMatch(client, search) || fuzzyMatch(jo.job_order_id, search) || fuzzyMatch(jo.received_by || '', search)
     return matchDate && matchSearch
   })
+
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)))
+  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   const toggle = (joId: string) => setExpanded(prev => ({ ...prev, [joId]: !prev[joId] }))
 
@@ -33,14 +40,14 @@ export default function DailyRecordClient({ jobOrders }: Props) {
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: '1rem', flexWrap: 'wrap' }}>
-        <input type="date" value={date} onChange={e => setDate(e.target.value)}
+        <input type="date" value={date} onChange={e => { setDate(e.target.value); setPage(1) }}
           style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }} />
         {date && (
-          <button onClick={() => setDate('')} style={{ background: '#f0f0f0', border: '1px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#666', fontSize: '0.78rem', cursor: 'pointer' }}>
+          <button onClick={() => { setDate(''); setPage(1) }} style={{ background: '#f0f0f0', border: '1px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#666', fontSize: '0.78rem', cursor: 'pointer' }}>
             Show all dates
           </button>
         )}
-        <input type="text" placeholder="Search client, JO ID, GA…" value={search} onChange={e => setSearch(e.target.value)}
+        <input type="text" placeholder="Search client, JO ID, GA…" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
           style={{ flex: 1, minWidth: 180, background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }} />
       </div>
 
@@ -50,7 +57,7 @@ export default function DailyRecordClient({ jobOrders }: Props) {
         <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem' }}>No job orders match.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {filtered.map(jo => {
+          {pageItems.map(jo => {
             const clientName = jo.clients?.client_name || jo.clients?.company_name || jo.job_order_id
             const items = jo.job_order_items || []
             const isOpen = !!expanded[jo.job_order_id]
@@ -109,6 +116,8 @@ export default function DailyRecordClient({ jobOrders }: Props) {
           })}
         </div>
       )}
+
+      <Pagination page={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
     </div>
   )
 }

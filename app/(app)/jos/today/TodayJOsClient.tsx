@@ -9,6 +9,9 @@ import NewJOModal from '@/components/NewJOModal'
 import EditJOModal from '@/components/EditJOModal'
 import JOReceiptModal from '@/components/JOReceiptModal'
 import { IconPlus } from '@/components/icons'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 10
 
 interface Props {
   jobOrders: any[]
@@ -24,6 +27,9 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients, categor
   const [editingJO, setEditingJO] = useState<any | null>(null)
   const [addingItemToJO, setAddingItemToJO] = useState<string | null>(null) // joId of saved JO being edited
   const [receiptJOId, setReceiptJOId] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(jobOrders.length / PAGE_SIZE)))
+  const pageItems = jobOrders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   async function handleAddItemToExistingJO(joId: string, rawItem: any) {
     const supabase = createSupabaseBrowserClient()
@@ -92,7 +98,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients, categor
         <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No job orders received today yet.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {jobOrders.map(jo => {
+          {pageItems.map(jo => {
             const clientName = jo.clients?.client_name || jo.clients?.company_name || jo.client_id
             const deadline = jo.job_order_items?.[0]?.date_time_needed
             const hasBalance = jo.balance_due > 0
@@ -154,6 +160,8 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients, categor
         </div>
       )}
 
+      <Pagination page={currentPage} totalItems={jobOrders.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+
       {showForm && (
         <NewJOModal
           clients={clients}
@@ -163,6 +171,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients, categor
           onClose={() => setShowForm(false)}
           onCreated={(newJO) => {
             setJobOrders(prev => [newJO, ...prev])
+            setPage(1)
             setShowForm(false)
           }}
         />

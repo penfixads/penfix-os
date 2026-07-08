@@ -4,8 +4,16 @@ import { useState } from 'react'
 import { formatPeso, buildFeedbackUrl, getPhilippineDateStr, fuzzyMatch } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 10
 
 interface Props { jobOrders: any[]; currentUser: AppUser }
+
+function isJODone(jo: any): boolean {
+  const items = jo.job_order_items || []
+  return items.length > 0 && items.every((i: any) => i.job_status === 'Done' || i.job_status === 'Cancelled')
+}
 
 export default function AllJOsClient({ jobOrders: initialJobOrders, currentUser }: Props) {
   const [jobOrders, setJobOrders] = useState(initialJobOrders)
@@ -15,18 +23,22 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, currentUser 
   const [dateTo, setDateTo] = useState('')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const toggleExpand = (joId: string) => setExpanded(prev => ({ ...prev, [joId]: !prev[joId] }))
+  const [page, setPage] = useState(1)
 
-  const statuses = ['all', ...Array.from(new Set(jobOrders.map(j => j.payment_status).filter(Boolean)))]
+  const statuses = ['all', 'Done', ...Array.from(new Set(jobOrders.map(j => j.payment_status).filter(Boolean)))]
 
   const filtered = jobOrders.filter(jo => {
     const client = jo.clients?.client_name || jo.clients?.company_name || ''
     const matchSearch = !search || fuzzyMatch(client, search) || fuzzyMatch(jo.job_order_id, search) || fuzzyMatch(jo.received_by || '', search)
-    const matchStatus = statusFilter === 'all' || jo.payment_status === statusFilter
+    const matchStatus = statusFilter === 'all' || (statusFilter === 'Done' ? isJODone(jo) : jo.payment_status === statusFilter)
     const d = jo.date_time_received ? getPhilippineDateStr(new Date(jo.date_time_received)) : undefined
     const matchFrom = !dateFrom || d >= dateFrom
     const matchTo = !dateTo || d <= dateTo
     return matchSearch && matchStatus && matchFrom && matchTo
   })
+
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)))
+  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   const totalGrand = filtered.reduce((s, j) => s + (j.grand_total || 0), 0)
   const totalPaid = filtered.reduce((s, j) => s + (j.total_amount_paid || 0), 0)
@@ -76,13 +88,13 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, currentUser 
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: '1rem', flexWrap: 'wrap' }}>
-        <input type="text" placeholder="Search client, JO ID, GA…" value={search} onChange={e => setSearch(e.target.value)}
+        <input type="text" placeholder="Search client, JO ID, GA…" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
           style={inp} />
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...inp, flex: 'none', width: 'auto' }}>
+        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1) }} style={{ ...inp, flex: 'none', width: 'auto' }}>
           {statuses.map(s => <option key={s} value={s}>{s === 'all' ? 'All Statuses' : s}</option>)}
         </select>
-        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ ...inp, flex: 'none', width: 'auto' }} />
-        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ ...inp, flex: 'none', width: 'auto' }} />
+        <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1) }} style={{ ...inp, flex: 'none', width: 'auto' }} />
+        <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1) }} style={{ ...inp, flex: 'none', width: 'auto' }} />
       </div>
 
       {/* Table-style list */}
@@ -90,10 +102,10 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, currentUser 
         <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem' }}>No job orders match your filters.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {filtered.map(jo => {
+          {pageItems.map(jo => {
             const clientName = jo.clients?.client_name || jo.clients?.company_name || jo.client_id
             const items = jo.job_order_items || []
-            const allDone = items.length > 0 && items.every((i: any) => i.job_status === 'Done' || i.job_status === 'Cancelled')
+            const allDone = isJODone(jo)
             const hasBalance = (jo.balance_due || 0) > 0
 
             const isOpen = !!expanded[jo.job_order_id]
@@ -193,6 +205,8 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, currentUser 
           })}
         </div>
       )}
+
+      <Pagination page={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
     </div>
   )
 }

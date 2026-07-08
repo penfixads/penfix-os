@@ -4,6 +4,9 @@ import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 10
 
 interface Props {
   jobOrders: any[]
@@ -19,8 +22,18 @@ export default function PendingApprovalClient({ jobOrders: initialJOs, creditReq
   const [acting, setActing] = useState<string | null>(null)
   const [rejectNote, setRejectNote] = useState<Record<string, string>>({})
   const [showReject, setShowReject] = useState<string | null>(null)
+  const [unlockPage, setUnlockPage] = useState(1)
+  const [creditPage, setCreditPage] = useState(1)
+  const [joPage, setJoPage] = useState(1)
 
   const isAdmin = currentUser.role === 'Admin'
+
+  const unlockCurrentPage = Math.min(unlockPage, Math.max(1, Math.ceil(unlockRequests.length / PAGE_SIZE)))
+  const unlockPageItems = unlockRequests.slice((unlockCurrentPage - 1) * PAGE_SIZE, unlockCurrentPage * PAGE_SIZE)
+  const creditCurrentPage = Math.min(creditPage, Math.max(1, Math.ceil(creditRequests.length / PAGE_SIZE)))
+  const creditPageItems = creditRequests.slice((creditCurrentPage - 1) * PAGE_SIZE, creditCurrentPage * PAGE_SIZE)
+  const joCurrentPage = Math.min(joPage, Math.max(1, Math.ceil(jos.length / PAGE_SIZE)))
+  const joPageItems = jos.slice((joCurrentPage - 1) * PAGE_SIZE, joCurrentPage * PAGE_SIZE)
 
   async function approveUnlock(requestId: string) {
     setActing(requestId)
@@ -110,7 +123,7 @@ export default function PendingApprovalClient({ jobOrders: initialJOs, creditReq
         <div style={{ marginBottom: '1.5rem' }}>
           <h2 style={{ color: '#7A1828', fontSize: '1rem', fontWeight: 700, marginBottom: '0.6rem' }}>Historical Record Unlock Requests</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            {unlockRequests.map(r => {
+            {unlockPageItems.map(r => {
               const isActing = acting === r.request_id
               return (
                 <div key={r.request_id} style={{ background: '#FDF5EC', borderRadius: 12, padding: '0.85rem 1rem', border: '1px solid #EDE0CC', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -134,6 +147,7 @@ export default function PendingApprovalClient({ jobOrders: initialJOs, creditReq
               )
             })}
           </div>
+          <Pagination page={unlockCurrentPage} totalItems={unlockRequests.length} pageSize={PAGE_SIZE} onPageChange={setUnlockPage} />
         </div>
       )}
 
@@ -141,7 +155,7 @@ export default function PendingApprovalClient({ jobOrders: initialJOs, creditReq
         <div style={{ marginBottom: '1.5rem' }}>
           <h2 style={{ color: '#7A1828', fontSize: '1rem', fontWeight: 700, marginBottom: '0.6rem' }}>Credit Line Requests</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            {creditRequests.map(c => {
+            {creditPageItems.map(c => {
               const clientName = c.client_name || c.company_name || c.client_id
               const isActing = acting === c.client_id
               return (
@@ -166,6 +180,7 @@ export default function PendingApprovalClient({ jobOrders: initialJOs, creditReq
               )
             })}
           </div>
+          <Pagination page={creditCurrentPage} totalItems={creditRequests.length} pageSize={PAGE_SIZE} onPageChange={setCreditPage} />
         </div>
       )}
 
@@ -173,7 +188,7 @@ export default function PendingApprovalClient({ jobOrders: initialJOs, creditReq
         creditRequests.length === 0 && unlockRequests.length === 0 && <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No pending approvals. ✓</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-          {jos.map(jo => {
+          {joPageItems.map(jo => {
             const clientName = jo.clients?.client_name || jo.clients?.company_name || jo.client_id
             const items = jo.job_order_items || []
             const totalPaid = jo.total_amount_paid || 0
@@ -253,6 +268,8 @@ export default function PendingApprovalClient({ jobOrders: initialJOs, creditReq
           })}
         </div>
       )}
+
+      <Pagination page={joCurrentPage} totalItems={jos.length} pageSize={PAGE_SIZE} onPageChange={setJoPage} />
     </div>
   )
 }

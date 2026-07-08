@@ -3,6 +3,9 @@
 import { useState } from 'react'
 import { formatPeso, fuzzyMatch } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 10
 
 interface Props { items: any[]; currentUser: AppUser }
 
@@ -26,6 +29,7 @@ export default function ItemsClient({ items, currentUser }: Props) {
   const [statusFilter, setStatusFilter] = useState('all')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const toggleExpand = (itemId: string) => setExpanded(prev => ({ ...prev, [itemId]: !prev[itemId] }))
+  const [page, setPage] = useState(1)
 
   const statuses = ['all', ...Array.from(new Set(items.map(i => i.job_status).filter(Boolean)))]
 
@@ -40,6 +44,9 @@ export default function ItemsClient({ items, currentUser }: Props) {
     const matchStatus = statusFilter === 'all' || item.job_status === statusFilter
     return matchSearch && matchStatus
   })
+
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)))
+  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   const totalValue = filtered.reduce((s, i) => s + (i.computed_line_total || 0), 0)
 
@@ -69,12 +76,12 @@ export default function ItemsClient({ items, currentUser }: Props) {
           type="text"
           placeholder="Search client, JO ID, item, GA…"
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => { setSearch(e.target.value); setPage(1) }}
           style={{ flex: 1, minWidth: 180, background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }}
         />
         <select
           value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
+          onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
           style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }}
         >
           {statuses.map(s => <option key={s} value={s}>{s === 'all' ? 'All Statuses' : s}</option>)}
@@ -85,7 +92,7 @@ export default function ItemsClient({ items, currentUser }: Props) {
         <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem' }}>No job order items match your filters.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {filtered.map(item => {
+          {pageItems.map(item => {
             const jo = item.job_orders
             const clientName = jo?.clients?.client_name || jo?.clients?.company_name || '—'
             const statusColor = STATUS_COLORS[item.job_status] || '#555'
@@ -151,6 +158,8 @@ export default function ItemsClient({ items, currentUser }: Props) {
           })}
         </div>
       )}
+
+      <Pagination page={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
     </div>
   )
 }

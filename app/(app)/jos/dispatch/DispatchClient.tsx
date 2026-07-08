@@ -4,7 +4,11 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso } from '@/lib/jo-helpers'
+import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
 import type { AppUser } from '@/lib/user'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 10
 
 interface Props {
   items: any[]
@@ -13,14 +17,11 @@ interface Props {
 
 const DISPATCH_MODES = ['Pickup', 'Delivery', 'Installation']
 
-// Loyalty program start — purchases before this date don't earn rewards, even if the JO
-// happens to get dispatched (and its rewards recorded) after this date.
-const REWARDS_START_DATE = new Date('2026-05-01T00:00:00+08:00')
-
 export default function DispatchClient({ items, currentUser }: Props) {
   const router = useRouter()
   const [marking, setMarking] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
 
   const filtered = items.filter(item => {
     const c = item.job_orders?.clients
@@ -31,6 +32,9 @@ export default function DispatchClient({ items, currentUser }: Props) {
       (item.subcategories?.subcategory_name || '').toLowerCase().includes(q)
     )
   })
+
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)))
+  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   async function markDispatched(itemId: string, mode: string) {
     setMarking(itemId)
@@ -43,42 +47,9 @@ export default function DispatchClient({ items, currentUser }: Props) {
       }).eq('item_id', itemId)
       if (markErr) { alert(markErr.message || 'Failed to mark item as dispatched.'); return }
 
-      // A JO only becomes fully "Done" once every item has been claimed AND the JO is
-      // settled (fully paid, or on an approved billing arrangement) — dispatching the last
-      // item while a balance remains should not close out the job order.
       const item = items.find(i => i.item_id === itemId)
       if (item?.job_orders?.job_order_id) {
-        const joId = item.job_orders.job_order_id
-        const [{ data: siblings }, { data: jo }] = await Promise.all([
-          supabase.from('job_order_items').select('item_id, job_status').eq('job_order_id', joId),
-          supabase.from('job_orders').select('is_fully_paid, grand_total, client_id, is_for_billing, date_time_received').eq('job_order_id', joId).single(),
-        ])
-        const allClaimed = siblings?.every(s => s.job_status === 'Done' || s.job_status === 'Cancelled' || s.item_id === itemId)
-        const isSettled = !!jo?.is_fully_paid || !!jo?.is_for_billing
-
-        if (allClaimed && isSettled) {
-          await supabase.from('job_orders').update({ job_status: 'Done' }).eq('job_order_id', joId)
-
-          // Record earned rewards in ledger only when fully paid, all done, and the JO was
-          // actually received on/after the loyalty program's start date — a JO backdated to
-          // before then (e.g. via Add Historical Records) shouldn't earn rewards just because
-          // it happens to get dispatched today.
-          const purchasedAfterRewardsStart = !!jo?.date_time_received && new Date(jo.date_time_received) >= REWARDS_START_DATE
-          if (jo?.is_fully_paid && !jo?.is_for_billing && jo?.client_id && purchasedAfterRewardsStart) {
-            const ledgerId = `EARN-${joId}`
-            const { data: existing } = await supabase.from('rewards_ledger').select('ledger_id').eq('ledger_id', ledgerId).single()
-            if (!existing) {
-              await supabase.from('rewards_ledger').insert({
-                ledger_id: ledgerId,
-                client_id: jo.client_id,
-                job_order_id: joId,
-                type: 'earned',
-                amount: (jo.grand_total || 0) * 0.01,
-                notes: `Rewards for JO ${joId}`,
-              })
-            }
-          }
-        }
+        await syncJobOrderDoneStatus(supabase, item.job_orders.job_order_id)
       }
       router.refresh()
     } finally {
@@ -97,7 +68,7 @@ export default function DispatchClient({ items, currentUser }: Props) {
           type="text"
           placeholder="Search..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => { setSearch(e.target.value); setPage(1) }}
           style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.85rem', color: '#1a1a1a', fontSize: '0.82rem', width: 200, outline: 'none' }}
         />
       </div>
@@ -106,7 +77,7 @@ export default function DispatchClient({ items, currentUser }: Props) {
         <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No items ready for dispatch.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {filtered.map(item => {
+          {pageItems.map(item => {
             const jo = item.job_orders
             const c = jo?.clients
             const clientName = c?.client_name || c?.company_name || jo?.client_id
@@ -151,6 +122,8 @@ export default function DispatchClient({ items, currentUser }: Props) {
           })}
         </div>
       )}
+
+      <Pagination page={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
     </div>
   )
 }

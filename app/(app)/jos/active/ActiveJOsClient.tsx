@@ -6,7 +6,10 @@ import { formatPeso, generateItemId, formatAge, fuzzyMatch } from '@/lib/jo-help
 import type { AppUser } from '@/lib/user'
 import EditJOModal from '@/components/EditJOModal'
 import JOReceiptModal from '@/components/JOReceiptModal'
+import Pagination from '@/components/Pagination'
 import JOItemForm from '../today/JOItemForm'
+
+const PAGE_SIZE = 10
 
 interface Props {
   jobOrders: any[]
@@ -30,6 +33,7 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
   const [editingJO, setEditingJO] = useState<any | null>(null)
   const [addingItemToJO, setAddingItemToJO] = useState<string | null>(null)
   const [receiptJOId, setReceiptJOId] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
 
   const filtered = jobOrders.filter(jo => {
     const client = jo.clients?.client_name || jo.clients?.company_name || ''
@@ -37,6 +41,9 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
     const matchStatus = statusFilter === 'all' || jo.payment_status === statusFilter
     return matchSearch && matchStatus
   })
+
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)))
+  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   const statuses = ['all', ...Array.from(new Set(jobOrders.map(j => j.payment_status).filter(Boolean)))]
 
@@ -107,12 +114,12 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
           type="text"
           placeholder="Search client or JO ID..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => { setSearch(e.target.value); setPage(1) }}
           style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.85rem', color: '#1a1a1a', fontSize: '0.82rem', flex: 1, minWidth: 180, outline: 'none' }}
         />
         <select
           value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
+          onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
           style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }}
         >
           {statuses.map(s => <option key={s} value={s}>{s === 'all' ? 'All Statuses' : s}</option>)}
@@ -123,7 +130,7 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
         <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No active job orders found.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-          {filtered.map(jo => {
+          {pageItems.map(jo => {
             const clientName = jo.clients?.client_name || jo.clients?.company_name || jo.client_id
             const items = jo.job_order_items || []
             const nearestDeadline = items.map((i: any) => i.date_time_needed).filter(Boolean).sort()[0]
@@ -199,6 +206,8 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
           })}
         </div>
       )}
+
+      <Pagination page={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       {editingJO && (
         <EditJOModal

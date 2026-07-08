@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { generateItemId, generatePaymentId, formatPeso, getEffectiveSteps, getPhilippineDateStr } from '@/lib/jo-helpers'
+import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
 import JOReceiptModal from '@/components/JOReceiptModal'
@@ -128,6 +129,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
       await supabase.from('job_order_item_status_log').insert(newLogs)
       setStatusLogs(prev => [...prev, ...newLogs])
       setPendingChange(null)
+      await syncJobOrderDoneStatus(supabase, jo.job_order_id)
     } finally {
       setAdvancingItemId(null)
     }
@@ -215,7 +217,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
         })
       }
 
-      await supabase.from('job_orders').update({
+      const { error: joUpdateErr } = await supabase.from('job_orders').update({
         grand_total: grandTotal,
         total_amount_paid: totalPaid,
         discount: editDiscount,
@@ -223,10 +225,12 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
         payment_status: paymentStatus,
         is_for_billing: editIsForBilling,
         is_fully_paid: paymentStatus === 'Fully Paid',
-        balance_due: balance,
         request_override: overrideReason || null,
         override_status: needsOverride ? 'Pending' : null,
       }).eq('job_order_id', joId)
+      if (joUpdateErr) throw joUpdateErr
+
+      await syncJobOrderDoneStatus(supabase, joId)
 
       const newCashback = newPays.filter(p => (p.cashback || 0) > 0).reduce((s, p) => s + p.cashback, 0)
       if (newCashback > 0) {

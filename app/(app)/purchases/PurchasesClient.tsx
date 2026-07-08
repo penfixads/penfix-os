@@ -5,6 +5,9 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso, generatePurchaseId, getPhilippineDateStr } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import { IconCirclePlus, IconEdit, IconCheck, IconX } from '@/components/icons'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 10
 
 interface Props {
   purchases: any[]
@@ -23,6 +26,7 @@ export default function PurchasesClient({ purchases: initialPurchases, currentUs
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [deleteError, setDeleteError] = useState('')
+  const [page, setPage] = useState(1)
 
   const [purchaseDate, setPurchaseDate] = useState(getPhilippineDateStr())
   const [supplierName, setSupplierName] = useState('')
@@ -37,8 +41,11 @@ export default function PurchasesClient({ purchases: initialPurchases, currentUs
   const months = Array.from(new Set(purchases.map(p => p.purchase_date.slice(0, 7)))).sort((a, b) => b.localeCompare(a))
   const filtered = monthFilter === 'all' ? purchases : purchases.filter(p => p.purchase_date.slice(0, 7) === monthFilter)
 
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)))
+  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
   const grouped: Record<string, any[]> = {}
-  for (const p of filtered) {
+  for (const p of pageItems) {
     const key = p.purchase_date.slice(0, 7)
     if (!grouped[key]) grouped[key] = []
     grouped[key].push(p)
@@ -95,6 +102,7 @@ export default function PurchasesClient({ purchases: initialPurchases, currentUs
         const { data, error: err } = await supabase.from('purchases').insert({ ...payload, purchase_id: generatePurchaseId() }).select().single()
         if (err) throw err
         setPurchases(prev => [data, ...prev])
+        setPage(1)
       }
       setShowForm(false)
     } catch (e: any) {
@@ -132,7 +140,7 @@ export default function PurchasesClient({ purchases: initialPurchases, currentUs
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: '1rem', flexWrap: 'wrap' }}>
-        <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)}
+        <select value={monthFilter} onChange={e => { setMonthFilter(e.target.value); setPage(1) }}
           style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }}>
           <option value="all">All Months</option>
           {months.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
@@ -196,6 +204,8 @@ export default function PurchasesClient({ purchases: initialPurchases, currentUs
           })}
         </div>
       )}
+
+      <Pagination page={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       {showForm && (
         <div className="pf-modal-overlay">

@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { createUser, updateUserInfo, deleteUser, toggleUserActive, resetUserPassword } from './actions'
 import { IconUserPlus, IconCheck, IconX, IconKey } from '@/components/icons'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 10
 
 const ROLES = ['Admin', 'GA', 'Treasury', 'Fabricator']
 
@@ -54,6 +57,9 @@ export default function UsersClient({ users: initialUsers }: Props) {
   const [editEmail, setEditEmail] = useState('')
   const [editRole, setEditRole] = useState('GA')
   const [editError, setEditError] = useState('')
+  const [page, setPage] = useState(1)
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(users.length / PAGE_SIZE)))
+  const pageItems = users.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   // New user form
   const [name, setName] = useState('')
@@ -74,6 +80,7 @@ export default function UsersClient({ users: initialUsers }: Props) {
       setError(result.message)
     } else {
       setUsers(prev => [...prev, { user_email: email, name, role, is_active: true }])
+      setPage(prev => Math.ceil((users.length + 1) / PAGE_SIZE))
       setSuccess(`User ${name} created successfully.`)
       resetForm()
       setShowForm(false)
@@ -178,7 +185,7 @@ export default function UsersClient({ users: initialUsers }: Props) {
             </tr>
           </thead>
           <tbody>
-            {users.map((u, i) => (
+            {pageItems.map((u, i) => (
               <tr key={u.user_email} style={{ borderBottom: '1px solid #EDE0CC', background: i % 2 === 0 ? '#FDF5EC' : '#faf0e0' }}>
                 <td style={td}>
                   <div style={{ fontWeight: 700, color: '#1a1a1a' }}>{u.name}</div>
@@ -232,6 +239,8 @@ export default function UsersClient({ users: initialUsers }: Props) {
           </tbody>
         </table>
       </div>
+
+      <Pagination page={currentPage} totalItems={users.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       {maxScrollX > 0 && (
         <input
