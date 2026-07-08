@@ -60,6 +60,7 @@ export default function UsersClient({ users: initialUsers }: Props) {
   const [editName, setEditName] = useState('')
   const [editEmail, setEditEmail] = useState('')
   const [editRole, setEditRole] = useState('GA')
+  const [editToolsRole, setEditToolsRole] = useState('')
   const [editError, setEditError] = useState('')
   const [page, setPage] = useState(1)
   const currentPage = Math.min(page, Math.max(1, Math.ceil(users.length / PAGE_SIZE)))
@@ -132,6 +133,7 @@ export default function UsersClient({ users: initialUsers }: Props) {
     setEditName(u.name)
     setEditEmail(u.user_email)
     setEditRole(u.role)
+    setEditToolsRole(u.tools_role || '')
     setEditError('')
   }
 
@@ -143,12 +145,22 @@ export default function UsersClient({ users: initialUsers }: Props) {
     const result = await updateUserInfo(editingUser.user_email, { name: editName, email: editEmail, role: editRole })
     if (!result.success) {
       setEditError(result.message)
-    } else {
-      const oldEmail = editingUser.user_email
-      setUsers(prev => prev.map(u => u.user_email === oldEmail ? { ...u, name: editName, user_email: editEmail, role: editRole } : u))
-      setEditingUser(null)
-      setSuccess(`User ${editName} updated successfully.`)
+      setActingOn(null)
+      return
     }
+    const toolsChanged = editToolsRole !== (editingUser.tools_role || '')
+    if (toolsChanged) {
+      const toolsResult = await setToolsAccess(editEmail, (editToolsRole || null) as 'Custodian' | 'Fabricator' | null)
+      if (!toolsResult.success) {
+        setEditError(`Name/role saved, but Tools access update failed: ${toolsResult.message}`)
+        setActingOn(null)
+        return
+      }
+    }
+    const oldEmail = editingUser.user_email
+    setUsers(prev => prev.map(u => u.user_email === oldEmail ? { ...u, name: editName, user_email: editEmail, role: editRole, tools_role: editToolsRole || null } : u))
+    setEditingUser(null)
+    setSuccess(`User ${editName} updated successfully.`)
     setActingOn(null)
   }
 
@@ -358,6 +370,12 @@ export default function UsersClient({ users: initialUsers }: Props) {
               <label className="pf-label">Role <span className="pf-req">*</span></label>
               <select value={editRole} onChange={e => setEditRole(e.target.value)} className="pf-select">
                 {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div className="pf-field">
+              <label className="pf-label">Tools Access <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(tools.penfixads.com)</span></label>
+              <select value={editToolsRole} onChange={e => setEditToolsRole(e.target.value)} className="pf-select">
+                {TOOLS_ROLES.map(r => <option key={r} value={r}>{r || 'No access'}</option>)}
               </select>
             </div>
 
