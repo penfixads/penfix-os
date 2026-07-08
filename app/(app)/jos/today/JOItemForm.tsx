@@ -267,6 +267,15 @@ export default function JOItemForm({ categories, editingItem, onSave, onClose, c
     }
   }
 
+  // Lets someone paste a clipboard screenshot (e.g. Win+Shift+S) straight into the
+  // preview box instead of having to save it to a file first and browse for it.
+  function handleLayoutPaste(e: React.ClipboardEvent) {
+    const item = Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'))
+    if (!item) return
+    e.preventDefault()
+    handleLayoutFile(item.getAsFile())
+  }
+
   function handleSave() {
     if (!subcategoryId) { setFormError('Please select a subcategory/item.'); return }
     if (!isProductionServices && !layoutPreview) { setFormError('Please upload an item preview image.'); return }
@@ -348,22 +357,38 @@ export default function JOItemForm({ categories, editingItem, onSave, onClose, c
               <div className="pf-field">
                 <label className="pf-label">Item Preview <span className="pf-req">*</span></label>
                 {layoutPreview ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <img src={layoutPreview} alt="Item preview" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)' }} />
+                  <div onPaste={handleLayoutPaste} tabIndex={!readOnly ? 0 : undefined} style={{ display: 'flex', alignItems: 'center', gap: 12, outline: 'none' }}>
+                    <img
+                      src={layoutPreview}
+                      alt="Item preview"
+                      onClick={() => window.open(layoutPreview, '_blank')}
+                      title="Click to view full size"
+                      style={{ width: 140, height: 140, objectFit: 'contain', background: 'rgba(0,0,0,0.2)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', cursor: 'zoom-in' }}
+                    />
                     <div style={{ flex: 1 }}>
                       {layoutBytes != null && (
                         <div style={{ color: '#E8B9C6', fontSize: '0.72rem' }}>Compressed to {(layoutBytes / 1024).toFixed(1)} KB</div>
                       )}
                       {!readOnly && (
-                        <label className="pf-link-btn" style={{ cursor: 'pointer', fontSize: '0.78rem' }}>
-                          Change image
-                          <input type="file" accept="image/*" onChange={e => handleLayoutFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
-                        </label>
+                        <>
+                          <label className="pf-link-btn" style={{ cursor: 'pointer', fontSize: '0.78rem' }}>
+                            Change image
+                            <input type="file" accept="image/*" onChange={e => handleLayoutFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
+                          </label>
+                          <div style={{ color: '#E8B9C6', fontSize: '0.68rem', marginTop: 2 }}>...or click here and paste (Ctrl+V) to replace</div>
+                        </>
                       )}
                     </div>
                   </div>
                 ) : !readOnly && (
-                  <input type="file" accept="image/*" onChange={e => handleLayoutFile(e.target.files?.[0] || null)} className="pf-input" />
+                  <div
+                    onPaste={handleLayoutPaste}
+                    tabIndex={0}
+                    style={{ border: '1.5px dashed rgba(255,255,255,0.3)', borderRadius: 8, padding: '0.6rem 0.75rem', outline: 'none' }}
+                  >
+                    <input type="file" accept="image/*" onChange={e => handleLayoutFile(e.target.files?.[0] || null)} className="pf-input" style={{ border: 'none', padding: 0 }} />
+                    <div style={{ color: '#E8B9C6', fontSize: '0.7rem', marginTop: 6 }}>...or click here and paste (Ctrl+V) a screenshot</div>
+                  </div>
                 )}
                 {compressing && <div style={{ color: '#E8B9C6', fontSize: '0.72rem', marginTop: 4 }}>Compressing image…</div>}
                 {layoutError && <div style={{ color: '#e74c3c', fontSize: '0.72rem', marginTop: 4 }}>{layoutError}</div>}

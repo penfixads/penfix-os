@@ -91,7 +91,13 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
       map[key].overhead += oh.amount || 0
     }
 
-    return Object.entries(map).sort((a, b) => b[0].localeCompare(a[0]))
+    // Supplier deliveries are keyed by billing_month (next month's cheque), which can
+    // land on a period that hasn't happened yet — drop anything past the current period
+    // so the report doesn't show a future month's projected-but-unrealized expense.
+    const currentKey = getPeriodKey(getPhilippineDateStr(), period)
+    return Object.entries(map)
+      .filter(([key]) => key <= currentKey)
+      .sort((a, b) => b[0].localeCompare(a[0]))
   }, [payments, jobOrders, expenses, purchases, supplierDeliveries, overheadExpenses, period])
 
   const grandCollections = report.reduce((s, [, r]) => s + r.collections, 0)

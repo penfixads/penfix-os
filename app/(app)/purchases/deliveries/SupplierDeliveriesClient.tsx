@@ -185,7 +185,7 @@ export default function SupplierDeliveriesClient({ deliveries: initialDeliveries
                         <th style={{ ...th, textAlign: 'center' }}>Qty</th>
                         <th style={{ ...th, textAlign: 'right' }}>Total</th>
                         <th style={th}>Remarks</th>
-                        <th style={{ ...th, width: 60 }}></th>
+                        <th style={thActions}></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -199,7 +199,7 @@ export default function SupplierDeliveriesClient({ deliveries: initialDeliveries
                           <td style={{ ...td, textAlign: 'center' }}>{d.quantity}</td>
                           <td style={{ ...td, textAlign: 'right', fontWeight: 700 }}>{formatPeso(d.total_amount || 0)}</td>
                           <td style={{ ...td, color: '#777' }}>{d.remarks || '—'}</td>
-                          <td style={{ ...td, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                          <td style={tdActions}>
                             <button onClick={() => openEdit(d)} title="Edit delivery" style={{ background: 'none', border: 'none', color: '#7A1828', cursor: 'pointer', marginRight: 8, display: 'inline-flex' }}>
                               <IconEdit style={{ width: 14, height: 14 }} />
                             </button>
@@ -290,3 +290,6 @@ export default function SupplierDeliveriesClient({ deliveries: initialDeliveries
 
 const th: React.CSSProperties = { padding: '0.5rem 0.65rem', textAlign: 'left', fontWeight: 600, fontSize: '0.72rem', letterSpacing: '0.03em' }
 const td: React.CSSProperties = { padding: '0.5rem 0.65rem', verticalAlign: 'top', color: '#1a1a1a' }
+// Pinned to the right so Edit/Delete stay reachable without scrolling the table horizontally.
+const thActions: React.CSSProperties = { ...th, width: 60, position: 'sticky', right: 0, background: '#C9A84C', boxShadow: '-2px 0 4px rgba(0,0,0,0.08)' }
+const tdActions: React.CSSProperties = { ...td, textAlign: 'center', whiteSpace: 'nowrap', position: 'sticky', right: 0, background: '#FDF5EC', boxShadow: '-2px 0 4px rgba(0,0,0,0.08)' }
