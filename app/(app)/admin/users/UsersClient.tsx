@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createUser, updateUserInfo, deleteUser, toggleUserActive, resetUserPassword, setToolsAccess } from './actions'
 import { IconUserPlus, IconCheck, IconX, IconKey } from '@/components/icons'
 import Pagination from '@/components/Pagination'
+import { FormField, Select } from '@/components/form'
 
 const PAGE_SIZE = 10
 
@@ -12,6 +13,20 @@ const ROLES = ['Admin', 'GA', 'Treasury', 'Fabricator']
 // Access levels on tools.penfixads.com — independent of the jobs role above.
 // '' = no Tools access (no tool_users row).
 const TOOLS_ROLES = ['', 'Custodian', 'Fabricator'] as const
+
+/** One block, used in both the Create and Edit modals — editing this
+ * definition (options, styling, help text) updates both call sites. This
+ * is what should have existed the first time instead of two hand-copied
+ * <select> blocks, one of which then silently fell out of sync. */
+function ToolsAccessField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <FormField label={<>Tools Access <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(tools.penfixads.com)</span></>}>
+      <Select value={value} onChange={e => onChange(e.target.value)}>
+        {TOOLS_ROLES.map(r => <option key={r} value={r}>{r || 'No access'}</option>)}
+      </Select>
+    </FormField>
+  )
+}
 
 const ROLE_COLORS: Record<string, string> = {
   Admin:     '#7A1828',
@@ -330,12 +345,7 @@ export default function UsersClient({ users: initialUsers }: Props) {
                 {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
-            <div className="pf-field">
-              <label className="pf-label">Tools Access <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(tools.penfixads.com)</span></label>
-              <select value={toolsRole} onChange={e => handleToolsRoleChange(e.target.value)} className="pf-select">
-                {TOOLS_ROLES.map(r => <option key={r} value={r}>{r || 'No access'}</option>)}
-              </select>
-            </div>
+            <ToolsAccessField value={toolsRole} onChange={handleToolsRoleChange} />
 
             {error && <div style={{ color: '#e74c3c', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{error}</div>}
 
@@ -372,12 +382,7 @@ export default function UsersClient({ users: initialUsers }: Props) {
                 {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
-            <div className="pf-field">
-              <label className="pf-label">Tools Access <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(tools.penfixads.com)</span></label>
-              <select value={editToolsRole} onChange={e => setEditToolsRole(e.target.value)} className="pf-select">
-                {TOOLS_ROLES.map(r => <option key={r} value={r}>{r || 'No access'}</option>)}
-              </select>
-            </div>
+            <ToolsAccessField value={editToolsRole} onChange={setEditToolsRole} />
 
             {editError && <div style={{ color: '#e74c3c', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{editError}</div>}
 
