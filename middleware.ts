@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getCookieDomain } from '@/lib/cookie-domain'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -17,10 +18,15 @@ export async function middleware(request: NextRequest) {
 
   let supabaseResponse = NextResponse.next({ request })
 
+  // SSO: on penfixads.com subdomains, session cookies are scoped to
+  // .penfixads.com so jobs/tools/etc. share one login (see lib/cookie-domain.ts)
+  const cookieDomain = getCookieDomain(request.headers.get('host'))
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      ...(cookieDomain ? { cookieOptions: { domain: cookieDomain } } : {}),
       cookies: {
         getAll() {
           return request.cookies.getAll()
@@ -31,7 +37,7 @@ export async function middleware(request: NextRequest) {
           )
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, { ...options, ...(cookieDomain ? { domain: cookieDomain } : {}) })
           )
         },
       },

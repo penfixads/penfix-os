@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "penfix-tools",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "C:\\PENFIX~1\\tools", "run", "dev", "--", "-p", "3001"],
+      "port": 3001
     }
   ]
 }

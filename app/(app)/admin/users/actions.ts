@@ -16,6 +16,7 @@ export async function createUser(formData: {
   email: string
   password: string
   role: string
+  toolsRole?: 'Custodian' | 'Fabricator' | null
 }): Promise<ActionResult> {
   const authErrMsg = await assertAdmin()
   if (authErrMsg) return { success: false, message: authErrMsg }
@@ -42,6 +43,40 @@ export async function createUser(formData: {
     return { success: false, message: dbErr.message }
   }
 
+  // Tools access is a separate grant: a tool_users row is what lets this
+  // identity into tools.penfixads.com (see project tools' middleware).
+  if (formData.toolsRole) {
+    const { error: toolsErr } = await admin.from('tool_users').upsert({
+      user_email: formData.email,
+      name: formData.name,
+      role: formData.toolsRole,
+      is_active: true,
+    }, { onConflict: 'user_email' })
+    if (toolsErr) return { success: false, message: `User created, but granting Tools access failed: ${toolsErr.message}` }
+  }
+
+  return { success: true }
+}
+
+export async function setToolsAccess(email: string, toolsRole: 'Custodian' | 'Fabricator' | null): Promise<ActionResult> {
+  const authErrMsg = await assertAdmin()
+  if (authErrMsg) return { success: false, message: authErrMsg }
+  const admin = createSupabaseAdminClient()
+
+  if (toolsRole === null) {
+    const { error } = await admin.from('tool_users').delete().eq('user_email', email)
+    if (error) return { success: false, message: error.message }
+    return { success: true }
+  }
+
+  const { data: profile } = await admin.from('users').select('name, is_active').eq('user_email', email).single()
+  const { error } = await admin.from('tool_users').upsert({
+    user_email: email,
+    name: profile?.name ?? email.split('@')[0],
+    role: toolsRole,
+    is_active: profile?.is_active ?? true,
+  }, { onConflict: 'user_email' })
+  if (error) return { success: false, message: error.message }
   return { success: true }
 }
 
@@ -67,6 +102,12 @@ export async function updateUserInfo(oldEmail: string, formData: {
     .update({ name: formData.name, role: formData.role, user_email: formData.email })
     .eq('user_email', oldEmail)
   if (error) return { success: false, message: error.message }
+
+  // Keep the Tools-access profile (if any) pointing at the same identity
+  await admin.from('tool_users')
+    .update({ name: formData.name, user_email: formData.email })
+    .eq('user_email', oldEmail)
+
   return { success: true }
 }
 
@@ -86,6 +127,9 @@ export async function deleteUser(email: string): Promise<ActionResult> {
   const authUser = authUsers?.users.find(u => u.email === email)
   if (authUser) await admin.auth.admin.deleteUser(authUser.id)
 
+  // Deleting the identity also revokes its Tools access
+  await admin.from('tool_users').delete().eq('user_email', email)
+
   const { error } = await admin.from('users').delete().eq('user_email', email)
   if (error) return { success: false, message: error.message }
   return { success: true }
@@ -101,6 +145,11 @@ export async function toggleUserActive(email: string, is_active: boolean): Promi
   if (authUser) {
     await admin.auth.admin.updateUserById(authUser.id, { ban_duration: is_active ? 'none' : '876600h' })
   }
+
+  // Deactivation is identity-wide: mirror it to the Tools profile so the
+  // tools app's own is_active check agrees (the auth ban already blocks
+  // login everywhere, this keeps the profile state consistent).
+  await admin.from('tool_users').update({ is_active }).eq('user_email', email)
 
   const { error } = await admin.from('users').update({ is_active }).eq('user_email', email)
   if (error) return { success: false, message: error.message }

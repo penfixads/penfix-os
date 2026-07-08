@@ -1,13 +1,17 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { createUser, updateUserInfo, deleteUser, toggleUserActive, resetUserPassword } from './actions'
+import { createUser, updateUserInfo, deleteUser, toggleUserActive, resetUserPassword, setToolsAccess } from './actions'
 import { IconUserPlus, IconCheck, IconX, IconKey } from '@/components/icons'
 import Pagination from '@/components/Pagination'
 
 const PAGE_SIZE = 10
 
 const ROLES = ['Admin', 'GA', 'Treasury', 'Fabricator']
+
+// Access levels on tools.penfixads.com — independent of the jobs role above.
+// '' = no Tools access (no tool_users row).
+const TOOLS_ROLES = ['', 'Custodian', 'Fabricator'] as const
 
 const ROLE_COLORS: Record<string, string> = {
   Admin:     '#7A1828',
@@ -66,26 +70,49 @@ export default function UsersClient({ users: initialUsers }: Props) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState('GA')
+  const [toolsRole, setToolsRole] = useState('')
 
   function resetForm() {
-    setName(''); setEmail(''); setPassword(''); setRole('GA')
+    setName(''); setEmail(''); setPassword(''); setRole('GA'); setToolsRole('')
     setError(''); setSuccess('')
+  }
+
+  // A Tools-only person still gets a jobs-side profile row (every identity
+  // does) — default it to Fabricator, the most restricted jobs role, so a
+  // Custodian who never uses jobs.penfixads.com can't reach anything
+  // sensitive there. Admin can still override the role afterwards.
+  function handleToolsRoleChange(value: string) {
+    setToolsRole(value)
+    if (value && role === 'GA') setRole('Fabricator')
   }
 
   async function handleCreate() {
     if (!name || !email || !password) { setError('All fields are required.'); return }
     setSaving(true); setError(''); setSuccess('')
-    const result = await createUser({ name, email, password, role })
+    const result = await createUser({ name, email, password, role, toolsRole: (toolsRole || null) as 'Custodian' | 'Fabricator' | null })
     if (!result.success) {
       setError(result.message)
     } else {
-      setUsers(prev => [...prev, { user_email: email, name, role, is_active: true }])
+      setUsers(prev => [...prev, { user_email: email, name, role, is_active: true, tools_role: toolsRole || null }])
       setPage(prev => Math.ceil((users.length + 1) / PAGE_SIZE))
       setSuccess(`User ${name} created successfully.`)
       resetForm()
       setShowForm(false)
     }
     setSaving(false)
+  }
+
+  async function handleToolsAccessChange(email: string, newToolsRole: string) {
+    const label = newToolsRole || 'No access'
+    if (!confirm(`Set Tools (tools.penfixads.com) access for ${email} to "${label}"?`)) return
+    setActingOn(email)
+    const result = await setToolsAccess(email, (newToolsRole || null) as 'Custodian' | 'Fabricator' | null)
+    if (!result.success) {
+      alert(result.message)
+    } else {
+      setUsers(prev => prev.map(u => u.user_email === email ? { ...u, tools_role: newToolsRole || null } : u))
+    }
+    setActingOn(null)
   }
 
   async function handleToggleActive(email: string, current: boolean) {
@@ -173,12 +200,13 @@ export default function UsersClient({ users: initialUsers }: Props) {
 
       {/* Users Table */}
       <div ref={tableScrollRef} onScroll={handleTableScroll} style={{ background: '#FDF5EC', borderRadius: 12, border: '1px solid #EDE0CC', overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: 780 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: 900 }}>
           <thead>
             <tr style={{ background: '#3a3a3a' }}>
               <th style={th}>Name</th>
               <th style={th}>Email</th>
               <th style={th}>Role</th>
+              <th style={th}>Tools Access</th>
               <th style={{ ...th, textAlign: 'center' }}>Status</th>
               <th style={{ ...th, textAlign: 'center' }}>Actions</th>
               <th style={{ ...th, textAlign: 'center' }}>Edit / Delete</th>
@@ -195,6 +223,15 @@ export default function UsersClient({ users: initialUsers }: Props) {
                   <span style={{ background: ROLE_COLORS[u.role] || '#333', color: '#fff', borderRadius: 20, padding: '0.25rem 0.6rem', fontSize: '0.72rem', fontWeight: 700 }}>
                     {u.role}
                   </span>
+                </td>
+                <td style={td}>
+                  <select
+                    value={u.tools_role || ''}
+                    disabled={actingOn === u.user_email}
+                    onChange={e => handleToolsAccessChange(u.user_email, e.target.value)}
+                    style={{ background: u.tools_role ? '#4a3a00' : 'transparent', color: u.tools_role ? '#fff' : '#999', border: u.tools_role ? 'none' : '1px solid #d8ccc0', borderRadius: 20, padding: '0.25rem 0.5rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+                    {TOOLS_ROLES.map(r => <option key={r} value={r} style={{ background: '#FDF5EC', color: '#2a2426' }}>{r || 'No access'}</option>)}
+                  </select>
                 </td>
                 <td style={{ ...td, textAlign: 'center' }}>
                   <span style={{ background: u.is_active ? '#1a3a1a' : '#3a1a1a', color: u.is_active ? '#2ecc71' : '#e74c3c', borderRadius: 20, padding: '0.2rem 0.6rem', fontSize: '0.7rem', fontWeight: 700 }}>
@@ -279,6 +316,12 @@ export default function UsersClient({ users: initialUsers }: Props) {
               <label className="pf-label">Role <span className="pf-req">*</span></label>
               <select value={role} onChange={e => setRole(e.target.value)} className="pf-select">
                 {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div className="pf-field">
+              <label className="pf-label">Tools Access <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(tools.penfixads.com)</span></label>
+              <select value={toolsRole} onChange={e => handleToolsRoleChange(e.target.value)} className="pf-select">
+                {TOOLS_ROLES.map(r => <option key={r} value={r}>{r || 'No access'}</option>)}
               </select>
             </div>
 

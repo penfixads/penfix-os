@@ -277,6 +277,13 @@ alter default privileges in schema public grant all on sequences to anon, authen
 -- Name/role come from user metadata if provided; role defaults to 'GA'.
 -- This means: add a user once in Auth and they can log in immediately.
 -- Valid roles: Admin, GA, Treasury, Fabricator.
+--
+-- This is also the identity provider for the rest of the Penfix ecosystem
+-- (e.g. the Tools Inventory system at tools.penfixads.com, see
+-- project-tools-inventory memory) — every person is created once here via
+-- SSO, then separately granted access to other apps via their own
+-- authorization tables (e.g. tool_users). Every auth.users signup gets a
+-- row here regardless of which app's admin UI created it.
 -- ============================================================
 create or replace function public.handle_new_user()
 returns trigger

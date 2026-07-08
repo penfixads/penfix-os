@@ -14,5 +14,13 @@ export default async function UsersPage() {
     .select('user_email, name, role, is_active')
     .order('name')
 
-  return <UsersClient users={users || []} />
+  // Tools ecosystem access lives in its own table (tools.penfixads.com's
+  // authorization); merge each person's tools role in for display.
+  const { data: toolUsers } = await supabase
+    .from('tool_users')
+    .select('user_email, role')
+  const toolsRoleByEmail = new Map((toolUsers || []).map(t => [t.user_email, t.role]))
+  const merged = (users || []).map(u => ({ ...u, tools_role: toolsRoleByEmail.get(u.user_email) ?? null }))
+
+  return <UsersClient users={merged} />
 }
