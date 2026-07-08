@@ -19,9 +19,8 @@ export default async function ActiveJOsPage() {
         clients(client_name, company_name, contact_number),
         job_order_items(item_id, job_status, computed_line_total, date_time_needed, subcategories(subcategory_name))
       `)
-      // Stay visible here past "Done" until feedback has actually been requested for it
       .neq('job_status', 'Cancelled')
-      .or('job_status.neq.Done,feedback_requested_at.is.null')
+      .neq('job_status', 'Done')
       .order('date_time_received', { ascending: false }),
     supabase.from('categories').select('*').eq('is_active', true).order('category_name'),
     supabase.from('subcategories').select('*').eq('is_active', true).order('subcategory_name'),

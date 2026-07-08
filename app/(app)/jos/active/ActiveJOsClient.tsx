@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { formatPeso, generateItemId, buildFeedbackUrl, formatAge } from '@/lib/jo-helpers'
+import { formatPeso, generateItemId, formatAge, fuzzyMatch } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import EditJOModal from '@/components/EditJOModal'
 import JOReceiptModal from '@/components/JOReceiptModal'
@@ -33,8 +33,7 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
 
   const filtered = jobOrders.filter(jo => {
     const client = jo.clients?.client_name || jo.clients?.company_name || ''
-    const q = search.toLowerCase()
-    const matchSearch = client.toLowerCase().includes(q) || jo.job_order_id.toLowerCase().includes(q)
+    const matchSearch = !search || fuzzyMatch(client, search) || fuzzyMatch(jo.job_order_id, search)
     const matchStatus = statusFilter === 'all' || jo.payment_status === statusFilter
     return matchSearch && matchStatus
   })
@@ -81,16 +80,6 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
   function copyTrackLink(joId: string) {
     const url = `${window.location.origin}/track/${joId}`
     navigator.clipboard.writeText(url)
-  }
-
-  async function copyFeedbackLink(joId: string, clientName: string) {
-    const url = buildFeedbackUrl(window.location.origin, joId, clientName)
-    navigator.clipboard.writeText(url)
-    const supabase = createSupabaseBrowserClient()
-    await supabase.from('job_orders').update({ feedback_requested_at: new Date().toISOString() }).eq('job_order_id', joId)
-    // Feedback has now been requested for this Done JO, so it no longer belongs in Active JOs
-    setJobOrders(prev => prev.filter(j => j.job_order_id !== joId))
-    alert('Feedback link copied — paste it into Messenger, Viber, SMS, or wherever the client prefers.')
   }
 
   return (
@@ -140,7 +129,6 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
             const nearestDeadline = items.map((i: any) => i.date_time_needed).filter(Boolean).sort()[0]
             const isOverdue = nearestDeadline && new Date(nearestDeadline) < new Date()
             const statusColor = STATUS_COLORS[jo.payment_status] || '#555'
-            const isDone = jo.job_status === 'Done'
             const ageMs = Date.now() - new Date(jo.date_time_received).getTime()
             const ageHours = ageMs / (1000 * 60 * 60)
             const ageColor = ageHours > 48 ? '#e74c3c' : ageHours > 24 ? '#f39c12' : '#999'
@@ -175,7 +163,7 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexShrink: 0 }}>
-                    {/* Edit / Add item / Copy tracking link / Copy feedback link */}
+                    {/* Edit / Add item / Copy tracking link / Generate receipt */}
                     <div style={{ display: 'flex', flexDirection: 'row', gap: 6, paddingTop: 2 }}>
                       <button title="Edit JO" onClick={() => setEditingJO(jo)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7A1828', padding: 2, display: 'flex', alignItems: 'center' }}>
@@ -193,12 +181,6 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e44ad', padding: 2, display: 'flex', alignItems: 'center' }}>
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
                       </button>
-                      {isDone && (
-                        <button title="Send feedback link to be pasted on social media platform" onClick={() => copyFeedbackLink(jo.job_order_id, clientName)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c9a84c', padding: 2, display: 'flex', alignItems: 'center' }}>
-                          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                        </button>
-                      )}
                     </div>
 
                     <div style={{ textAlign: 'right' }}>

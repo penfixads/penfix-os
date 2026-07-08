@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { getPhilippineDateStr } from '@/lib/jo-helpers'
+import { getPhilippineDateStr, fuzzyMatch } from '@/lib/jo-helpers'
 
 interface Props { jobOrders: any[] }
 
@@ -19,8 +19,7 @@ export default function DailyRecordClient({ jobOrders }: Props) {
     const d = jo.date_time_received ? getPhilippineDateStr(new Date(jo.date_time_received)) : undefined
     const matchDate = !date || d === date
     const client = jo.clients?.client_name || jo.clients?.company_name || ''
-    const q = search.toLowerCase()
-    const matchSearch = !q || client.toLowerCase().includes(q) || jo.job_order_id.toLowerCase().includes(q) || (jo.received_by || '').toLowerCase().includes(q)
+    const matchSearch = !search || fuzzyMatch(client, search) || fuzzyMatch(jo.job_order_id, search) || fuzzyMatch(jo.received_by || '', search)
     return matchDate && matchSearch
   })
 

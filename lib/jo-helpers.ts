@@ -66,6 +66,14 @@ export function buildFeedbackUrl(origin: string, jobOrderId: string, clientName:
   return `${origin}/feedback/${token}?jo=${encodeURIComponent(jobOrderId)}&name=${encodeURIComponent(clientName)}`
 }
 
+// Plain .includes() search fails when staff type a name without the spaces the client
+// record has (e.g. "mariposa" vs stored "Mari Posa") — strip whitespace from both sides
+// so search matches regardless of spacing.
+export function fuzzyMatch(text: string, query: string): boolean {
+  const norm = (s: string) => s.toLowerCase().replace(/\s+/g, '')
+  return norm(text).includes(norm(query))
+}
+
 export function formatPeso(amount: number): string {
   return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }

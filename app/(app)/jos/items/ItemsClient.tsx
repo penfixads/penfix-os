@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { formatPeso } from '@/lib/jo-helpers'
+import { formatPeso, fuzzyMatch } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 
 interface Props { items: any[]; currentUser: AppUser }
@@ -32,12 +32,11 @@ export default function ItemsClient({ items, currentUser }: Props) {
   const filtered = items.filter(item => {
     const jo = item.job_orders
     const client = jo?.clients?.client_name || jo?.clients?.company_name || ''
-    const q = search.toLowerCase()
-    const matchSearch = !q ||
-      client.toLowerCase().includes(q) ||
-      (item.job_order_id || '').toLowerCase().includes(q) ||
-      (item.subcategories?.subcategory_name || '').toLowerCase().includes(q) ||
-      (jo?.received_by || '').toLowerCase().includes(q)
+    const matchSearch = !search ||
+      fuzzyMatch(client, search) ||
+      fuzzyMatch(item.job_order_id || '', search) ||
+      fuzzyMatch(item.subcategories?.subcategory_name || '', search) ||
+      fuzzyMatch(jo?.received_by || '', search)
     const matchStatus = statusFilter === 'all' || item.job_status === statusFilter
     return matchSearch && matchStatus
   })
