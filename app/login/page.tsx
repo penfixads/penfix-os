@@ -15,6 +15,7 @@ function LoginForm() {
   const urlErrorMessage =
     urlError === 'idle' ? 'You were signed out after 30 minutes of inactivity.' :
     urlError === 'inactive' ? 'Your account has been deactivated. Contact an admin.' :
+    urlError === 'no-access' ? 'This account does not have access to Penfix OS.' :
     ''
 
   const [email, setEmail] = useState('')

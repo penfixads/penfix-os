@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { createSupabaseServerClient } from './supabase-server'
 
-export type UserRole = 'Admin' | 'GA' | 'Treasury' | 'Fabricator'
+export type UserRole = 'Admin' | 'GA' | 'Treasury' | 'Fabricator' | 'None'
 
 export interface AppUser {
   email: string

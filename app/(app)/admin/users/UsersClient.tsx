@@ -8,7 +8,12 @@ import { FormField, Select } from '@/components/form'
 
 const PAGE_SIZE = 10
 
-const ROLES = ['Admin', 'GA', 'Treasury', 'Fabricator']
+// 'None' = zero jobs.penfixads.com access — for people who only need
+// another Penfix app (e.g. a tools.penfixads.com-only Custodian). They
+// still exist here (login, deactivate, reset password all work) but every
+// protected page bounces them to /login since 'None' isn't a real role.
+const ROLES = ['None', 'Admin', 'GA', 'Treasury', 'Fabricator']
+const ROLE_LABELS: Record<string, string> = { None: 'No jobs access' }
 
 // Access levels on tools.penfixads.com — independent of the jobs role above.
 // '' = no Tools access (no tool_users row).
@@ -33,6 +38,7 @@ const ROLE_COLORS: Record<string, string> = {
   GA:        '#1a4a7a',
   Treasury:  '#1a5a1a',
   Fabricator:'#4a3a00',
+  None:      '#555',
 }
 
 interface Props {
@@ -93,13 +99,13 @@ export default function UsersClient({ users: initialUsers }: Props) {
     setError(''); setSuccess('')
   }
 
-  // A Tools-only person still gets a jobs-side profile row (every identity
-  // does) — default it to Fabricator, the most restricted jobs role, so a
-  // Custodian who never uses jobs.penfixads.com can't reach anything
-  // sensitive there. Admin can still override the role afterwards.
+  // Granting Tools access to a freshly-opened (still-default 'GA') form
+  // nudges Role to 'None' — most people getting Tools access (Custodians
+  // especially) have no reason to touch jobs.penfixads.com at all. Admin
+  // can still pick a real jobs role afterwards if this person needs both.
   function handleToolsRoleChange(value: string) {
     setToolsRole(value)
-    if (value && role === 'GA') setRole('Fabricator')
+    if (value && role === 'GA') setRole('None')
   }
 
   async function handleCreate() {
@@ -248,7 +254,7 @@ export default function UsersClient({ users: initialUsers }: Props) {
                 <td style={{ ...td, color: '#555' }}>{u.user_email}</td>
                 <td style={td}>
                   <span style={{ background: ROLE_COLORS[u.role] || '#333', color: '#fff', borderRadius: 20, padding: '0.25rem 0.6rem', fontSize: '0.72rem', fontWeight: 700 }}>
-                    {u.role}
+                    {ROLE_LABELS[u.role] || u.role}
                   </span>
                 </td>
                 <td style={td}>
@@ -342,7 +348,7 @@ export default function UsersClient({ users: initialUsers }: Props) {
             <div className="pf-field">
               <label className="pf-label">Role <span className="pf-req">*</span></label>
               <select value={role} onChange={e => setRole(e.target.value)} className="pf-select">
-                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>)}
               </select>
             </div>
             <ToolsAccessField value={toolsRole} onChange={handleToolsRoleChange} />
@@ -379,7 +385,7 @@ export default function UsersClient({ users: initialUsers }: Props) {
             <div className="pf-field">
               <label className="pf-label">Role <span className="pf-req">*</span></label>
               <select value={editRole} onChange={e => setEditRole(e.target.value)} className="pf-select">
-                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>)}
               </select>
             </div>
             <ToolsAccessField value={editToolsRole} onChange={setEditToolsRole} />

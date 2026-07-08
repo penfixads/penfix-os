@@ -63,6 +63,15 @@ export async function middleware(request: NextRequest) {
 
   const role = userData?.role as string | undefined
 
+  // 'None' = this identity has zero jobs.penfixads.com access (e.g. a
+  // tools.penfixads.com-only Custodian) — block every route, not just some.
+  if (role === 'None') {
+    const loginUrl = request.nextUrl.clone()
+    loginUrl.pathname = '/login'
+    loginUrl.searchParams.set('error', 'no-access')
+    return NextResponse.redirect(loginUrl)
+  }
+
   const ROLE_RESTRICTIONS: Record<string, string[]> = {
     // Purchases/Supplier Deliveries are Admin + Treasury only. Overhead Expenses
     // (carries salary data) is Admin-only — also enforced at the DB layer via RLS.

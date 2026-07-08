@@ -10,7 +10,7 @@ create table if not exists users (
   id uuid primary key default uuid_generate_v4(),
   user_email text unique not null,
   name text not null,
-  role text not null check (role in ('Admin', 'GA', 'Treasury', 'Fabricator')),
+  role text not null check (role in ('Admin', 'GA', 'Treasury', 'Fabricator', 'None')),
   is_active boolean default true,
   created_at timestamptz default now()
 );
@@ -276,7 +276,9 @@ alter default privileges in schema public grant all on sequences to anon, authen
 -- is created (via the Supabase dashboard OR the in-app register page).
 -- Name/role come from user metadata if provided; role defaults to 'GA'.
 -- This means: add a user once in Auth and they can log in immediately.
--- Valid roles: Admin, GA, Treasury, Fabricator.
+-- Valid roles: Admin, GA, Treasury, Fabricator, None (no jobs.penfixads.com
+-- access at all — used for people who only need access to other Penfix
+-- apps, e.g. tools.penfixads.com Custodians/Fabricators).
 --
 -- This is also the identity provider for the rest of the Penfix ecosystem
 -- (e.g. the Tools Inventory system at tools.penfixads.com, see
