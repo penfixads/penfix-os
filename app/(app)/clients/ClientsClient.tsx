@@ -7,6 +7,7 @@ import { formatPeso, generateClientId } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import { IconUserPlus, IconEdit, IconCheck, IconX } from '@/components/icons'
 import Pagination from '@/components/Pagination'
+import ClientQrButton from '@/components/ClientQrButton'
 
 const PAGE_SIZE = 10
 
@@ -29,12 +30,16 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
   const [companyName, setCompanyName] = useState('')
   const [contact, setContact] = useState('')
   const [email, setEmail] = useState('')
+  const [messenger, setMessenger] = useState('')
+  const [viber, setViber] = useState('')
+  const [whatsapp, setWhatsapp] = useState('')
   const [address, setAddress] = useState('')
   const [creditLine, setCreditLine] = useState(false)
 
   function openAdd() {
     setEditing(null); setClientType('Individual'); setClientName(''); setCompanyName('')
-    setContact(''); setEmail(''); setAddress(''); setCreditLine(false); setError(''); setShowForm(true)
+    setContact(''); setEmail(''); setMessenger(''); setViber(''); setWhatsapp('')
+    setAddress(''); setCreditLine(false); setError(''); setShowForm(true)
   }
 
   function openEdit(c: any) {
@@ -44,6 +49,9 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
     setCompanyName(c.company_name || '')
     setContact(c.contact_number || '')
     setEmail(c.email || '')
+    setMessenger(c.messenger || '')
+    setViber(c.viber || '')
+    setWhatsapp(c.whatsapp || '')
     setAddress(c.address || '')
     setCreditLine(!!c.credit_line_status)
     setError('')
@@ -61,6 +69,9 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
         company_name: companyName || null,
         contact_number: contact || null,
         email: email || null,
+        messenger: messenger || null,
+        viber: viber || null,
+        whatsapp: whatsapp || null,
         address: address || null,
       }
       // Only Admin can set credit line / for-billing status directly. GA/Treasury checking
@@ -143,14 +154,24 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
                   {!c.credit_line_status && c.credit_line_request_status === 'Pending' && <span style={{ background: '#4a3a1a', color: '#f39c12', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>CREDIT PENDING</span>}
                   {c.client_type === 'Company' && <span style={{ background: '#2a2a1a', color: '#f1c40f', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>CO.</span>}
                 </div>
-                <div style={{ color: '#aaa', fontSize: '0.68rem', marginTop: 1 }}>{c.client_id} {c.contact_number ? `· ${c.contact_number}` : ''}</div>
+                <div style={{ color: '#aaa', fontSize: '0.68rem', marginTop: 1 }}>
+                  {c.client_id} {c.contact_number ? `· ${c.contact_number}` : ''}
+                  {c.email && <span title="Email"> · ✉️</span>}
+                  {c.messenger && <span title="Messenger"> · 💬</span>}
+                  {c.viber && <span title="Viber"> · 📞</span>}
+                  {c.whatsapp && <span title="WhatsApp"> · 📲</span>}
+                </div>
                 <div style={{ color: '#999', fontSize: '0.7rem', marginTop: 2 }}>
                   {totalJOs} JO(s) · {formatPeso(totalSales)} total sales · Rewards: {formatPeso(c.rewards_balance || 0)}
                 </div>
               </div>
-              <button onClick={() => openEdit(c)} className="pf-btn pf-btn-secondary" style={{ fontSize: '0.75rem', padding: '0.35rem 0.7rem' }}>
-                <IconEdit />Edit
-              </button>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <ClientQrButton clientId={c.client_id} clientLabel={c.client_name || c.company_name}
+                  buttonClassName="pf-btn pf-btn-secondary" buttonStyle={{ fontSize: '0.75rem', padding: '0.35rem 0.7rem' }} />
+                <button onClick={() => openEdit(c)} className="pf-btn pf-btn-secondary" style={{ fontSize: '0.75rem', padding: '0.35rem 0.7rem' }}>
+                  <IconEdit />Edit
+                </button>
+              </div>
             </div>
           )
         })}
@@ -196,6 +217,20 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
             <div className="pf-field">
               <label className="pf-label">Email</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="pf-input" />
+            </div>
+            <div className="pf-grid-2" style={{ marginBottom: '0.85rem' }}>
+              <div>
+                <label className="pf-label">Messenger</label>
+                <input type="text" value={messenger} onChange={e => setMessenger(e.target.value)} className="pf-input" />
+              </div>
+              <div>
+                <label className="pf-label">Viber</label>
+                <input type="text" value={viber} onChange={e => setViber(e.target.value)} className="pf-input" />
+              </div>
+            </div>
+            <div className="pf-field">
+              <label className="pf-label">WhatsApp</label>
+              <input type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} className="pf-input" />
             </div>
             <div className="pf-field">
               <label className="pf-label">Address</label>

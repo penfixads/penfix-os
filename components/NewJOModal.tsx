@@ -17,18 +17,28 @@ interface Props {
   // When true, "Date Received" defaults locked to now and can only be changed to a past
   // date after an Admin unlocks it — used by Add Historical Records, not Today's Received JOs.
   allowDateOverride?: boolean
+  // Set when this modal was opened by scanning a client's QR code — pre-selects that client
+  // instead of making staff search for them.
+  initialClientId?: string
+  // Today's Received JOs requires the client to have been resolved via QR scan (or just-now
+  // registration) before this modal opens at all — when true, the client field is a read-only
+  // display of that resolved client instead of a free-text search, so staff can't bypass the
+  // scan requirement by typing a name. Add Historical Records never sets this; it's backfilling
+  // old paper records with no QR to scan.
+  requireScannedClient?: boolean
   onClose: () => void
   onCreated: (newJO: any) => void
 }
 
-export default function NewJOModal({ clients: initialClients, categories, subcategories, currentUser, allowDateOverride, onClose, onCreated }: Props) {
+export default function NewJOModal({ clients: initialClients, categories, subcategories, currentUser, allowDateOverride, initialClientId, requireScannedClient, onClose, onCreated }: Props) {
   const [clients, setClients] = useState(initialClients)
   const [showAddClient, setShowAddClient] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  const [selectedClientId, setSelectedClientId] = useState('')
-  const [clientSearch, setClientSearch] = useState('')
+  const initialClient = initialClientId ? initialClients.find(c => c.client_id === initialClientId) : undefined
+  const [selectedClientId, setSelectedClientId] = useState(initialClientId || '')
+  const [clientSearch, setClientSearch] = useState(initialClient ? (initialClient.client_name || initialClient.company_name) : '')
   const [showClientDropdown, setShowClientDropdown] = useState(false)
   const [isForBilling, setIsForBilling] = useState(false)
   const [items, setItems] = useState<any[]>([])
@@ -338,6 +348,15 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
 
         <div className="pf-field">
           <label className="pf-label">Client <span className="pf-req">*</span></label>
+          {requireScannedClient ? (
+            <div style={{ background: '#f0f0f0', borderRadius: 8, padding: '0.6rem 0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.85rem' }}>{clientSearch || selectedClientId}</div>
+                <div style={{ color: '#999', fontSize: '0.72rem' }}>{selectedClientId}</div>
+              </div>
+              <span style={{ color: '#27ae60', fontSize: '0.72rem', fontWeight: 700 }}>✓ Scanned</span>
+            </div>
+          ) : (
           <div style={{ position: 'relative' }}>
             <input
               type="text"
@@ -379,6 +398,12 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
               </div>
             )}
           </div>
+          )}
+          {selectedClientId && !selectedClient && (
+            <div style={{ color: '#e74c3c', fontSize: '0.75rem', marginTop: 4 }}>
+              Scanned client ({selectedClientId}) wasn&apos;t found — they may have been removed. Search for them above instead.
+            </div>
+          )}
           {selectedClient && (
             <div style={{ color: '#2ecc71', fontSize: '0.75rem', marginTop: 4 }}>
               Earned Rewards: {formatPeso(earnedRewards)} · {selectedClient.credit_line_status ? 'Credit Line Active' : 'No Credit Line'}

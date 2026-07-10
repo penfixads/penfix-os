@@ -21,6 +21,7 @@ export default async function ActiveJOsPage() {
       `)
       .neq('job_status', 'Cancelled')
       .neq('job_status', 'Done')
+      .neq('job_status', 'Unclaimed')
       .order('date_time_received', { ascending: false }),
     supabase.from('categories').select('*').eq('is_active', true).order('category_name'),
     supabase.from('subcategories').select('*').eq('is_active', true).order('subcategory_name'),

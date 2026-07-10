@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { formatPeso, fuzzyMatch } from '@/lib/jo-helpers'
+import { formatPeso, fuzzyMatch, getPhilippineDateStr } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import Pagination from '@/components/Pagination'
 
@@ -16,6 +16,7 @@ const STATUS_COLORS: Record<string, string> = {
   'Ready For Pickup/Delivery/Installation': '#16a085',
   'Done': '#27ae60',
   'Cancelled': '#7f8c8d',
+  'Unclaimed': '#c0392b',
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -27,6 +28,8 @@ const PRIORITY_COLORS: Record<string, string> = {
 export default function ItemsClient({ items, currentUser }: Props) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const toggleExpand = (itemId: string) => setExpanded(prev => ({ ...prev, [itemId]: !prev[itemId] }))
   const [page, setPage] = useState(1)
@@ -42,7 +45,10 @@ export default function ItemsClient({ items, currentUser }: Props) {
       fuzzyMatch(item.subcategories?.subcategory_name || '', search) ||
       fuzzyMatch(jo?.received_by || '', search)
     const matchStatus = statusFilter === 'all' || item.job_status === statusFilter
-    return matchSearch && matchStatus
+    const d = item.date_time_received ? getPhilippineDateStr(new Date(item.date_time_received)) : undefined
+    const matchFrom = !dateFrom || (d && d >= dateFrom)
+    const matchTo = !dateTo || (d && d <= dateTo)
+    return matchSearch && matchStatus && matchFrom && matchTo
   })
 
   const currentPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)))
@@ -86,6 +92,10 @@ export default function ItemsClient({ items, currentUser }: Props) {
         >
           {statuses.map(s => <option key={s} value={s}>{s === 'all' ? 'All Statuses' : s}</option>)}
         </select>
+        <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1) }}
+          style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }} />
+        <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1) }}
+          style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }} />
       </div>
 
       {filtered.length === 0 ? (
@@ -115,6 +125,7 @@ export default function ItemsClient({ items, currentUser }: Props) {
                     </div>
                     <div style={{ color: '#aaa', fontSize: '0.68rem', marginTop: 1 }}>
                       {item.item_id} · {item.job_order_id} · {clientName} · Qty {item.quantity || 1} · by {jo?.received_by || '—'}
+                      {item.date_time_received && ` · Received ${new Date(item.date_time_received).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}`}
                     </div>
                     {item.production_specs && (
                       <div style={{ color: '#999', fontSize: '0.7rem', marginTop: 2 }}>{item.production_specs}</div>

@@ -16,7 +16,7 @@ export async function createUser(formData: {
   email: string
   password: string
   role: string
-  toolsRole?: 'Custodian' | 'Fabricator' | null
+  toolsRole?: 'Admin' | 'Custodian' | 'Fabricator' | null
 }): Promise<ActionResult> {
   const authErrMsg = await assertAdmin()
   if (authErrMsg) return { success: false, message: authErrMsg }
@@ -58,7 +58,7 @@ export async function createUser(formData: {
   return { success: true }
 }
 
-export async function setToolsAccess(email: string, toolsRole: 'Custodian' | 'Fabricator' | null): Promise<ActionResult> {
+export async function setToolsAccess(email: string, toolsRole: 'Admin' | 'Custodian' | 'Fabricator' | null): Promise<ActionResult> {
   const authErrMsg = await assertAdmin()
   if (authErrMsg) return { success: false, message: authErrMsg }
   const admin = createSupabaseAdminClient()

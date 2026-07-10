@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { getPhilippineDateStr, getPhilippineDayBoundsUTC } from '@/lib/jo-helpers'
 import TodayJOsClient from './TodayJOsClient'
 
-export default async function TodayJOsPage() {
+export default async function TodayJOsPage({ searchParams }: { searchParams: { client?: string } }) {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
@@ -47,6 +47,7 @@ export default async function TodayJOsPage() {
       categories={categories || []}
       subcategories={subcategories || []}
       currentUser={user}
+      initialClientId={searchParams.client}
     />
   )
 }

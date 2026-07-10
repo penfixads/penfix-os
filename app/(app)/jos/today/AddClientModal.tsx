@@ -18,6 +18,9 @@ export default function AddClientModal({ currentUser, onSave, onClose }: Props) 
   const [companyName, setCompanyName] = useState('')
   const [contactNumber, setContactNumber] = useState('')
   const [email, setEmail] = useState('')
+  const [messenger, setMessenger] = useState('')
+  const [viber, setViber] = useState('')
+  const [whatsapp, setWhatsapp] = useState('')
   const [address, setAddress] = useState('')
   const [creditLine, setCreditLine] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -38,6 +41,9 @@ export default function AddClientModal({ currentUser, onSave, onClose }: Props) 
         company_name: companyName || null,
         contact_number: contactNumber || null,
         email: email || null,
+        messenger: messenger || null,
+        viber: viber || null,
+        whatsapp: whatsapp || null,
         address: address || null,
         // Only Admin can set credit line directly — GA/Treasury checking the box
         // just files a request for Admin to approve on the Pending Approval page.
@@ -96,6 +102,22 @@ export default function AddClientModal({ currentUser, onSave, onClose }: Props) 
         <div className="pf-field">
           <label className="pf-label">Email</label>
           <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="pf-input" />
+        </div>
+
+        <div className="pf-grid-2" style={{ marginBottom: '0.85rem' }}>
+          <div>
+            <label className="pf-label">Messenger</label>
+            <input type="text" value={messenger} onChange={e => setMessenger(e.target.value)} className="pf-input" />
+          </div>
+          <div>
+            <label className="pf-label">Viber</label>
+            <input type="text" value={viber} onChange={e => setViber(e.target.value)} className="pf-input" />
+          </div>
+        </div>
+
+        <div className="pf-field">
+          <label className="pf-label">WhatsApp</label>
+          <input type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} className="pf-input" />
         </div>
 
         <div className="pf-field">

@@ -66,6 +66,14 @@ export function buildFeedbackUrl(origin: string, jobOrderId: string, clientName:
   return `${origin}/feedback/${token}?jo=${encodeURIComponent(jobOrderId)}&name=${encodeURIComponent(clientName)}`
 }
 
+// Scanning a client's QR (printed, or shown on their phone from shop.penfixads.com) should
+// drop staff straight into a pre-filled New JO instead of a dead client_id string — this is
+// what that QR encodes. Lands on Today's Received JOs since a scan only happens when a
+// client is physically here starting a transaction.
+export function buildClientJoLink(origin: string, clientId: string): string {
+  return `${origin}/jos/today?client=${encodeURIComponent(clientId)}`
+}
+
 // Plain .includes() search fails when staff type a name without the spaces the client
 // record has (e.g. "mariposa" vs stored "Mari Posa") — strip whitespace from both sides
 // so search matches regardless of spacing.

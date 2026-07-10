@@ -34,6 +34,7 @@ function reconciliationBadge(excessDeficit: number): { label: string; bg: string
 function HistoryRow({ row, isAdmin }: { row: any; isAdmin: boolean }) {
   const [expanded, setExpanded] = useState(false)
   const [rowExpenses, setRowExpenses] = useState<any[] | null>(null)
+  const [rowPayments, setRowPayments] = useState<any[] | null>(null)
   const [cashOnHand, setCashOnHand] = useState(row.cash_on_hand != null ? String(row.cash_on_hand) : '')
   const [remittedCash, setRemittedCash] = useState(row.remitted_cash != null ? String(row.remitted_cash) : '')
   const [remark, setRemark] = useState(row.remark || '')
@@ -54,6 +55,15 @@ function HistoryRow({ row, isAdmin }: { row: any; isAdmin: boolean }) {
       const supabase = createSupabaseBrowserClient()
       const { data } = await supabase.from('expenses').select('*').eq('summary_id', saved.summary_id).order('created_at', { ascending: false })
       setRowExpenses(data || [])
+    }
+    if (next && rowPayments === null) {
+      const supabase = createSupabaseBrowserClient()
+      const { data } = await supabase
+        .from('payments')
+        .select(`*, job_orders(client_id, clients(client_name, company_name))`)
+        .eq('payment_date', row.date)
+        .order('created_at', { ascending: false })
+      setRowPayments(data || [])
     }
   }
 
@@ -127,6 +137,35 @@ function HistoryRow({ row, isAdmin }: { row: any; isAdmin: boolean }) {
             <button onClick={save} disabled={saving} className="pf-btn" style={{ marginBottom: 10 }}>
               <IconCheck />{saving ? 'Saving…' : 'Save Changes'}
             </button>
+          )}
+
+          {rowPayments && (
+            <div style={{ marginBottom: rowExpenses && rowExpenses.length > 0 ? 14 : 0 }}>
+              <div style={{ color: '#666', fontWeight: 700, fontSize: '0.75rem', marginBottom: 6 }}>Paid Job Orders ({rowPayments.length})</div>
+              {rowPayments.length === 0 ? (
+                <div style={{ color: '#aaa', fontSize: '0.75rem' }}>No payments recorded for this day.</div>
+              ) : (
+                <>
+                  {rowPayments.map(p => {
+                    const clientName = p.job_orders?.clients?.client_name || p.job_orders?.clients?.company_name || p.job_order_id
+                    return (
+                      <div key={p.payment_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', padding: '0.3rem 0', borderBottom: '1px solid #e5e5e5' }}>
+                        <div>
+                          <span style={{ color: '#1a1a1a' }}>{p.job_order_id}</span>
+                          <span style={{ color: '#1a1a1a', marginLeft: 8 }}>{clientName}</span>
+                          <span style={{ color: '#999', marginLeft: 8 }}>{p.payment_method}</span>
+                        </div>
+                        <span style={{ color: '#2ecc71', fontWeight: 700 }}>{formatPeso(p.amount)}</span>
+                      </div>
+                    )
+                  })}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 6, fontWeight: 700, fontSize: '0.78rem' }}>
+                    <span style={{ color: '#666' }}>Cash Payments Total</span>
+                    <span style={{ color: '#1a1a1a' }}>{formatPeso(rowPayments.filter(p => p.payment_method === 'Cash').reduce((s, p) => s + (p.amount || 0), 0))}</span>
+                  </div>
+                </>
+              )}
+            </div>
           )}
 
           {rowExpenses && rowExpenses.length > 0 && (

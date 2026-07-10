@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { formatPeso, generateItemId, formatAge, fuzzyMatch } from '@/lib/jo-helpers'
+import { formatPeso, generateItemId, formatAge, fuzzyMatch, getPhilippineDateStr } from '@/lib/jo-helpers'
+import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
 import type { AppUser } from '@/lib/user'
 import EditJOModal from '@/components/EditJOModal'
 import JOReceiptModal from '@/components/JOReceiptModal'
@@ -89,6 +90,39 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
     navigator.clipboard.writeText(url)
   }
 
+  // Client never came back to claim/pay for this item. Mirrors markCancelled's one-way,
+  // confirm-then-persist shape (see ProductionClient.tsx), plus a status-log entry so the
+  // action is traceable in All Job Order Items' history timeline. Guarded in the render below
+  // to same-day-received JOs can't be marked (avoids archiving something that's simply new).
+  async function markUnclaimed(itemId: string, jobOrderId: string, itemLabel: string) {
+    if (!confirm(`Mark "${itemLabel}" as Unclaimed? The client never came back to claim/pay for it.`)) return
+    const supabase = createSupabaseBrowserClient()
+    const { error } = await supabase.from('job_order_items').update({ job_status: 'Unclaimed' }).eq('item_id', itemId)
+    if (error) { alert(error.message || 'Failed to mark item as unclaimed.'); return }
+    await supabase.from('job_order_item_status_log').insert({
+      item_id: itemId,
+      job_order_id: jobOrderId,
+      status_name: 'Unclaimed',
+      changed_by_email: currentUser.email,
+      changed_by_name: currentUser.name,
+      changed_by_role: currentUser.role,
+    })
+    await syncJobOrderDoneStatus(supabase, jobOrderId)
+
+    // Mirror the server-side rollup: once every sibling item is terminal, the JO itself
+    // rolled up to 'Unclaimed' server-side too — drop the whole card locally so it disappears
+    // from Active JOs without waiting on a page refresh.
+    setJobOrders(prev => {
+      const jo = prev.find(j => j.job_order_id === jobOrderId)
+      if (!jo) return prev
+      const updatedItems = (jo.job_order_items || []).map((i: any) => i.item_id === itemId ? { ...i, job_status: 'Unclaimed' } : i)
+      const TERMINAL = ['Done', 'Cancelled', 'Unclaimed']
+      const allTerminal = updatedItems.every((i: any) => TERMINAL.includes(i.job_status))
+      if (allTerminal) return prev.filter(j => j.job_order_id !== jobOrderId)
+      return prev.map(j => j.job_order_id === jobOrderId ? { ...j, job_order_items: updatedItems } : j)
+    })
+  }
+
   return (
     <div>
       <div style={{ marginBottom: '1.25rem' }}>
@@ -133,6 +167,11 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
           {pageItems.map(jo => {
             const clientName = jo.clients?.client_name || jo.clients?.company_name || jo.client_id
             const items = jo.job_order_items || []
+            // Cancelled/Unclaimed items are terminal — hide them here the same way Production
+            // and Dispatch already hide them from their queues, so the card only shows work
+            // still in flight. (They stay fully visible in All Job Order Items.)
+            const visibleItems = items.filter((i: any) => i.job_status !== 'Cancelled' && i.job_status !== 'Unclaimed')
+            const receivedToday = getPhilippineDateStr(new Date(jo.date_time_received)) === getPhilippineDateStr()
             const nearestDeadline = items.map((i: any) => i.date_time_needed).filter(Boolean).sort()[0]
             const isOverdue = nearestDeadline && new Date(nearestDeadline) < new Date()
             const statusColor = STATUS_COLORS[jo.payment_status] || '#555'
@@ -160,12 +199,24 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
                       </div>
                     )}
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
-                      {items.slice(0, 4).map((item: any) => (
-                        <span key={item.item_id} style={{ background: '#f0f0f0', color: '#999', fontSize: '0.65rem', padding: '0.15rem 0.5rem', borderRadius: 10 }}>
-                          {item.subcategories?.subcategory_name || item.item_id} · {item.job_status}
-                        </span>
-                      ))}
-                      {items.length > 4 && <span style={{ color: '#aaa', fontSize: '0.65rem' }}>+{items.length - 4} more</span>}
+                      {visibleItems.slice(0, 4).map((item: any) => {
+                        const canMarkUnclaimed = item.job_status !== 'Done' && !receivedToday
+                        return (
+                          <span key={item.item_id} style={{ background: '#f0f0f0', color: '#999', fontSize: '0.65rem', padding: '0.15rem 0.5rem', borderRadius: 10, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            {item.subcategories?.subcategory_name || item.item_id} · {item.job_status}
+                            {canMarkUnclaimed && (
+                              <button
+                                title="Mark unclaimed — client never came back for this item"
+                                onClick={() => markUnclaimed(item.item_id, jo.job_order_id, item.subcategories?.subcategory_name || item.item_id)}
+                                style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', padding: 0, fontSize: '0.7rem', lineHeight: 1, fontWeight: 700 }}
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </span>
+                        )
+                      })}
+                      {visibleItems.length > 4 && <span style={{ color: '#aaa', fontSize: '0.65rem' }}>+{visibleItems.length - 4} more</span>}
                     </div>
                   </div>
 

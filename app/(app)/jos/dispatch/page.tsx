@@ -20,7 +20,7 @@ export default async function DispatchPage() {
       ),
       subcategories(subcategory_name, job_flow)
     `)
-    .not('job_status', 'in', '("Done","Cancelled")')
+    .not('job_status', 'in', '("Done","Cancelled","Unclaimed")')
     .order('date_time_needed', { ascending: true, nullsFirst: false })
 
   // subcategory_sop has 1200+ rows across all 221 subcategories — well past Supabase's

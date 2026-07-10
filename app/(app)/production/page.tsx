@@ -20,7 +20,7 @@ export default async function ProductionPage() {
       ),
       subcategories(subcategory_name, category_id, job_flow)
     `)
-    .not('job_status', 'in', '("Done","Cancelled")')
+    .not('job_status', 'in', '("Done","Cancelled","Unclaimed")')
     .order('date_time_needed', { ascending: true, nullsFirst: false })
 
   if (itemsError) console.error('Production queue query failed:', itemsError.message)

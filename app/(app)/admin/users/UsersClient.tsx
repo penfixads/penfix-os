@@ -17,7 +17,7 @@ const ROLE_LABELS: Record<string, string> = { None: 'No jobs access' }
 
 // Access levels on tools.penfixads.com — independent of the jobs role above.
 // '' = no Tools access (no tool_users row).
-const TOOLS_ROLES = ['', 'Custodian', 'Fabricator'] as const
+const TOOLS_ROLES = ['', 'Admin', 'Custodian', 'Fabricator'] as const
 
 /** One block, used in both the Create and Edit modals — editing this
  * definition (options, styling, help text) updates both call sites. This
@@ -111,7 +111,7 @@ export default function UsersClient({ users: initialUsers }: Props) {
   async function handleCreate() {
     if (!name || !email || !password) { setError('All fields are required.'); return }
     setSaving(true); setError(''); setSuccess('')
-    const result = await createUser({ name, email, password, role, toolsRole: (toolsRole || null) as 'Custodian' | 'Fabricator' | null })
+    const result = await createUser({ name, email, password, role, toolsRole: (toolsRole || null) as 'Admin' | 'Custodian' | 'Fabricator' | null })
     if (!result.success) {
       setError(result.message)
     } else {
@@ -128,7 +128,7 @@ export default function UsersClient({ users: initialUsers }: Props) {
     const label = newToolsRole || 'No access'
     if (!confirm(`Set Tools (tools.penfixads.com) access for ${email} to "${label}"?`)) return
     setActingOn(email)
-    const result = await setToolsAccess(email, (newToolsRole || null) as 'Custodian' | 'Fabricator' | null)
+    const result = await setToolsAccess(email, (newToolsRole || null) as 'Admin' | 'Custodian' | 'Fabricator' | null)
     if (!result.success) {
       alert(result.message)
     } else {
@@ -171,7 +171,7 @@ export default function UsersClient({ users: initialUsers }: Props) {
     }
     const toolsChanged = editToolsRole !== (editingUser.tools_role || '')
     if (toolsChanged) {
-      const toolsResult = await setToolsAccess(editEmail, (editToolsRole || null) as 'Custodian' | 'Fabricator' | null)
+      const toolsResult = await setToolsAccess(editEmail, (editToolsRole || null) as 'Admin' | 'Custodian' | 'Fabricator' | null)
       if (!toolsResult.success) {
         setEditError(`Name/role saved, but Tools access update failed: ${toolsResult.message}`)
         setActingOn(null)
