@@ -92,6 +92,8 @@ create table if not exists job_orders (
   override_status text check (override_status in ('Pending','Approved','Rejected')),
   is_for_billing boolean default false,
   is_fully_paid boolean default false,
+  -- How the client reached us for this JO — see migration 028 for why it's nullable.
+  source_channel text check (source_channel in ('Walk-in', 'Messenger', 'Viber', 'WhatsApp', 'Phone Call', 'Email')),
   created_at timestamptz default now()
 );
 

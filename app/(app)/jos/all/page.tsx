@@ -12,7 +12,7 @@ export default async function AllJOsPage() {
   const { data: jobOrders, error } = await supabase
     .from('job_orders')
     .select(`
-      job_order_id, date_time_received, received_by, payment_status,
+      job_order_id, date_time_received, received_by, payment_status, source_channel,
       grand_total, total_amount_paid, balance_due, job_status, is_for_billing, feedback_requested_at,
       clients(client_name, company_name, contact_number),
       job_order_items(

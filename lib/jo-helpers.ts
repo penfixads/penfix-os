@@ -1,3 +1,8 @@
+// How a client reached us for a given JO — matches job_orders.source_channel's check
+// constraint (migration 028). Captured on New JO/Add Historical Records, correctable
+// via Edit JO, so a channel is traceable if an issue comes up later.
+export const JO_SOURCE_CHANNELS = ['Walk-in', 'Messenger', 'Viber', 'WhatsApp', 'Phone Call', 'Email'] as const
+
 export function generateJobOrderId(seq: number, date: Date = new Date()): string {
   const mm = String(date.getMonth() + 1).padStart(2, '0')
   const dd = String(date.getDate()).padStart(2, '0')

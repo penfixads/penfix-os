@@ -30,7 +30,7 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, currentUser 
 
   const filtered = jobOrders.filter(jo => {
     const client = jo.clients?.client_name || jo.clients?.company_name || ''
-    const matchSearch = !search || fuzzyMatch(client, search) || fuzzyMatch(jo.job_order_id, search) || fuzzyMatch(jo.received_by || '', search)
+    const matchSearch = !search || fuzzyMatch(client, search) || fuzzyMatch(jo.job_order_id, search) || fuzzyMatch(jo.received_by || '', search) || fuzzyMatch(jo.source_channel || '', search)
     const matchStatus = statusFilter === 'all' || (statusFilter === 'Done' ? isJODone(jo) : jo.payment_status === statusFilter)
     const d = jo.date_time_received ? getPhilippineDateStr(new Date(jo.date_time_received)) : undefined
     const matchFrom = !dateFrom || d >= dateFrom
@@ -134,7 +134,7 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, currentUser 
                       {jo.is_for_billing && <span style={{ background: '#2a1a4a', color: '#9b59b6', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>BILLING</span>}
                     </div>
                     <div style={{ color: '#aaa', fontSize: '0.68rem', marginTop: 1 }}>
-                      {jo.job_order_id} · {new Date(jo.date_time_received).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })} · {jo.received_by || '—'}
+                      {jo.job_order_id} · {new Date(jo.date_time_received).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })} · {jo.received_by || '—'}{jo.source_channel ? ` · via ${jo.source_channel}` : ''}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>

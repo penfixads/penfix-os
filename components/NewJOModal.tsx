@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { generateJobOrderId, generateItemId, generateClientId, generatePaymentId, formatPeso, getNextJOSequence, buildFeedbackUrl, getPhilippineDateStr, toLocalDateTimeInput } from '@/lib/jo-helpers'
+import { generateJobOrderId, generateItemId, generateClientId, generatePaymentId, formatPeso, getNextJOSequence, buildFeedbackUrl, getPhilippineDateStr, toLocalDateTimeInput, JO_SOURCE_CHANNELS } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
 import AddClientModal from '@/app/(app)/jos/today/AddClientModal'
@@ -40,6 +40,7 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
   const [selectedClientId, setSelectedClientId] = useState(initialClientId || '')
   const [clientSearch, setClientSearch] = useState(initialClient ? (initialClient.client_name || initialClient.company_name) : '')
   const [showClientDropdown, setShowClientDropdown] = useState(false)
+  const [sourceChannel, setSourceChannel] = useState('')
   const [isForBilling, setIsForBilling] = useState(false)
   const [items, setItems] = useState<any[]>([])
   const [showItemForm, setShowItemForm] = useState(false)
@@ -159,6 +160,7 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
 
   async function handleSave() {
     if (!selectedClientId) { setError('Please select a client.'); return }
+    if (!sourceChannel) { setError('Please select how this client reached us.'); return }
     if (items.length === 0) { setError('Add at least one job order item.'); return }
     if (needsOverride && !overrideReason) { setError('Please provide a reason for the override.'); return }
     setSaving(true)
@@ -195,6 +197,7 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
           is_for_billing: isForBilling,
           is_fully_paid: paymentStatus === 'Fully Paid',
           date_override_authorized_by: unlockedByName,
+          source_channel: sourceChannel,
         })
         if (!joErr) break
         if (joErr.code !== '23505' || attempt === 4) throw joErr
@@ -270,6 +273,7 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
         client_id: selectedClientId,
         rewards_balance: Math.max(0, earnedRewards - cashbackDiscount),
         date_override_authorized_by: unlockedByName,
+        source_channel: sourceChannel,
       }
       onCreated(newJO)
 
@@ -409,6 +413,14 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
               Earned Rewards: {formatPeso(earnedRewards)} · {selectedClient.credit_line_status ? 'Credit Line Active' : 'No Credit Line'}
             </div>
           )}
+        </div>
+
+        <div className="pf-field">
+          <label className="pf-label">How did this client reach us? <span className="pf-req">*</span></label>
+          <select value={sourceChannel} onChange={e => setSourceChannel(e.target.value)} className="pf-select">
+            <option value="">-- Select --</option>
+            {JO_SOURCE_CHANNELS.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
         </div>
 
         {/* Billing toggle — read-only, mirrors the client's credit_line_status in the database */}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { generateItemId, generatePaymentId, formatPeso, getEffectiveSteps, getPhilippineDateStr } from '@/lib/jo-helpers'
+import { generateItemId, generatePaymentId, formatPeso, getEffectiveSteps, getPhilippineDateStr, JO_SOURCE_CHANNELS } from '@/lib/jo-helpers'
 import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
@@ -23,6 +23,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   const [editPayments, setEditPayments] = useState<any[]>([])
   const [editDiscount, setEditDiscount] = useState(jo.discount || 0)
   const [editIsForBilling, setEditIsForBilling] = useState(jo.is_for_billing || false)
+  const [editSourceChannel, setEditSourceChannel] = useState(jo.source_channel || '')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -227,6 +228,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
         is_fully_paid: paymentStatus === 'Fully Paid',
         request_override: overrideReason || null,
         override_status: needsOverride ? 'Pending' : null,
+        source_channel: editSourceChannel || null,
       }).eq('job_order_id', joId)
       if (joUpdateErr) throw joUpdateErr
 
@@ -252,6 +254,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
         is_for_billing: editIsForBilling,
         request_override: overrideReason || null,
         override_status: needsOverride ? 'Pending' : null,
+        source_channel: editSourceChannel || null,
         job_order_items: editItems.map(i => ({ item_id: i.item_id, computed_line_total: i.computed_line_total, job_status: i.job_status, date_time_needed: i.date_time_needed, subcategories: i.subcategories })),
       })
       onClose()
@@ -291,6 +294,14 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                 </div>
                 <div style={{ color: '#2ecc71', fontSize: '0.75rem' }}>Total Rewards Earned: {formatPeso(rewardsBalance)}</div>
               </div>
+            </div>
+
+            <div className="pf-field">
+              <label className="pf-label">How did this client reach us?</label>
+              <select value={editSourceChannel} onChange={e => setEditSourceChannel(e.target.value)} className="pf-select">
+                <option value="">-- Not set --</option>
+                {JO_SOURCE_CHANNELS.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
 
             <div className="pf-field">
