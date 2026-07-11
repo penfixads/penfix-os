@@ -4,10 +4,12 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso, generateClientId } from '@/lib/jo-helpers'
+import { findLikelyDuplicateClients, type ClientMatch } from '@/lib/client-dedupe'
 import type { AppUser } from '@/lib/user'
 import { IconUserPlus, IconEdit, IconCheck, IconX } from '@/components/icons'
 import Pagination from '@/components/Pagination'
 import ClientQrButton from '@/components/ClientQrButton'
+import DuplicateClientPrompt from '@/components/DuplicateClientPrompt'
 
 const PAGE_SIZE = 10
 
@@ -35,6 +37,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
   const [whatsapp, setWhatsapp] = useState('')
   const [address, setAddress] = useState('')
   const [creditLine, setCreditLine] = useState(false)
+  const [duplicateMatches, setDuplicateMatches] = useState<ClientMatch[] | null>(null)
 
   function openAdd() {
     setEditing(null); setClientType('Individual'); setClientName(''); setCompanyName('')
@@ -58,8 +61,12 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
     setShowForm(true)
   }
 
-  async function handleSave() {
+  async function handleSave(skipDuplicateCheck?: boolean) {
     if (!clientName && !companyName) { setError('Provide at least a name.'); return }
+    if (!editing && !skipDuplicateCheck) {
+      const matches = findLikelyDuplicateClients(clientName, companyName, clients, { email, contactNumber: contact })
+      if (matches.length > 0) { setDuplicateMatches(matches); return }
+    }
     setSaving(true); setError('')
     try {
       const supabase = createSupabaseBrowserClient()
@@ -260,12 +267,27 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={() => setShowForm(false)} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
-              <button onClick={handleSave} disabled={saving} className="pf-btn">
+              <button onClick={() => handleSave()} disabled={saving} className="pf-btn">
                 <IconCheck />{saving ? 'Saving…' : editing ? 'Update Client' : 'Add Client'}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {duplicateMatches && (
+        <DuplicateClientPrompt
+          enteredName={clientName || companyName}
+          matches={duplicateMatches}
+          onUseExisting={(existing) => {
+            setDuplicateMatches(null)
+            setShowForm(false)
+            const full = clients.find(c => c.client_id === existing.client_id)
+            if (full) openEdit(full)
+          }}
+          onSaveAnyway={() => { setDuplicateMatches(null); handleSave(true) }}
+          onCancel={() => setDuplicateMatches(null)}
+        />
       )}
     </div>
   )

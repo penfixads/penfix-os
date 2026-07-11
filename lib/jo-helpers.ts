@@ -40,6 +40,23 @@ export function generatePurchaseId(): string {
   return `PUR${mm}${dd}${yy}-${rand}`
 }
 
+// Suggests a category_id in the existing "CAT_XXX" convention (see PENFIX_CRM master
+// list) — just a starting point in the Add Category form; admin can edit it before saving.
+export function generateCategoryId(categoryName: string): string {
+  const letters = categoryName.toUpperCase().replace(/[^A-Z]/g, '')
+  return `CAT_${(letters || 'NEW').slice(0, 3)}`
+}
+
+// Suggests a subcategory_id as <category-prefix>-<name-slug>-<random 2 digits>, echoing
+// the shape of the seeded IDs (e.g. "ACRYL-CPL01") without trying to replicate their exact
+// abbreviations — admin can edit it before saving.
+export function generateSubcategoryId(categoryId: string, subcategoryName: string): string {
+  const prefix = categoryId.replace(/^CAT_/, '') || 'SUB'
+  const slug = subcategoryName.toUpperCase().replace(/[^A-Z0-9]+/g, '').slice(0, 8) || 'ITEM'
+  const rand = String(Math.floor(Math.random() * 90) + 10)
+  return `${prefix}-${slug}-${rand}`
+}
+
 export function generateOverheadId(): string {
   const now = new Date()
   const mm = String(now.getMonth() + 1).padStart(2, '0')

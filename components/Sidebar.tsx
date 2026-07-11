@@ -95,6 +95,10 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Subcategory SOPs', href: '/admin/subcategory-sops', roles: ['Admin'],
     icon: <I><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></I>
   },
+  {
+    label: 'Categories & Pricing', href: '/admin/categories', roles: ['Admin'],
+    icon: <I><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></I>
+  },
 ]
 
 interface Props {

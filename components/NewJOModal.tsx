@@ -551,8 +551,11 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
       {showAddClient && (
         <AddClientModal
           currentUser={currentUser}
+          existingClients={clients}
           onSave={(newClient) => {
-            setClients(prev => [...prev, newClient])
+            // newClient may be an existing client the dedupe prompt matched to, not one just
+            // inserted — don't add it twice to the in-memory list.
+            setClients(prev => prev.some(c => c.client_id === newClient.client_id) ? prev : [...prev, newClient])
             setSelectedClientId(newClient.client_id)
             setClientSearch(newClient.client_name || newClient.company_name)
             setShowAddClient(false)

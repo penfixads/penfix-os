@@ -3,16 +3,21 @@
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { generateClientId } from '@/lib/jo-helpers'
+import { findLikelyDuplicateClients, type ClientMatch } from '@/lib/client-dedupe'
+import DuplicateClientPrompt from '@/components/DuplicateClientPrompt'
 import { IconX, IconCheck } from '@/components/icons'
 import type { AppUser } from '@/lib/user'
 
 interface Props {
   currentUser: AppUser
+  // Used to check the new client's name/contact against existing clients before saving, so
+  // staff get asked to confirm instead of silently creating a duplicate (see lib/client-dedupe.ts).
+  existingClients: any[]
   onSave: (client: any) => void
   onClose: () => void
 }
 
-export default function AddClientModal({ currentUser, onSave, onClose }: Props) {
+export default function AddClientModal({ currentUser, existingClients, onSave, onClose }: Props) {
   const [clientType, setClientType] = useState<'Individual' | 'Company'>('Individual')
   const [clientName, setClientName] = useState('')
   const [companyName, setCompanyName] = useState('')
@@ -25,9 +30,14 @@ export default function AddClientModal({ currentUser, onSave, onClose }: Props) 
   const [creditLine, setCreditLine] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [duplicateMatches, setDuplicateMatches] = useState<ClientMatch[] | null>(null)
 
-  async function handleSave() {
+  async function handleSave(skipDuplicateCheck?: boolean) {
     if (!clientName && !companyName) { setError('Provide at least a name or company.'); return }
+    if (!skipDuplicateCheck) {
+      const matches = findLikelyDuplicateClients(clientName, companyName, existingClients, { email, contactNumber })
+      if (matches.length > 0) { setDuplicateMatches(matches); return }
+    }
     setSaving(true)
     setError('')
     try {
@@ -139,11 +149,21 @@ export default function AddClientModal({ currentUser, onSave, onClose }: Props) 
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onClose} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
-          <button onClick={handleSave} disabled={saving} className="pf-btn">
+          <button onClick={() => handleSave()} disabled={saving} className="pf-btn">
             <IconCheck />{saving ? 'Saving…' : 'Save Client'}
           </button>
         </div>
       </div>
+
+      {duplicateMatches && (
+        <DuplicateClientPrompt
+          enteredName={clientName || companyName}
+          matches={duplicateMatches}
+          onUseExisting={(existing) => { setDuplicateMatches(null); onSave(existing) }}
+          onSaveAnyway={() => { setDuplicateMatches(null); handleSave(true) }}
+          onCancel={() => setDuplicateMatches(null)}
+        />
+      )}
     </div>
   )
 }
