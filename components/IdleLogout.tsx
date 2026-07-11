@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
-const IDLE_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
+const IDLE_TIMEOUT_MS = 4 * 60 * 60 * 1000 // 4 hours
 
 const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'scroll'] as const
 

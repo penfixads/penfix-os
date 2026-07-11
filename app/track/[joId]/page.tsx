@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
+import TrackItems from './TrackItems'
 
 export default async function TrackPage({ params }: { params: { joId: string } }) {
   const supabase = createSupabaseServerClient()
@@ -58,40 +59,7 @@ export default async function TrackPage({ params }: { params: { joId: string } }
         </div>
 
         {/* Items */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {(items || []).map((item: any) => {
-            // SOP step names are internal-only (GA/Fabricator use), so clients only ever
-            // see a generic in-progress/completed state here, never the granular status.
-            const isDone = !!item.date_time_done || item.job_status === 'Done'
-
-            return (
-              <div key={item.item_id} style={{ background: '#FDF5EC', borderRadius: 12, padding: '1rem', border: '1px solid #EDE0CC', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.85rem' }}>
-                  <div>
-                    <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.9rem' }}>{item.subcategory_name}</div>
-                    {item.production_specs && (
-                      <div style={{ color: '#777', fontSize: '0.75rem', marginTop: 2 }}>{item.production_specs}</div>
-                    )}
-                    {item.date_time_needed && (
-                      <div style={{ color: '#c0782b', fontSize: '0.72rem', marginTop: 4 }}>
-                        Deadline: {new Date(item.date_time_needed).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ padding: '0.25rem 0.65rem', borderRadius: 20, background: isDone ? '#1a4a1a22' : '#2980b922', border: `1px solid ${isDone ? '#27ae60' : '#2980b9'}`, color: isDone ? '#1e8449' : '#2471a3', fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap', marginLeft: 8 }}>
-                    {isDone ? '✓ Completed' : 'In Progress'}
-                  </div>
-                </div>
-
-                {item.date_time_done && (
-                  <div style={{ marginTop: 10, color: '#27ae60', fontSize: '0.72rem' }}>
-                    ✓ Completed: {new Date(item.date_time_done).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+        <TrackItems jobOrderId={jo.job_order_id} initialItems={items || []} />
 
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: '2rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>
