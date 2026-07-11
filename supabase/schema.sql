@@ -248,8 +248,27 @@ alter table subcategory_sop enable row level security;
 -- Authenticated users have full access (role-based logic handled in app layer)
 create policy "auth_users_users" on users for select using (auth.role() = 'authenticated');
 create policy "auth_users_clients" on clients for all using (auth.role() = 'authenticated');
-create policy "auth_users_categories" on categories for all using (auth.role() = 'authenticated');
-create policy "auth_users_subcategories" on subcategories for all using (auth.role() = 'authenticated');
+-- Categories/subcategories are the pricing catalog every JO is built from — everyone
+-- authenticated can read them, but only Admin can add/edit/remove entries (matches the
+-- /admin/categories page's own role gate, enforced here too so it can't be bypassed by
+-- a direct Supabase client call).
+create policy "auth_users_select_categories" on categories for select using (auth.role() = 'authenticated');
+create policy "admin_insert_categories" on categories for insert
+  with check (exists (select 1 from users u where u.user_email = auth.email() and u.role = 'Admin'));
+create policy "admin_update_categories" on categories for update
+  using (exists (select 1 from users u where u.user_email = auth.email() and u.role = 'Admin'))
+  with check (exists (select 1 from users u where u.user_email = auth.email() and u.role = 'Admin'));
+create policy "admin_delete_categories" on categories for delete
+  using (exists (select 1 from users u where u.user_email = auth.email() and u.role = 'Admin'));
+
+create policy "auth_users_select_subcategories" on subcategories for select using (auth.role() = 'authenticated');
+create policy "admin_insert_subcategories" on subcategories for insert
+  with check (exists (select 1 from users u where u.user_email = auth.email() and u.role = 'Admin'));
+create policy "admin_update_subcategories" on subcategories for update
+  using (exists (select 1 from users u where u.user_email = auth.email() and u.role = 'Admin'))
+  with check (exists (select 1 from users u where u.user_email = auth.email() and u.role = 'Admin'));
+create policy "admin_delete_subcategories" on subcategories for delete
+  using (exists (select 1 from users u where u.user_email = auth.email() and u.role = 'Admin'));
 create policy "auth_users_job_orders" on job_orders for all using (auth.role() = 'authenticated');
 create policy "auth_users_job_order_items" on job_order_items for all using (auth.role() = 'authenticated');
 create policy "auth_users_payments" on payments for all using (auth.role() = 'authenticated');
