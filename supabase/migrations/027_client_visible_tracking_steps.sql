@@ -16,17 +16,21 @@ where subcategory_id in (select subcategory_id from subcategories where category
 
 -- 2) Add subcategory_id to the public item-tracking view (needed to look up that item's
 --    step list) — not sensitive, same trust level as the subcategory_name already exposed.
+-- subcategory_id is appended at the end, not inserted where it "belongs" — Postgres'
+-- CREATE OR REPLACE VIEW only allows adding trailing columns, not reordering existing
+-- ones (it treats that as renaming a column, which it rejects). Column order doesn't
+-- matter to the app either way since Supabase returns rows keyed by column name.
 create or replace view public_job_order_items_tracking as
 select
   i.item_id,
   i.job_order_id,
   i.job_status,
-  i.subcategory_id,
   i.production_specs,
   i.date_time_needed,
   i.date_time_done,
   i.quantity,
-  s.subcategory_name
+  s.subcategory_name,
+  i.subcategory_id
 from job_order_items i
 left join subcategories s on s.subcategory_id = i.subcategory_id;
 
