@@ -155,6 +155,7 @@ export default function JOReceiptModal({ jobOrderId, onClose }: Props) {
               dateNeeded={item?.date_time_needed}
               receivedBy={jo.received_by}
               accomplishedBy={accomplishedBy}
+              sourceChannel={jo.source_channel}
               totalAmount={jo.grand_total || 0}
               amountPaid={jo.total_amount_paid || 0}
               balance={jo.balance_due || 0}

@@ -18,6 +18,7 @@ export interface ReceiptCardProps {
   dateNeeded?: string | null
   receivedBy?: string | null
   accomplishedBy?: string | null
+  sourceChannel?: string | null
   totalAmount: number
   amountPaid: number
   balance: number
@@ -33,7 +34,7 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(function Receip
   const {
     jobOrderId, dateReceived, clientName, contactNumber, itemPreview, itemName, categoryName,
     size, quantity, specs, remarks, dateNeeded, receivedBy, accomplishedBy, totalAmount, amountPaid, balance,
-    paymentMethods, status, discount,
+    paymentMethods, status, discount, sourceChannel,
   } = props
 
   // html2canvas doesn't reliably respect CSS object-fit, so the image's displayed size is
@@ -73,6 +74,7 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(function Receip
       <div style={{ padding: '1.1rem 1.25rem' }}>
         <Row label="JO Number" value={jobOrderId} />
         <Row label="Client / Contact" value={`${clientName}${contactNumber ? ' · ' + contactNumber : ''}`} />
+        {sourceChannel && <Row label="Received Via" value={sourceChannel} />}
         <Row label="Item" value={itemName} />
         {categoryName && <Row label="Category" value={categoryName} />}
         {size && <Row label="Size" value={size} />}

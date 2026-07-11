@@ -38,6 +38,7 @@ interface Jo {
   client_name?: string | null
   company_name?: string | null
   contact_number?: string | null
+  source_channel?: string | null
 }
 
 interface Props {
@@ -105,6 +106,7 @@ export default function PublicReceiptView({ jo, items, statusLogs, paymentMethod
           dateNeeded={item?.date_time_needed}
           receivedBy={jo.received_by}
           accomplishedBy={accomplishedBy}
+          sourceChannel={jo.source_channel}
           totalAmount={jo.grand_total || 0}
           amountPaid={jo.total_amount_paid || 0}
           balance={jo.balance_due || 0}
