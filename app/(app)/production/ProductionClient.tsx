@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { formatPeso, getEffectiveSteps } from '@/lib/jo-helpers'
+import { formatPeso, getEffectiveSteps, canPushToProduction } from '@/lib/jo-helpers'
 import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
@@ -80,14 +80,6 @@ function formatDeadline(dateStr: string): string {
   return d.toLocaleString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-function canPushToProduction(jo: any): boolean {
-  if (!jo) return false
-  if (jo.is_for_billing) return true
-  if (jo.payment_status === 'Fully Paid' || jo.payment_status === 'Downpayment Received') return true
-  if (jo.override_status === 'Approved') return true
-  return false
-}
-
 export default function ProductionClient({ items: initialItems, sopSteps, staff, statusLogs, categories, subcategories, currentUser }: Props) {
   const [localItems, setLocalItems] = useState(initialItems)
   const [localLogs, setLocalLogs] = useState(statusLogs)
@@ -146,6 +138,15 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
   async function confirmStatusChange() {
     if (!pendingChange) return
     const { itemId, jobOrderId, completedStatus, targetStatus } = pendingChange
+    // Defense in depth — the checklist UI already hides this action for ineligible JOs, but
+    // re-check here too in case localItems went stale (e.g. someone else just recorded a
+    // payment or an Admin just rejected the override in another tab).
+    const liveItem = localItems.find(i => i.item_id === itemId)
+    if (!canPushToProduction(liveItem?.job_orders)) {
+      alert('This job order needs 50% downpayment (or Admin-approved override) before it can advance past Received.')
+      setPendingChange(null)
+      return
+    }
     const proponents = selectedProponents.length > 0 ? selectedProponents : [currentUser.email]
     setAdvancing(itemId)
     try {
@@ -397,6 +398,8 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
               pendingStatus: isPendingHere ? pendingChange!.completedStatus : null,
               selectedProponents,
               advancing: advancing === liveItem.item_id,
+              blocked: !canPushToProduction(liveItem.job_orders),
+              blockedReason: 'Needs 50% downpayment (or Admin-approved override) before status can move past Received.',
               onRequestAdvance: (completedStatus, targetStatus) => requestStatusChange(liveItem.item_id, liveItem.job_orders?.job_order_id, completedStatus, targetStatus),
               onToggleProponent: toggleProponent,
               onConfirmAdvance: confirmStatusChange,

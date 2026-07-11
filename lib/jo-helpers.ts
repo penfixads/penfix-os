@@ -124,6 +124,19 @@ export function formatAge(dateStr: string): string {
   return `${minutes}m`
 }
 
+// A JO can't advance past "Received" — not just the fabricator-flagged production step,
+// ANY step, including GA-owned ones like layout/design — until either it's settled enough
+// (50%+ down, fully paid, or billing) or Admin has approved the override request. Shared by
+// EditJOModal.tsx (GA/Admin/Treasury) and ProductionClient.tsx (Fabricator queue) so both
+// enforce the exact same rule instead of two independently-maintained copies drifting apart.
+export function canPushToProduction(jo: { is_for_billing?: boolean | null; payment_status?: string | null; override_status?: string | null } | null | undefined): boolean {
+  if (!jo) return false
+  if (jo.is_for_billing) return true
+  if (jo.payment_status === 'Fully Paid' || jo.payment_status === 'Downpayment Received') return true
+  if (jo.override_status === 'Approved') return true
+  return false
+}
+
 export function computeLineTotal(
   pricingModel: string,
   basePrice: number,

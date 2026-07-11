@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { generateItemId, generatePaymentId, formatPeso, getEffectiveSteps, getPhilippineDateStr, JO_SOURCE_CHANNELS } from '@/lib/jo-helpers'
+import { generateItemId, generatePaymentId, formatPeso, getEffectiveSteps, getPhilippineDateStr, JO_SOURCE_CHANNELS, canPushToProduction } from '@/lib/jo-helpers'
 import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
@@ -109,6 +109,12 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   async function confirmStatusChange() {
     if (!pendingChange) return
     const { itemId, completedStatus, targetStatus } = pendingChange
+    // Defense in depth — the checklist UI already disables this when !productionAllowed.
+    if (!productionAllowed) {
+      alert('This job order needs 50% downpayment (or Admin-approved override) before it can advance past Received.')
+      setPendingChange(null)
+      return
+    }
     const proponents = selectedProponents.length > 0 ? selectedProponents : [currentUser.email]
     setAdvancingItemId(itemId)
     try {
@@ -153,6 +159,10 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
     return 'Below 50% Downpayment'
   })()
   const needsOverride = (paymentStatus === 'Below 50% Downpayment' || paymentStatus === 'Pending Payment') && !editIsForBilling
+  // Uses the live (unsaved) payment status, not the possibly-stale jo.payment_status prop,
+  // so adding a payment that crosses 50% unblocks the checklist in the same edit session —
+  // override_status still comes from jo since that's only ever changed by an Admin elsewhere.
+  const productionAllowed = canPushToProduction({ is_for_billing: editIsForBilling, payment_status: paymentStatus, override_status: jo.override_status })
 
   function addPayment() {
     const amt = parseFloat(payAmount) || 0
@@ -534,6 +544,8 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
               pendingStatus: isPendingHere ? pendingChange!.completedStatus : null,
               selectedProponents,
               advancing: advancingItemId === liveItem.item_id,
+              blocked: !productionAllowed,
+              blockedReason: 'Needs 50% downpayment (or Admin-approved override) before status can move past Received.',
               onRequestAdvance: (completedStatus, targetStatus) => requestStatusChange(liveItem.item_id, completedStatus, targetStatus),
               onToggleProponent: toggleProponent,
               onConfirmAdvance: confirmStatusChange,

@@ -14,6 +14,10 @@ export interface StatusChecklistProps {
   pendingStatus: string | null
   selectedProponents: string[]
   advancing: boolean
+  // When set, no step past the current one can be actioned (checkboxes disabled) — used to
+  // enforce the 50%-down/Admin-override rule so status can't skip ahead of that approval.
+  blocked?: boolean
+  blockedReason?: string
   onRequestAdvance: (completedStatus: string, targetStatus: string) => void
   onToggleProponent: (email: string) => void
   onConfirmAdvance: () => void
@@ -91,7 +95,7 @@ const PRICING_LABELS: Record<string, string> = {
 
 function StatusChecklist({ statusChecklist }: { statusChecklist: StatusChecklistProps }) {
   const { steps, currentStatus, namesByStatus, staff, pendingStatus, selectedProponents, advancing,
-    onRequestAdvance, onToggleProponent, onConfirmAdvance, onCancelPending } = statusChecklist
+    blocked, blockedReason, onRequestAdvance, onToggleProponent, onConfirmAdvance, onCancelPending } = statusChecklist
   if (steps.length === 0) return null
   const currentIndex = steps.findIndex(s => s.status_name === currentStatus)
   // Steps from is_production_start up to (but excluding) the terminal step are the actual
@@ -102,6 +106,11 @@ function StatusChecklist({ statusChecklist }: { statusChecklist: StatusChecklist
   return (
     <div className="pf-field">
       <label className="pf-label">Status</label>
+      {blocked && (
+        <div style={{ background: 'rgba(230,126,34,0.15)', border: '1px solid #e67e22', borderRadius: 8, padding: '0.5rem 0.65rem', marginBottom: 8, color: '#f0b27a', fontSize: '0.75rem' }}>
+          🔒 {blockedReason || 'Status can\'t advance past Received yet.'}
+        </div>
+      )}
       <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, overflow: 'hidden' }}>
         {steps.map((step, i) => {
           const isPast = currentIndex >= 0 && i < currentIndex
@@ -132,9 +141,9 @@ function StatusChecklist({ statusChecklist }: { statusChecklist: StatusChecklist
                 <input
                   type="checkbox"
                   checked={isDone}
-                  disabled={!isActionable || advancing}
+                  disabled={!isActionable || advancing || blocked}
                   onChange={() => onRequestAdvance(step.status_name, nextStep ? nextStep.status_name : step.status_name)}
-                  style={{ accentColor: '#C9A84C', width: 15, height: 15, marginTop: 1, cursor: isActionable ? 'pointer' : 'default' }}
+                  style={{ accentColor: '#C9A84C', width: 15, height: 15, marginTop: 1, cursor: isActionable && !blocked ? 'pointer' : 'default' }}
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ fontSize: '0.82rem', fontWeight: isActionable ? 700 : 400, color: isActionable ? '#fff' : '#E8B9C6', textDecoration: isDone ? 'line-through' : 'none' }}>
