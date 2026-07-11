@@ -5,6 +5,7 @@ import { formatPeso, buildFeedbackUrl, getPhilippineDateStr, fuzzyMatch } from '
 import type { AppUser } from '@/lib/user'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import Pagination from '@/components/Pagination'
+import ClientQrButton from '@/components/ClientQrButton'
 
 const PAGE_SIZE = 10
 
@@ -140,6 +141,13 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, currentUser 
                     <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.85rem' }}>{formatPeso(jo.grand_total || 0)}</div>
                     <div style={{ color: hasBalance ? '#e74c3c' : '#2ecc71', fontSize: '0.7rem' }}>Bal: {formatPeso(jo.balance_due || 0)}</div>
                   </div>
+                  <ClientQrButton
+                    clientId={jo.client_id}
+                    clientLabel={clientName}
+                    iconOnly
+                    buttonClassName="pf-btn pf-btn-secondary"
+                    buttonStyle={{ background: '#f0f0f0', border: '1px solid #d0d0d0', color: '#666', borderRadius: 7, padding: '0.35rem 0.6rem', cursor: 'pointer', fontSize: '0.72rem', flexShrink: 0 }}
+                  />
                   <button
                     onClick={() => copyTrackLink(jo.job_order_id)}
                     title="Send tracking link to be pasted on social media platform"

@@ -4,70 +4,13 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { generateItemId, formatPeso, buildFeedbackUrl } from '@/lib/jo-helpers'
-import { useQrDownload } from '@/lib/useQrDownload'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from './JOItemForm'
-import AddClientModal from './AddClientModal'
 import NewJOModal from '@/components/NewJOModal'
 import EditJOModal from '@/components/EditJOModal'
 import JOReceiptModal from '@/components/JOReceiptModal'
-import ClientQrDisplay from '@/components/ClientQrDisplay'
-import { IconPlus, IconUserPlus, IconDownload, IconCheck } from '@/components/icons'
+import { IconPlus } from '@/components/icons'
 import Pagination from '@/components/Pagination'
-
-// Shown right after registering a walk-in client, before their first JO opens — gives them
-// something to scan on future visits, and lets this visit proceed without a redundant scan
-// since we already have their client_id in hand from creating them.
-function NewClientQrModal({ client, onContinue }: { client: any; onContinue: () => void }) {
-  const label = client.client_name || client.company_name
-  const { ref, saving, download } = useQrDownload(`${client.client_id}-qr.png`)
-  return (
-    <div className="pf-modal-overlay" style={{ background: 'rgba(0,0,0,0.8)' }}>
-      <div className="pf-modal-card pf-modal-wine" style={{ maxWidth: 340 }}>
-        <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-          <h3 style={{ color: '#fff', fontWeight: 700, fontSize: '1.4rem' }}>Welcome, {label}!</h3>
-        </div>
-        <p style={{ color: '#E8B9C6', fontSize: '0.8rem', textAlign: 'center', marginBottom: '1rem' }}>
-          Save or print this QR — scanning it on future visits keeps their rewards accurate.
-        </p>
-        <ClientQrDisplay ref={ref} clientId={client.client_id} clientLabel={label} />
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-          <button onClick={download} disabled={saving} className="pf-btn pf-btn-secondary">
-            <IconDownload />{saving ? 'Saving…' : 'Download'}
-          </button>
-          <button onClick={onContinue} className="pf-btn">
-            <IconCheck />Continue to Job Order
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Gate shown when staff click "New JO" without having scanned a client's QR yet — the only
-// way past it is scanning (which reloads this page with ?client=<id>, see page.tsx) or
-// registering a brand-new client. Keeps rewards tracking honest: a JO can't get attached to
-// a client without either proof of a real visit (their QR) or that client not existing yet.
-function ScanGateModal({ onClose, onRegisterNew }: { onClose: () => void; onRegisterNew: () => void }) {
-  return (
-    <div className="pf-modal-overlay" style={{ background: 'rgba(0,0,0,0.8)' }}>
-      <div className="pf-modal-card pf-modal-wine" style={{ maxWidth: 380 }}>
-        <div style={{ position: 'relative', textAlign: 'center', marginBottom: '1.25rem' }}>
-          <h3 style={{ color: '#fff', fontWeight: 700, fontSize: '1.4rem' }}>Scan Client QR to Start</h3>
-          <button onClick={onClose} style={{ position: 'absolute', top: 0, right: 0, background: 'none', border: 'none', color: '#E8B9C6', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
-        </div>
-        <p style={{ color: '#E8B9C6', fontSize: '0.85rem', textAlign: 'center', marginBottom: '1.5rem' }}>
-          Ask the client to show their QR code and scan it with your phone's camera — it opens their Job Order here automatically and keeps their rewards accurate.
-        </p>
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <button onClick={onRegisterNew} className="pf-btn pf-btn-secondary">
-            <IconUserPlus />First Visit? Register New Client
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 const PAGE_SIZE = 10
 
@@ -82,17 +25,13 @@ interface Props {
   initialClientId?: string
 }
 
-export default function TodayJOsClient({ jobOrders: initialJOs, clients: initialClients, categories, subcategories, currentUser, initialClientId }: Props) {
+export default function TodayJOsClient({ jobOrders: initialJOs, clients, categories, subcategories, currentUser, initialClientId }: Props) {
   const router = useRouter()
   const [jobOrders, setJobOrders] = useState(initialJOs)
-  const [clients, setClients] = useState(initialClients)
-  // Which client the New JO modal should open pre-filled for — set either by arriving via a
-  // scanned QR link (initialClientId) or by just registering a walk-in below.
+  // Which client the New JO modal should open pre-filled for — set when arriving via a
+  // scanned QR link (initialClientId); otherwise staff pick the client inside the form.
   const [activeClientId, setActiveClientId] = useState<string | undefined>(initialClientId)
   const [showForm, setShowForm] = useState(!!initialClientId)
-  const [showScanGate, setShowScanGate] = useState(false)
-  const [showAddClient, setShowAddClient] = useState(false)
-  const [newlyAddedClient, setNewlyAddedClient] = useState<any | null>(null)
   const [editingJO, setEditingJO] = useState<any | null>(null)
   const [addingItemToJO, setAddingItemToJO] = useState<string | null>(null) // joId of saved JO being edited
   const [receiptJOId, setReceiptJOId] = useState<string | null>(null)
@@ -157,7 +96,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
           <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Today&apos;s Received JOs</h1>
           <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </div>
-        <button onClick={() => setShowScanGate(true)} className="pf-btn">
+        <button onClick={() => setShowForm(true)} className="pf-btn">
           <IconPlus />New JO
         </button>
       </div>
@@ -231,36 +170,6 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
 
       <Pagination page={currentPage} totalItems={jobOrders.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
-      {showScanGate && (
-        <ScanGateModal
-          onClose={() => setShowScanGate(false)}
-          onRegisterNew={() => { setShowScanGate(false); setShowAddClient(true) }}
-        />
-      )}
-
-      {showAddClient && (
-        <AddClientModal
-          currentUser={currentUser}
-          onSave={(newClient) => {
-            setClients(prev => [...prev, newClient])
-            setShowAddClient(false)
-            setNewlyAddedClient(newClient)
-          }}
-          onClose={() => setShowAddClient(false)}
-        />
-      )}
-
-      {newlyAddedClient && (
-        <NewClientQrModal
-          client={newlyAddedClient}
-          onContinue={() => {
-            setActiveClientId(newlyAddedClient.client_id)
-            setNewlyAddedClient(null)
-            setShowForm(true)
-          }}
-        />
-      )}
-
       {showForm && (
         <NewJOModal
           clients={clients}
@@ -268,7 +177,6 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients: initial
           subcategories={subcategories}
           currentUser={currentUser}
           initialClientId={activeClientId}
-          requireScannedClient
           onClose={() => { setShowForm(false); setActiveClientId(undefined); if (initialClientId) router.replace('/jos/today') }}
           onCreated={(newJO) => {
             setJobOrders(prev => [newJO, ...prev])

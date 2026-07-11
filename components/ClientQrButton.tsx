@@ -10,16 +10,19 @@ interface Props {
   clientLabel: string
   buttonClassName?: string
   buttonStyle?: React.CSSProperties
+  // Compact form for tight row layouts (e.g. All Job Orders' 🔗/📋 icon buttons) —
+  // just the icon, no "QR Code" text.
+  iconOnly?: boolean
 }
 
-export default function ClientQrButton({ clientId, clientLabel, buttonClassName, buttonStyle }: Props) {
+export default function ClientQrButton({ clientId, clientLabel, buttonClassName, buttonStyle, iconOnly }: Props) {
   const [open, setOpen] = useState(false)
   const { ref, saving, download } = useQrDownload(`${clientId}-qr.png`)
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className={buttonClassName ?? 'pf-btn pf-btn-secondary'} style={buttonStyle}>
-        <IconQrCode />QR Code
+      <button onClick={() => setOpen(true)} title="QR Code" className={buttonClassName ?? 'pf-btn pf-btn-secondary'} style={buttonStyle}>
+        <IconQrCode />{!iconOnly && 'QR Code'}
       </button>
 
       {open && (
