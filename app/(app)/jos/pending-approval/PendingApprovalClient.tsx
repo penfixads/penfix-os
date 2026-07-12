@@ -39,9 +39,10 @@ export default function PendingApprovalClient({ jobOrders: initialJOs, creditReq
     setActing(requestId)
     try {
       const supabase = createSupabaseBrowserClient()
-      await supabase.from('historical_unlock_requests').update({
+      const { error } = await supabase.from('historical_unlock_requests').update({
         status: 'Approved', approved_by: currentUser.name, resolved_at: new Date().toISOString(),
       }).eq('request_id', requestId)
+      if (error) { alert(error.message || 'Failed to approve.'); return }
       setUnlockRequests(prev => prev.filter(r => r.request_id !== requestId))
     } finally {
       setActing(null)
@@ -52,9 +53,10 @@ export default function PendingApprovalClient({ jobOrders: initialJOs, creditReq
     setActing(requestId)
     try {
       const supabase = createSupabaseBrowserClient()
-      await supabase.from('historical_unlock_requests').update({
+      const { error } = await supabase.from('historical_unlock_requests').update({
         status: 'Rejected', approved_by: currentUser.name, resolved_at: new Date().toISOString(),
       }).eq('request_id', requestId)
+      if (error) { alert(error.message || 'Failed to reject.'); return }
       setUnlockRequests(prev => prev.filter(r => r.request_id !== requestId))
     } finally {
       setActing(null)
@@ -65,7 +67,8 @@ export default function PendingApprovalClient({ jobOrders: initialJOs, creditReq
     setActing(joId)
     try {
       const supabase = createSupabaseBrowserClient()
-      await supabase.from('job_orders').update({ override_status: 'Approved' }).eq('job_order_id', joId)
+      const { error } = await supabase.from('job_orders').update({ override_status: 'Approved' }).eq('job_order_id', joId)
+      if (error) { alert(error.message || 'Failed to approve.'); return }
       setJos(prev => prev.filter(j => j.job_order_id !== joId))
     } finally {
       setActing(null)
@@ -76,10 +79,11 @@ export default function PendingApprovalClient({ jobOrders: initialJOs, creditReq
     setActing(joId)
     try {
       const supabase = createSupabaseBrowserClient()
-      await supabase.from('job_orders').update({
+      const { error } = await supabase.from('job_orders').update({
         override_status: 'Rejected',
         override_reject_note: rejectNote[joId] || null,
       }).eq('job_order_id', joId)
+      if (error) { alert(error.message || 'Failed to reject.'); return }
       setShowReject(null)
       setJos(prev => prev.filter(j => j.job_order_id !== joId))
     } finally {
@@ -91,7 +95,8 @@ export default function PendingApprovalClient({ jobOrders: initialJOs, creditReq
     setActing(clientId)
     try {
       const supabase = createSupabaseBrowserClient()
-      await supabase.from('clients').update({ credit_line_status: true, credit_line_request_status: 'Approved' }).eq('client_id', clientId)
+      const { error } = await supabase.from('clients').update({ credit_line_status: true, credit_line_request_status: 'Approved' }).eq('client_id', clientId)
+      if (error) { alert(error.message || 'Failed to approve.'); return }
       setCreditRequests(prev => prev.filter(c => c.client_id !== clientId))
     } finally {
       setActing(null)
@@ -102,7 +107,8 @@ export default function PendingApprovalClient({ jobOrders: initialJOs, creditReq
     setActing(clientId)
     try {
       const supabase = createSupabaseBrowserClient()
-      await supabase.from('clients').update({ credit_line_status: false, credit_line_request_status: 'Rejected' }).eq('client_id', clientId)
+      const { error } = await supabase.from('clients').update({ credit_line_status: false, credit_line_request_status: 'Rejected' }).eq('client_id', clientId)
+      if (error) { alert(error.message || 'Failed to reject.'); return }
       setCreditRequests(prev => prev.filter(c => c.client_id !== clientId))
     } finally {
       setActing(null)
