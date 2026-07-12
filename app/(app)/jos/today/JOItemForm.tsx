@@ -204,6 +204,8 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
   const [dateNeeded, setDateNeeded] = useState(editingItem?.date_time_needed ? toLocalDateTimeInput(editingItem.date_time_needed) : '')
   const [jobStatus] = useState('Received')
   const [discount, setDiscount] = useState(editingItem?.discount != null ? String(editingItem.discount) : '0')
+  const [needsLayout, setNeedsLayout] = useState((editingItem?.layout_fee || 0) > 0)
+  const [layoutFee, setLayoutFee] = useState(editingItem?.layout_fee != null && editingItem.layout_fee > 0 ? String(editingItem.layout_fee) : '150')
   const [layoutPreview, setLayoutPreview] = useState(editingItem?.item_preview || '')
   const [layoutBytes, setLayoutBytes] = useState<number | null>(null)
   const [compressing, setCompressing] = useState(false)
@@ -245,7 +247,7 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
   // brought/owns) has nothing to preview at intake — there's no layout or purchased item yet.
   const isProductionServices = categoryId === 'CAT_FPS'
 
-  const lineTotal = useMemo(() => computeLineTotal(
+  const baseLineTotal = useMemo(() => computeLineTotal(
     effectivePricing,
     effectivePrice,
     parseFloat(width) || undefined,
@@ -256,6 +258,8 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
     parseFloat(letterCount) || undefined,
     parseFloat(discount) || 0,
   ), [effectivePricing, effectivePrice, width, height, depth, quantity, noOfMins, letterCount, discount])
+  const effectiveLayoutFee = needsLayout ? (parseFloat(layoutFee) || 0) : 0
+  const lineTotal = baseLineTotal + effectiveLayoutFee
 
   const needsDims = ['area','dimension','area_cube','per_lettersqft'].includes(effectivePricing)
   const needsDepth = effectivePricing === 'area_cube'
@@ -312,6 +316,7 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
       notes: remarks,
       date_time_needed: dateNeeded ? new Date(dateNeeded).toISOString() : null,
       discount: parseFloat(discount) || 0,
+      layout_fee: effectiveLayoutFee,
       computed_line_total: lineTotal,
       item_preview: layoutPreview,
     })
@@ -467,6 +472,19 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
               <textarea value={productionSpecs} disabled={readOnly} onChange={e => setProductionSpecs(e.target.value)} rows={2} placeholder="Material, size details, color, etc." className="pf-textarea" />
             </div>
 
+            <div className="pf-field">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: readOnly ? 'default' : 'pointer' }}>
+                <input type="checkbox" checked={needsLayout} disabled={readOnly} onChange={e => setNeedsLayout(e.target.checked)} />
+                <span className="pf-label" style={{ marginBottom: 0 }}>Needs layout/design for this item?</span>
+              </label>
+              {needsLayout && (
+                <div style={{ marginTop: 6 }}>
+                  <label className="pf-label">Layout Fee (₱)</label>
+                  <input type="number" value={layoutFee} disabled={readOnly} onChange={e => setLayoutFee(e.target.value)} min="0" className="pf-input" />
+                </div>
+              )}
+            </div>
+
             <div className="pf-grid-2" style={{ marginBottom: '0.85rem' }}>
               <div>
                 <label className="pf-label">Deadline / Date Needed <span className="pf-req">*</span></label>
@@ -486,9 +504,23 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
             </div>
 
             {canSeeLineTotal && (
-              <div className="pf-totals-box" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#000', fontSize: '0.82rem' }}>Line Total</span>
-                <span style={{ color: '#000', fontWeight: 700, fontSize: '1rem' }}>{formatPeso(lineTotal)}</span>
+              <div className="pf-totals-box">
+                {effectiveLayoutFee > 0 && (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ color: '#555', fontSize: '0.75rem' }}>Item Price</span>
+                      <span style={{ color: '#555', fontSize: '0.8rem' }}>{formatPeso(baseLineTotal)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ color: '#555', fontSize: '0.75rem' }}>Layout Fee</span>
+                      <span style={{ color: '#555', fontSize: '0.8rem' }}>{formatPeso(effectiveLayoutFee)}</span>
+                    </div>
+                  </>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#000', fontSize: '0.82rem' }}>Line Total</span>
+                  <span style={{ color: '#000', fontWeight: 700, fontSize: '1rem' }}>{formatPeso(lineTotal)}</span>
+                </div>
               </div>
             )}
           </>
