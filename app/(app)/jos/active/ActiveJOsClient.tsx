@@ -61,7 +61,8 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
     const { data: existingItems } = await supabase.from('job_order_items').select('item_id').eq('job_order_id', joId)
     const seq = (existingItems?.length || 0) + 1
     const itemId = generateItemId(joId, seq)
-    await supabase.from('job_order_items').insert({ ...item, item_id: itemId, job_order_id: joId })
+    const { error: insertErr } = await supabase.from('job_order_items').insert({ ...item, item_id: itemId, job_order_id: joId })
+    if (insertErr) { alert(insertErr.message || 'Failed to add item.'); return }
     // "Received" is auto-logged to whoever is adding this item right now, same as a brand-new JO.
     await supabase.from('job_order_item_status_log').insert({
       item_id: itemId,
@@ -73,13 +74,14 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
     })
     const { data: allItems } = await supabase.from('job_order_items').select('computed_line_total').eq('job_order_id', joId)
     const newTotal = (allItems || []).reduce((s: number, i: any) => s + (i.computed_line_total || 0), 0)
-    await supabase.from('job_orders').update({ grand_total: newTotal }).eq('job_order_id', joId)
+    const { error: totalErr } = await supabase.from('job_orders').update({ grand_total: newTotal }).eq('job_order_id', joId)
+    if (totalErr) { alert(totalErr.message || 'Item was added but the job order total failed to update — refresh to check.'); return }
     setJobOrders(prev => prev.map(j => {
       if (j.job_order_id !== joId) return j
       return {
         ...j,
         grand_total: newTotal,
-        job_order_items: [...(j.job_order_items || []), { item_id: itemId, job_status: 'Received', computed_line_total: item.computed_line_total }],
+        job_order_items: [...(j.job_order_items || []), { item_id: itemId, job_status: 'Received', computed_line_total: item.computed_line_total, subcategories: { subcategory_name } }],
       }
     }))
     setAddingItemToJO(null)
