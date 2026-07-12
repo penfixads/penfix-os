@@ -15,6 +15,7 @@ interface Item {
   date_time_needed: string | null
   date_time_done: string | null
   quantity: number | null
+  item_preview: string | null
 }
 
 interface Step {
@@ -110,13 +111,23 @@ function ItemCard({ item, steps }: { item: Item; steps?: Step[] }) {
             </div>
           )}
         </div>
-        <div style={{
-          padding: '0.25rem 0.65rem', borderRadius: 20, whiteSpace: 'nowrap', marginLeft: 8, fontSize: '0.68rem', fontWeight: 700,
-          background: isCancelled ? '#4a1a1a22' : isDone ? '#1a4a1a22' : '#2980b922',
-          border: `1px solid ${isCancelled ? '#e74c3c' : isDone ? '#27ae60' : '#2980b9'}`,
-          color: isCancelled ? '#c0392b' : isDone ? '#1e8449' : '#2471a3',
-        }}>
-          {isCancelled ? 'Cancelled' : isDone ? '✓ Completed' : 'In Progress'}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, marginLeft: 8, flexShrink: 0 }}>
+          <div style={{
+            padding: '0.25rem 0.65rem', borderRadius: 20, whiteSpace: 'nowrap', fontSize: '0.68rem', fontWeight: 700,
+            background: isCancelled ? '#4a1a1a22' : isDone ? '#1a4a1a22' : '#2980b922',
+            border: `1px solid ${isCancelled ? '#e74c3c' : isDone ? '#27ae60' : '#2980b9'}`,
+            color: isCancelled ? '#c0392b' : isDone ? '#1e8449' : '#2471a3',
+          }}>
+            {isCancelled ? 'Cancelled' : isDone ? '✓ Completed' : 'In Progress'}
+          </div>
+          {item.item_preview && (
+            <img
+              src={item.item_preview}
+              alt={item.subcategory_name || 'Item preview'}
+              onClick={() => window.open(item.item_preview!, '_blank')}
+              style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, border: '1px solid #EDE0CC', cursor: 'zoom-in' }}
+            />
+          )}
         </div>
       </div>
 
