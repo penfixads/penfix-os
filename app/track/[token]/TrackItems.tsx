@@ -16,6 +16,7 @@ interface Item {
   date_time_needed: string | null
   date_time_done: string | null
   quantity: number | null
+  item_preview: string | null
   item_preview_thumb: string | null
   computed_line_total: number | null
 }
@@ -127,9 +128,11 @@ function ItemCard({ item, steps }: { item: Item; steps?: Step[] }) {
           }}>
             {isCancelled ? 'Cancelled' : isDone ? '✓ Completed' : 'In Progress'}
           </div>
-          {item.item_preview_thumb && (
+          {/* Prefer the small thumbnail (new items); fall back to the full preview for
+              items saved before item_preview_thumb existed, rather than showing nothing. */}
+          {(item.item_preview_thumb || item.item_preview) && (
             <img
-              src={item.item_preview_thumb}
+              src={item.item_preview_thumb || item.item_preview!}
               alt={item.subcategory_name || 'Item preview'}
               style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, border: '1px solid #EDE0CC' }}
             />

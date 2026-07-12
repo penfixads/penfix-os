@@ -1,18 +1,16 @@
--- The tracker (/track/[token]) only ever shows item_preview at 56x56 CSS px, but migration
--- 030 wired it to the full ~20KB staff-facing preview (compressed for on-screen viewing at
--- normal size, not for a tiny public thumbnail) — needlessly heavy for a page clients load
+-- The tracker (/track/[token]) only ever shows the item preview at 56x56 CSS px, but was
+-- shipping the full ~20KB staff-facing preview (sized for normal on-screen viewing, not a tiny
+-- public thumbnail) just to display it that small — needless weight on a page clients load
 -- over mobile data. item_preview_thumb is a much smaller (~5KB, 200px cap) version generated
--- alongside the full preview at upload time (see JOItemForm.tsx); the tracker now uses that
--- instead. The full-size item_preview is unchanged and still used everywhere internal
--- (Edit JO, Production, receipt).
+-- alongside the full preview at upload time (see JOItemForm.tsx).
+--
+-- item_preview stays in this view too (appended trailing column, not swapped out) — only
+-- items uploaded/re-saved after this migration get a thumbnail; existing items have no way to
+-- get one without someone re-uploading the same file, so the app falls back to item_preview
+-- for those instead of losing their tracker image entirely (see TrackItems.tsx).
 alter table job_order_items add column if not exists item_preview_thumb text;
 
--- CREATE OR REPLACE VIEW can't drop an existing output column (only append new ones), and
--- dropping item_preview from this view's output is the whole point here — drop and recreate
--- instead. No other view/object depends on this one, so this is safe.
-drop view if exists public_job_order_items_tracking;
-
-create view public_job_order_items_tracking as
+create or replace view public_job_order_items_tracking as
 select
   i.item_id,
   i.job_order_id,
@@ -23,6 +21,7 @@ select
   i.quantity,
   s.subcategory_name,
   i.subcategory_id,
+  i.item_preview,
   i.computed_line_total,
   i.item_preview_thumb
 from job_order_items i
