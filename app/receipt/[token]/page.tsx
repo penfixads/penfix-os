@@ -3,21 +3,24 @@ import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import PublicReceiptView from '@/components/PublicReceiptView'
 
-export default async function ReceiptPage({ params }: { params: { jobOrderId: string } }) {
+export default async function ReceiptPage({ params }: { params: { token: string } }) {
   const supabase = createSupabaseServerClient()
 
+  // Looked up by public_token (a random uuid), not job_order_id — job_order_id is sequential
+  // and guessable (JO-MMDDYYYY-001, -002, ...), which would let anyone enumerate every other
+  // client's items/prices/contact number just by editing the URL.
   const { data: jo, error } = await supabase
     .from('public_job_order_receipt')
     .select('*')
-    .eq('job_order_id', params.jobOrderId)
+    .eq('public_token', params.token)
     .maybeSingle()
 
   if (error) console.error('Receipt page query failed:', error.message)
   if (!jo) notFound()
 
   const [{ data: items }, { data: methodRows }] = await Promise.all([
-    supabase.from('public_job_order_items_receipt').select('*').eq('job_order_id', params.jobOrderId),
-    supabase.from('public_job_order_payment_methods').select('payment_method').eq('job_order_id', params.jobOrderId),
+    supabase.from('public_job_order_items_receipt').select('*').eq('job_order_id', jo.job_order_id),
+    supabase.from('public_job_order_payment_methods').select('payment_method').eq('job_order_id', jo.job_order_id),
   ])
 
   const paymentMethods = Array.from(new Set((methodRows || []).map(r => r.payment_method).filter(Boolean))) as string[]

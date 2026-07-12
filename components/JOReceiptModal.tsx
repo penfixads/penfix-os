@@ -92,7 +92,7 @@ export default function JOReceiptModal({ jobOrderId, onClose }: Props) {
   function copyLink() {
     setWorking('link')
     setMessage('')
-    const url = `${window.location.origin}/receipt/${jobOrderId}`
+    const url = `${window.location.origin}/receipt/${jo.public_token}`
     navigator.clipboard.writeText(url)
     setMessage('Link copied — paste it into Messenger, Viber, or wherever the client is.')
     setWorking(null)

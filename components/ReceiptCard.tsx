@@ -27,7 +27,7 @@ export interface ReceiptCardProps {
   discount?: number | null
 }
 
-// Shared by the in-app "Generate Receipt" modal and the public /receipt/[jobOrderId] link so
+// Shared by the in-app "Generate Receipt" modal and the public /receipt/[token] link so
 // both look identical — the branded e-JO the shop already sends clients via Messenger/Viber,
 // just rebuilt from the data already captured when the JO was created.
 const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(function ReceiptCard(props, ref) {

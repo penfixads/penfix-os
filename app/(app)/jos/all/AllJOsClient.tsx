@@ -45,8 +45,8 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, currentUser 
   const totalPaid = filtered.reduce((s, j) => s + (j.total_amount_paid || 0), 0)
   const totalBal = filtered.reduce((s, j) => s + (j.balance_due || 0), 0)
 
-  function copyTrackLink(joId: string) {
-    const url = `${window.location.origin}/track/${joId}`
+  function copyTrackLink(publicToken: string) {
+    const url = `${window.location.origin}/track/${publicToken}`
     navigator.clipboard.writeText(url)
   }
 
@@ -149,7 +149,7 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, currentUser 
                     buttonStyle={{ background: '#f0f0f0', border: '1px solid #d0d0d0', color: '#666', borderRadius: 7, padding: '0.35rem 0.6rem', cursor: 'pointer', fontSize: '0.72rem', flexShrink: 0 }}
                   />
                   <button
-                    onClick={() => copyTrackLink(jo.job_order_id)}
+                    onClick={() => copyTrackLink(jo.public_token)}
                     title="Send tracking link to be pasted on social media platform"
                     style={{ background: '#f0f0f0', border: '1px solid #d0d0d0', color: '#666', borderRadius: 7, padding: '0.35rem 0.6rem', cursor: 'pointer', fontSize: '0.72rem', flexShrink: 0 }}
                   >

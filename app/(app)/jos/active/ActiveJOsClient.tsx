@@ -87,8 +87,8 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
     setAddingItemToJO(null)
   }
 
-  function copyTrackLink(joId: string) {
-    const url = `${window.location.origin}/track/${joId}`
+  function copyTrackLink(publicToken: string) {
+    const url = `${window.location.origin}/track/${publicToken}`
     navigator.clipboard.writeText(url)
   }
 
@@ -236,7 +236,7 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#27ae60', padding: 2, display: 'flex', alignItems: 'center' }}>
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                       </button>
-                      <button title="Send tracking link to be pasted on social media platform" onClick={() => copyTrackLink(jo.job_order_id)}
+                      <button title="Send tracking link to be pasted on social media platform" onClick={() => copyTrackLink(jo.public_token)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2980b9', padding: 2, display: 'flex', alignItems: 'center' }}>
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                       </button>

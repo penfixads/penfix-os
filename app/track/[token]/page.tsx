@@ -4,13 +4,16 @@ import Image from 'next/image'
 import TrackItems from './TrackItems'
 import { formatPeso } from '@/lib/jo-helpers'
 
-export default async function TrackPage({ params }: { params: { joId: string } }) {
+export default async function TrackPage({ params }: { params: { token: string } }) {
   const supabase = createSupabaseServerClient()
 
+  // Looked up by public_token (a random uuid), not job_order_id — job_order_id is sequential
+  // and guessable (JO-MMDDYYYY-001, -002, ...), which would let anyone enumerate every other
+  // client's items/prices/payment status just by editing the URL.
   const { data: jo, error } = await supabase
     .from('public_job_order_tracking')
     .select('*')
-    .eq('job_order_id', params.joId)
+    .eq('public_token', params.token)
     .maybeSingle()
 
   if (error) console.error('Track page query failed:', error.message)
@@ -19,7 +22,7 @@ export default async function TrackPage({ params }: { params: { joId: string } }
   const { data: items, error: itemsError } = await supabase
     .from('public_job_order_items_tracking')
     .select('*')
-    .eq('job_order_id', params.joId)
+    .eq('job_order_id', jo.job_order_id)
 
   if (itemsError) console.error('Track page items query failed:', itemsError.message)
 
