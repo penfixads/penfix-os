@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import TrackItems from './TrackItems'
+import { formatPeso } from '@/lib/jo-helpers'
 
 export default async function TrackPage({ params }: { params: { joId: string } }) {
   const supabase = createSupabaseServerClient()
@@ -60,6 +61,24 @@ export default async function TrackPage({ params }: { params: { joId: string } }
 
         {/* Items */}
         <TrackItems jobOrderId={jo.job_order_id} initialItems={items || []} />
+
+        {/* Payment Summary */}
+        <div style={{ background: '#FDF5EC', borderRadius: 14, padding: '1.25rem', marginTop: '1rem', border: '1px solid #EDE0CC', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
+          {[
+            { label: 'Total', value: formatPeso(jo.grand_total || 0) },
+            { label: 'Amount Paid', value: formatPeso(jo.total_amount_paid || 0) },
+            { label: 'Balance Due', value: formatPeso(jo.balance_due || 0), warn: (jo.balance_due || 0) > 0 },
+          ].map((row, i) => (
+            <div key={row.label} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              paddingTop: i > 0 ? 8 : 0, marginTop: i > 0 ? 8 : 0,
+              borderTop: i > 0 ? '1px solid #EDE0CC' : 'none',
+            }}>
+              <span style={{ color: '#777', fontSize: '0.82rem' }}>{row.label}</span>
+              <span style={{ color: row.warn ? '#c0392b' : '#1a1a1a', fontWeight: 700, fontSize: '0.95rem' }}>{row.value}</span>
+            </div>
+          ))}
+        </div>
 
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: '2rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>

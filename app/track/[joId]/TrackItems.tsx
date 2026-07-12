@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { formatPeso } from '@/lib/jo-helpers'
 
 const POLL_MS = 15000
 
@@ -16,6 +17,7 @@ interface Item {
   date_time_done: string | null
   quantity: number | null
   item_preview: string | null
+  computed_line_total: number | null
 }
 
 interface Step {
@@ -108,6 +110,11 @@ function ItemCard({ item, steps }: { item: Item; steps?: Step[] }) {
           {item.date_time_needed && (
             <div style={{ color: '#c0782b', fontSize: '0.72rem', marginTop: 4 }}>
               Deadline: {new Date(item.date_time_needed).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </div>
+          )}
+          {item.computed_line_total != null && (
+            <div style={{ color: '#333', fontWeight: 700, fontSize: '0.78rem', marginTop: 4 }}>
+              {formatPeso(item.computed_line_total)}
             </div>
           )}
         </div>
