@@ -293,7 +293,10 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
     setFormError('')
     const selectedCat = categories.find(c => c.category_id === categoryId)
     onSave({
-      ...(isEditing ? { item_id: editingItem.item_id } : { job_status: jobStatus }),
+      ...(editingItem?.item_id ? { item_id: editingItem.item_id } : {}),
+      ...(editingItem?._tempId ? { _tempId: editingItem._tempId } : {}),
+      job_status: editingItem?.job_status || jobStatus,
+      category_id: categoryId,
       subcategory_id: subcategoryId,
       subcategory_name: selectedSub?.subcategory_name,
       category_name: selectedCat?.category_name,

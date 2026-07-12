@@ -143,7 +143,10 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   }
 
   function saveEditedItem(updated: any) {
-    setEditItems(prev => prev.map(i => i.item_id === updated.item_id ? { ...i, ...updated, subcategory_name: updated.subcategory_name || i.subcategory_name } : i))
+    setEditItems(prev => prev.map(i => {
+      const isMatch = updated.item_id ? i.item_id === updated.item_id : (updated._tempId && i._tempId === updated._tempId)
+      return isMatch ? { ...i, ...updated, subcategory_name: updated.subcategory_name || i.subcategory_name } : i
+    }))
     setEditingItem(null)
   }
 
@@ -344,7 +347,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                         {editItems.map((item, i) => {
                           const status = item.job_status || 'Received'
                           return (
-                            <tr key={item.item_id || i} style={{ borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
+                            <tr key={item.item_id || item._tempId || i} style={{ borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
                               <td style={td}>
                                 <div style={{ fontWeight: 600, color: '#fff' }}>{item.subcategory_name}</div>
                                 {item.production_specs && <div style={{ color: '#E8B9C6', fontSize: '0.7rem', marginTop: 1 }}>{item.production_specs}</div>}
@@ -355,12 +358,10 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                                 <span style={{ color: '#E8B9C6' }}>{item._existing ? status : 'New'}</span>
                               </td>
                               <td style={{ ...td, textAlign: 'center', whiteSpace: 'nowrap' }}>
-                                {item._existing && (
-                                  <button onClick={() => setEditingItem({ ...item, category_id: item.subcategories?.category_id })}
-                                    style={{ background: 'none', border: 'none', color: '#E8B9C6', cursor: 'pointer', padding: 0, marginRight: 8, display: 'inline-flex' }} title="Edit item">
-                                    <IconEdit style={{ width: 14, height: 14 }} />
-                                  </button>
-                                )}
+                                <button onClick={() => setEditingItem({ ...item, category_id: item.subcategories?.category_id || item.category_id })}
+                                  style={{ background: 'none', border: 'none', color: '#E8B9C6', cursor: 'pointer', padding: 0, marginRight: 8, display: 'inline-flex' }} title="Edit item">
+                                  <IconEdit style={{ width: 14, height: 14 }} />
+                                </button>
                                 <button onClick={() => {
                                   if (item._existing) setRemovedItemIds(prev => [...prev, item.item_id])
                                   setEditItems(prev => prev.filter((_, j) => j !== i))
@@ -514,7 +515,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
         <JOItemForm
           categories={categories}
           subcategories={subcategories}
-          onSave={(item) => { setEditItems(prev => [...prev, item]); setShowItemForm(false) }}
+          onSave={(item) => { setEditItems(prev => [...prev, { ...item, _tempId: `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}` }]); setShowItemForm(false) }}
           onClose={() => setShowItemForm(false)}
         />
       )}
