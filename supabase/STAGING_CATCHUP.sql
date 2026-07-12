@@ -106,3 +106,28 @@ where jo.job_status not in ('Done', 'Cancelled')
     where i.job_order_id = jo.job_order_id
       and i.job_status not in ('Done', 'Cancelled')
   );
+
+-- ── 9) migration 028 — job_orders.source_channel column never created, so New/Edit
+--      JO fails with "Could not find the 'source_channel' column ... in the schema
+--      cache" when saving. ──
+alter table job_orders add column if not exists source_channel text
+  check (source_channel in ('Walk-in', 'Messenger', 'Viber', 'WhatsApp', 'Phone Call', 'Email'));
+
+-- ── 10) migration 029 — public_job_order_receipt view missing source_channel. ──
+create or replace view public_job_order_receipt as
+select
+  jo.job_order_id,
+  jo.date_time_received,
+  jo.received_by,
+  jo.grand_total,
+  jo.total_amount_paid,
+  jo.balance_due,
+  jo.payment_status,
+  jo.discount,
+  c.client_name,
+  c.company_name,
+  c.contact_number,
+  jo.source_channel
+from job_orders jo
+left join clients c on c.client_id = jo.client_id;
+grant select on public_job_order_receipt to anon;
