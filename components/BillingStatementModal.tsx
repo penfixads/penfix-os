@@ -111,16 +111,15 @@ export default function BillingStatementModal({ clientId, clientName, onClose }:
 
   return (
     <div className="pf-modal-overlay" style={{ background: 'rgba(0,0,0,0.7)', alignItems: 'flex-start' }}>
-      <div className="pf-modal-card pf-modal-wine" style={{ maxWidth: 480, marginTop: '1rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.1rem' }}>
-          <div>
+      <div className="pf-modal-card pf-modal-wine" style={{ maxWidth: 480, marginTop: '1rem', position: 'relative' }}>
+        <button onClick={onClose} style={{ position: 'absolute', top: '1.75rem', right: '1.75rem', background: 'none', border: 'none', color: '#E8B9C6', fontSize: '1.2rem', cursor: 'pointer', zIndex: 1 }}>✕</button>
+
+        <div ref={cardRef}>
+          <div style={{ marginBottom: '1.1rem' }}>
             <h2 style={{ color: '#fff', fontSize: '1.5rem', fontWeight: 700 }}>Billing Statement</h2>
             <div style={{ color: '#E8B9C6', fontSize: '0.78rem', marginTop: 2 }}>{clientName}</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#E8B9C6', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
-        </div>
 
-        <div ref={cardRef}>
           {loading ? (
             <div style={{ color: '#E8B9C6', textAlign: 'center', padding: '2rem' }}>Loading…</div>
           ) : jobs.length === 0 ? (
