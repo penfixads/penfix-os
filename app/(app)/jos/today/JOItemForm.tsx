@@ -37,11 +37,16 @@ interface Props {
 }
 
 const MAX_LAYOUT_BYTES = 20 * 1024
+// Item cards on the public tracker only ever show this at 56x56 CSS px — a separate, much
+// smaller thumbnail keeps that page light instead of shipping the full ~20KB preview just to
+// display it tiny.
+const MAX_THUMB_BYTES = 5 * 1024
+const MAX_THUMB_DIM = 200
 
 // Resizes/re-encodes as JPEG, backing off dimensions then quality, until the data URL's
 // underlying byte size is under the target (20KB) — approved layouts get stored inline in
 // job_order_items.item_preview (a text column), not a storage bucket, so they need to stay small.
-async function compressImageToDataUrl(file: File, maxBytes = MAX_LAYOUT_BYTES): Promise<{ dataUrl: string; bytes: number }> {
+async function compressImageToDataUrl(file: File, maxBytes = MAX_LAYOUT_BYTES, startDim = 1200): Promise<{ dataUrl: string; bytes: number }> {
   const objectUrl = URL.createObjectURL(file)
   let img: HTMLImageElement
   try {
@@ -55,7 +60,7 @@ async function compressImageToDataUrl(file: File, maxBytes = MAX_LAYOUT_BYTES): 
     URL.revokeObjectURL(objectUrl)
   }
 
-  let maxDim = Math.min(1200, Math.max(img.width, img.height))
+  let maxDim = Math.min(startDim, Math.max(img.width, img.height))
   let quality = 0.85
   let dataUrl = ''
   let bytes = Infinity
@@ -211,6 +216,7 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
   const [needsInstallation, setNeedsInstallation] = useState((editingItem?.installation_fee || 0) > 0)
   const [installationFee, setInstallationFee] = useState(editingItem?.installation_fee != null && editingItem.installation_fee > 0 ? String(editingItem.installation_fee) : '')
   const [layoutPreview, setLayoutPreview] = useState(editingItem?.item_preview || '')
+  const [layoutThumb, setLayoutThumb] = useState(editingItem?.item_preview_thumb || '')
   const [layoutBytes, setLayoutBytes] = useState<number | null>(null)
   const [compressing, setCompressing] = useState(false)
   const [layoutError, setLayoutError] = useState('')
@@ -277,8 +283,12 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
     setLayoutError('')
     setCompressing(true)
     try {
-      const { dataUrl, bytes } = await compressImageToDataUrl(file)
+      const [{ dataUrl, bytes }, { dataUrl: thumbUrl }] = await Promise.all([
+        compressImageToDataUrl(file),
+        compressImageToDataUrl(file, MAX_THUMB_BYTES, MAX_THUMB_DIM),
+      ])
       setLayoutPreview(dataUrl)
+      setLayoutThumb(thumbUrl)
       setLayoutBytes(bytes)
     } catch (e: any) {
       setLayoutError(e.message || 'Failed to process image.')
@@ -327,6 +337,7 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
       installation_fee: effectiveInstallationFee,
       computed_line_total: lineTotal,
       item_preview: layoutPreview,
+      item_preview_thumb: layoutThumb,
     })
   }
 

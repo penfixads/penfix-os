@@ -16,7 +16,7 @@ interface Item {
   date_time_needed: string | null
   date_time_done: string | null
   quantity: number | null
-  item_preview: string | null
+  item_preview_thumb: string | null
   computed_line_total: number | null
 }
 
@@ -127,12 +127,11 @@ function ItemCard({ item, steps }: { item: Item; steps?: Step[] }) {
           }}>
             {isCancelled ? 'Cancelled' : isDone ? '✓ Completed' : 'In Progress'}
           </div>
-          {item.item_preview && (
+          {item.item_preview_thumb && (
             <img
-              src={item.item_preview}
+              src={item.item_preview_thumb}
               alt={item.subcategory_name || 'Item preview'}
-              onClick={() => window.open(item.item_preview!, '_blank')}
-              style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, border: '1px solid #EDE0CC', cursor: 'zoom-in' }}
+              style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, border: '1px solid #EDE0CC' }}
             />
           )}
         </div>

@@ -232,6 +232,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
           installation_fee: item.installation_fee,
           computed_line_total: item.computed_line_total,
           item_preview: item.item_preview,
+          item_preview_thumb: item.item_preview_thumb,
         }).eq('item_id', item.item_id)
         if (error) throw error
       }
