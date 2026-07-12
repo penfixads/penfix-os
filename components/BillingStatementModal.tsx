@@ -104,7 +104,7 @@ export default function BillingStatementModal({ clientId, clientName, onClose }:
                     <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.15)', display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {items.map(it => (
                         <div key={it.item_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
-                          <span style={{ color: '#E8B9C6' }}>{it.subcategories?.subcategory_name || it.item_id} {it.quantity > 1 ? `× ${it.quantity}` : ''} <span style={{ color: '#999' }}>({it.job_status})</span></span>
+                          <span style={{ color: '#ccc' }}>{it.subcategories?.subcategory_name || it.item_id} {it.quantity > 1 ? `× ${it.quantity}` : ''} <span style={{ color: '#999' }}>({it.job_status})</span></span>
                           <span style={{ color: '#ddd' }}>{formatPeso(it.computed_line_total || 0)}</span>
                         </div>
                       ))}
