@@ -522,13 +522,17 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
 
       {editingItem && (() => {
         // editItems may have advanced since the modal opened (checklist clicks update it) —
-        // always read the live copy so the modal reflects the current status.
-        const liveItem = { ...(editItems.find(i => i.item_id === editingItem.item_id) || editingItem), category_id: editingItem.category_id }
+        // always read the live copy so the modal reflects the current status. Not-yet-saved
+        // items have no item_id yet, so match those by _tempId instead.
+        const liveItem = {
+          ...(editItems.find(i => editingItem.item_id ? i.item_id === editingItem.item_id : (editingItem._tempId && i._tempId === editingItem._tempId)) || editingItem),
+          category_id: editingItem.category_id,
+        }
         const subcategoryId = liveItem.subcategory_id
         const jobFlow = liveItem.subcategories?.job_flow
         const currentStatus = liveItem.job_status || 'Received'
         const steps = getEffectiveSteps(sopBySubcategory[subcategoryId] || [], jobFlow)
-        const isPendingHere = pendingChange?.itemId === liveItem.item_id
+        const isPendingHere = !!pendingChange && pendingChange.itemId === liveItem.item_id
         return (
           <JOItemForm
             categories={categories}
@@ -538,7 +542,10 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
             currentUser={currentUser}
             onSave={saveEditedItem}
             onClose={() => setEditingItem(null)}
-            statusChecklist={{
+            // Status advancement only applies to items that already exist in the database —
+            // a not-yet-saved item has no item_id to advance against and always starts at
+            // Received, so it gets no checklist at all.
+            statusChecklist={liveItem.item_id ? {
               steps,
               currentStatus,
               namesByStatus: namesByItemStatus[liveItem.item_id] || {},
@@ -552,7 +559,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
               onToggleProponent: toggleProponent,
               onConfirmAdvance: confirmStatusChange,
               onCancelPending: () => setPendingChange(null),
-            }}
+            } : undefined}
           />
         )
       })()}
