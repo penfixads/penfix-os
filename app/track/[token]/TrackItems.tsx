@@ -129,12 +129,13 @@ function ItemCard({ item, steps }: { item: Item; steps?: Step[] }) {
             {isCancelled ? 'Cancelled' : isDone ? '✓ Completed' : 'In Progress'}
           </div>
           {/* Prefer the small thumbnail (new items); fall back to the full preview for
-              items saved before item_preview_thumb existed, rather than showing nothing. */}
+              items saved before item_preview_thumb existed, rather than showing nothing.
+              contain (not cover) so a wide/non-square photo isn't cropped to a square. */}
           {(item.item_preview_thumb || item.item_preview) && (
             <img
               src={item.item_preview_thumb || item.item_preview!}
               alt={item.subcategory_name || 'Item preview'}
-              style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, border: '1px solid #EDE0CC' }}
+              style={{ width: 72, height: 72, objectFit: 'contain', borderRadius: 8, border: '1px solid #EDE0CC', background: '#FDF5EC' }}
             />
           )}
         </div>
