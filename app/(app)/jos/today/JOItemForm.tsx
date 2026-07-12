@@ -206,6 +206,10 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
   const [discount, setDiscount] = useState(editingItem?.discount != null ? String(editingItem.discount) : '0')
   const [needsLayout, setNeedsLayout] = useState((editingItem?.layout_fee || 0) > 0)
   const [layoutFee, setLayoutFee] = useState(editingItem?.layout_fee != null && editingItem.layout_fee > 0 ? String(editingItem.layout_fee) : '150')
+  const [needsDelivery, setNeedsDelivery] = useState((editingItem?.delivery_fee || 0) > 0)
+  const [deliveryFee, setDeliveryFee] = useState(editingItem?.delivery_fee != null && editingItem.delivery_fee > 0 ? String(editingItem.delivery_fee) : '')
+  const [needsInstallation, setNeedsInstallation] = useState((editingItem?.installation_fee || 0) > 0)
+  const [installationFee, setInstallationFee] = useState(editingItem?.installation_fee != null && editingItem.installation_fee > 0 ? String(editingItem.installation_fee) : '')
   const [layoutPreview, setLayoutPreview] = useState(editingItem?.item_preview || '')
   const [layoutBytes, setLayoutBytes] = useState<number | null>(null)
   const [compressing, setCompressing] = useState(false)
@@ -259,7 +263,9 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
     parseFloat(discount) || 0,
   ), [effectivePricing, effectivePrice, width, height, depth, quantity, noOfMins, letterCount, discount])
   const effectiveLayoutFee = needsLayout ? (parseFloat(layoutFee) || 0) : 0
-  const lineTotal = baseLineTotal + effectiveLayoutFee
+  const effectiveDeliveryFee = needsDelivery ? (parseFloat(deliveryFee) || 0) : 0
+  const effectiveInstallationFee = needsInstallation ? (parseFloat(installationFee) || 0) : 0
+  const lineTotal = baseLineTotal + effectiveLayoutFee + effectiveDeliveryFee + effectiveInstallationFee
 
   const needsDims = ['area','dimension','area_cube','per_lettersqft'].includes(effectivePricing)
   const needsDepth = effectivePricing === 'area_cube'
@@ -317,6 +323,8 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
       date_time_needed: dateNeeded ? new Date(dateNeeded).toISOString() : null,
       discount: parseFloat(discount) || 0,
       layout_fee: effectiveLayoutFee,
+      delivery_fee: effectiveDeliveryFee,
+      installation_fee: effectiveInstallationFee,
       computed_line_total: lineTotal,
       item_preview: layoutPreview,
     })
@@ -485,6 +493,32 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
               )}
             </div>
 
+            <div className="pf-field">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: readOnly ? 'default' : 'pointer' }}>
+                <input type="checkbox" checked={needsDelivery} disabled={readOnly} onChange={e => setNeedsDelivery(e.target.checked)} />
+                <span className="pf-label" style={{ marginBottom: 0 }}>Needs delivery for this item?</span>
+              </label>
+              {needsDelivery && (
+                <div style={{ marginTop: 6 }}>
+                  <label className="pf-label">Delivery Fee (₱)</label>
+                  <input type="number" value={deliveryFee} disabled={readOnly} onChange={e => setDeliveryFee(e.target.value)} min="0" placeholder="0.00" className="pf-input" />
+                </div>
+              )}
+            </div>
+
+            <div className="pf-field">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: readOnly ? 'default' : 'pointer' }}>
+                <input type="checkbox" checked={needsInstallation} disabled={readOnly} onChange={e => setNeedsInstallation(e.target.checked)} />
+                <span className="pf-label" style={{ marginBottom: 0 }}>Needs installation for this item?</span>
+              </label>
+              {needsInstallation && (
+                <div style={{ marginTop: 6 }}>
+                  <label className="pf-label">Installation Fee (₱)</label>
+                  <input type="number" value={installationFee} disabled={readOnly} onChange={e => setInstallationFee(e.target.value)} min="0" placeholder="0.00" className="pf-input" />
+                </div>
+              )}
+            </div>
+
             <div className="pf-grid-2" style={{ marginBottom: '0.85rem' }}>
               <div>
                 <label className="pf-label">Deadline / Date Needed <span className="pf-req">*</span></label>
@@ -505,16 +539,30 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
 
             {canSeeLineTotal && (
               <div className="pf-totals-box">
-                {effectiveLayoutFee > 0 && (
+                {(effectiveLayoutFee > 0 || effectiveDeliveryFee > 0 || effectiveInstallationFee > 0) && (
                   <>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                       <span style={{ color: '#555', fontSize: '0.75rem' }}>Item Price</span>
                       <span style={{ color: '#555', fontSize: '0.8rem' }}>{formatPeso(baseLineTotal)}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                      <span style={{ color: '#555', fontSize: '0.75rem' }}>Layout Fee</span>
-                      <span style={{ color: '#555', fontSize: '0.8rem' }}>{formatPeso(effectiveLayoutFee)}</span>
-                    </div>
+                    {effectiveLayoutFee > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <span style={{ color: '#555', fontSize: '0.75rem' }}>Layout Fee</span>
+                        <span style={{ color: '#555', fontSize: '0.8rem' }}>{formatPeso(effectiveLayoutFee)}</span>
+                      </div>
+                    )}
+                    {effectiveDeliveryFee > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <span style={{ color: '#555', fontSize: '0.75rem' }}>Delivery Fee</span>
+                        <span style={{ color: '#555', fontSize: '0.8rem' }}>{formatPeso(effectiveDeliveryFee)}</span>
+                      </div>
+                    )}
+                    {effectiveInstallationFee > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <span style={{ color: '#555', fontSize: '0.75rem' }}>Installation Fee</span>
+                        <span style={{ color: '#555', fontSize: '0.8rem' }}>{formatPeso(effectiveInstallationFee)}</span>
+                      </div>
+                    )}
                   </>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
