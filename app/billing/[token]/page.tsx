@@ -29,6 +29,18 @@ export default async function BillingStatementPage({ params }: { params: { token
 
   const clientName = client.client_name || client.company_name || 'Client'
   const openJobs = jobs || []
+  const jobIds = openJobs.map(j => j.job_order_id)
+
+  const { data: items, error: itemsError } = jobIds.length > 0
+    ? await supabase.from('public_client_billing_items').select('*').in('job_order_id', jobIds)
+    : { data: [], error: null }
+  if (itemsError) console.error('Billing statement items query failed:', itemsError.message)
+
+  const itemsByJO: Record<string, any[]> = {}
+  for (const it of items || []) {
+    if (!itemsByJO[it.job_order_id]) itemsByJO[it.job_order_id] = []
+    itemsByJO[it.job_order_id].push(it)
+  }
   const totalGrand = openJobs.reduce((s, j) => s + (j.grand_total || 0), 0)
   const totalPaid = openJobs.reduce((s, j) => s + (j.total_amount_paid || 0), 0)
   const totalBalance = openJobs.reduce((s, j) => s + (j.balance_due || 0), 0)
@@ -69,22 +81,35 @@ export default async function BillingStatementPage({ params }: { params: { token
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-            {openJobs.map(jo => (
-              <div key={jo.job_order_id} style={{ background: '#FDF5EC', borderRadius: 12, padding: '0.85rem 1rem', border: '1px solid #EDE0CC', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                  <div>
-                    <div style={{ color: '#7A1828', fontWeight: 700, fontSize: '0.85rem' }}>{jo.job_order_id}</div>
-                    <div style={{ color: '#999', fontSize: '0.72rem', marginTop: 2 }}>
-                      {new Date(jo.date_time_received).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+            {openJobs.map(jo => {
+              const jobItems = itemsByJO[jo.job_order_id] || []
+              return (
+                <div key={jo.job_order_id} style={{ background: '#FDF5EC', borderRadius: 12, padding: '0.85rem 1rem', border: '1px solid #EDE0CC', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                    <div>
+                      <div style={{ color: '#7A1828', fontWeight: 700, fontSize: '0.85rem' }}>{jo.job_order_id}</div>
+                      <div style={{ color: '#999', fontSize: '0.72rem', marginTop: 2 }}>
+                        {new Date(jo.date_time_received).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.85rem' }}>{formatPeso(jo.grand_total || 0)}</div>
+                      <div style={{ color: '#e74c3c', fontSize: '0.72rem' }}>Bal: {formatPeso(jo.balance_due || 0)}</div>
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.85rem' }}>{formatPeso(jo.grand_total || 0)}</div>
-                    <div style={{ color: '#e74c3c', fontSize: '0.72rem' }}>Bal: {formatPeso(jo.balance_due || 0)}</div>
-                  </div>
+                  {jobItems.length > 0 && (
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid #EDE0CC', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {jobItems.map(it => (
+                        <div key={it.item_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
+                          <span style={{ color: '#777' }}>{it.subcategory_name || it.item_id}{it.quantity > 1 ? ` × ${it.quantity}` : ''} <span style={{ color: '#aaa' }}>({it.job_status})</span></span>
+                          <span style={{ color: '#333' }}>{formatPeso(it.computed_line_total || 0)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
