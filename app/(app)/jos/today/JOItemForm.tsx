@@ -28,6 +28,7 @@ interface Props {
   categories: any[]
   subcategories: any[]
   editingItem?: any
+  clientName?: string
   onSave: (item: any) => void
   onClose: () => void
   currentUser?: AppUser
@@ -184,7 +185,7 @@ function StatusChecklist({ statusChecklist }: { statusChecklist: StatusChecklist
   )
 }
 
-export default function JOItemForm({ categories, editingItem, onSave, onClose, currentUser, readOnly, statusChecklist }: Props) {
+export default function JOItemForm({ categories, editingItem, clientName, onSave, onClose, currentUser, readOnly, statusChecklist }: Props) {
   const isEditing = !!editingItem
   const [categoryId, setCategoryId] = useState(editingItem?.category_id || '')
   const [subcategoryId, setSubcategoryId] = useState(editingItem?.subcategory_id || '')
@@ -327,6 +328,13 @@ export default function JOItemForm({ categories, editingItem, onSave, onClose, c
           <h3 style={{ color: '#fff', fontWeight: 700, fontSize: '1.7rem' }}>{isEditing ? 'Edit Job Order Item' : 'Add Job Order Item'}</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#E8B9C6', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
         </div>
+
+        {clientName && (
+          <div className="pf-field">
+            <label className="pf-label">Client</label>
+            <div style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>{clientName}</div>
+          </div>
+        )}
 
         <div className="pf-field">
           <label className="pf-label">Category</label>

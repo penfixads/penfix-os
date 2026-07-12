@@ -533,6 +533,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
             categories={categories}
             subcategories={subcategories}
             editingItem={liveItem}
+            clientName={client?.client_name || client?.company_name}
             currentUser={currentUser}
             onSave={saveEditedItem}
             onClose={() => setEditingItem(null)}

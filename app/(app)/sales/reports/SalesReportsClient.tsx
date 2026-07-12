@@ -1,10 +1,13 @@
 ﻿'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { formatPeso, getPhilippineDateStr } from '@/lib/jo-helpers'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 10
 
 interface Props { payments: any[]; jobOrders: any[]; expenses: any[]; purchases: any[]; supplierDeliveries: any[]; overheadExpenses: any[] }
 
@@ -31,6 +34,8 @@ function periodLabel(key: string, period: Period): string {
 
 export default function SalesReportsClient({ payments, jobOrders, expenses, purchases, supplierDeliveries, overheadExpenses }: Props) {
   const [period, setPeriod] = useState<Period>('monthly')
+  const [page, setPage] = useState(1)
+  useEffect(() => { setPage(1) }, [period])
 
   const report = useMemo(() => {
     const map: Record<string, { collections: number; sales: number; expenses: number; overhead: number; joCount: number; byMethod: Record<string, number> }> = {}
@@ -107,6 +112,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
   const grandNetProfit = grandSales - grandExpenses
   const grandProfit = grandNetProfit - grandOverhead
   const grandJOs = report.reduce((s, [, r]) => s + r.joCount, 0)
+  const pagedReport = report.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <div>
@@ -173,7 +179,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
 
       {/* Period rows */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-        {report.map(([key, r]) => {
+        {pagedReport.map(([key, r]) => {
           const netCash = r.collections - r.expenses
           const netProfit = r.sales - r.expenses
           const profit = netProfit - r.overhead
@@ -229,6 +235,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
           )
         })}
       </div>
+      <Pagination page={page} totalItems={report.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
     </div>
   )
 }
