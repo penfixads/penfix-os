@@ -92,6 +92,8 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
   // targetStatus = the step job_status advances to once confirmed.
   const [pendingChange, setPendingChange] = useState<{ itemId: string; jobOrderId: string; completedStatus: string; targetStatus: string } | null>(null)
   const [selectedProponents, setSelectedProponents] = useState<string[]>([])
+  const [cancelTarget, setCancelTarget] = useState<{ itemId: string; jobOrderId: string; label: string } | null>(null)
+  const [cancelInput, setCancelInput] = useState('')
   const isFabricator = currentUser.role === 'Fabricator'
 
   const items = localItems
@@ -176,11 +178,30 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
     }
   }
 
-  async function markCancelled(itemId: string, jobOrderId: string) {
-    if (!confirm('Mark this item as Cancelled?')) return
+  function requestCancel(itemId: string, jobOrderId: string, label: string) {
+    setCancelTarget({ itemId, jobOrderId, label })
+    setCancelInput('')
+  }
+
+  async function confirmCancel() {
+    if (!cancelTarget || cancelInput.trim().toUpperCase() !== 'CANCEL') return
+    const { itemId, jobOrderId } = cancelTarget
     const supabase = createSupabaseBrowserClient()
     await supabase.from('job_order_items').update({ job_status: 'Cancelled' }).eq('item_id', itemId)
     setLocalItems(prev => prev.filter(i => i.item_id !== itemId))
+    // Same attribution log as every other status change — records who cancelled it and when.
+    const newLog = {
+      item_id: itemId,
+      job_order_id: jobOrderId,
+      status_name: 'Cancelled',
+      changed_by_email: currentUser.email,
+      changed_by_name: currentUser.name,
+      changed_by_role: currentUser.role,
+    }
+    await supabase.from('job_order_item_status_log').insert(newLog)
+    setLocalLogs(prev => [...prev, newLog])
+    setCancelTarget(null)
+    setCancelInput('')
     await syncJobOrderDoneStatus(supabase, jobOrderId)
   }
 
@@ -339,7 +360,7 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
                               {!isFabricator && <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.85rem' }}>{formatPeso(item.computed_line_total || 0)}</div>}
                               <div style={{ color: '#aaa', fontSize: '0.68rem' }}>qty: {item.quantity || 1}</div>
                               <button
-                                onClick={e => { e.stopPropagation(); markCancelled(item.item_id, item.job_order_id) }}
+                                onClick={e => { e.stopPropagation(); requestCancel(item.item_id, item.job_order_id, item.subcategories?.subcategory_name || item.item_id) }}
                                 style={{ marginTop: 6, background: 'none', border: '1px solid #3a0000', color: '#7A1828', fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: 6, cursor: 'pointer' }}
                               >
                                 Cancel
@@ -408,6 +429,45 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
           />
         )
       })()}
+
+      {cancelTarget && (
+        <div className="pf-modal-overlay">
+          <div className="pf-modal-card pf-modal-wine" style={{ maxWidth: 420 }}>
+            <h3 style={{ marginBottom: '0.75rem' }}>Cancel "{cancelTarget.label}"?</h3>
+            <p style={{ color: '#E8B9C6', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: '1rem' }}>
+              It will be removed from this queue right away. Its price still counts toward
+              the Job Order's grand total — this does not adjust billing or issue a refund.
+              If every other item on this Job Order is already Done/Cancelled and it is fully
+              paid (or approved for billing), the Job Order itself will be marked Done.
+              This is logged against your account and can't be undone from here.
+            </p>
+            <div className="pf-field">
+              <label className="pf-label">Type CANCEL to confirm</label>
+              <input
+                type="text"
+                className="pf-input"
+                value={cancelInput}
+                onChange={e => setCancelInput(e.target.value)}
+                autoFocus
+                placeholder="CANCEL"
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: '1rem' }}>
+              <button onClick={() => { setCancelTarget(null); setCancelInput('') }} className="pf-btn pf-btn-secondary">
+                Keep Item
+              </button>
+              <button
+                onClick={confirmCancel}
+                disabled={cancelInput.trim().toUpperCase() !== 'CANCEL'}
+                className="pf-btn"
+                style={{ opacity: cancelInput.trim().toUpperCase() !== 'CANCEL' ? 0.5 : 1, cursor: cancelInput.trim().toUpperCase() !== 'CANCEL' ? 'not-allowed' : 'pointer' }}
+              >
+                Confirm Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

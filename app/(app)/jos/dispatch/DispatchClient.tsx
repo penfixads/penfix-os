@@ -19,6 +19,7 @@ const DISPATCH_MODES = ['Pickup', 'Delivery', 'Installation']
 
 export default function DispatchClient({ items, currentUser }: Props) {
   const router = useRouter()
+  const isFabricator = currentUser.role === 'Fabricator'
   const [marking, setMarking] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -95,9 +96,11 @@ export default function DispatchClient({ items, currentUser }: Props) {
                     {c?.contact_number && <div style={{ color: '#777', fontSize: '0.72rem', marginTop: 2 }}>📞 {c.contact_number}</div>}
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: hasBalance ? '#e74c3c' : '#2ecc71' }}>
-                      {hasBalance ? `Bal: ${formatPeso(jo?.balance_due)}` : 'Fully Paid'}
-                    </div>
+                    {!isFabricator && (
+                      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: hasBalance ? '#e74c3c' : '#2ecc71' }}>
+                        {hasBalance ? `Bal: ${formatPeso(jo?.balance_due)}` : 'Fully Paid'}
+                      </div>
+                    )}
                     <div style={{ color: '#aaa', fontSize: '0.7rem' }}>{jo?.payment_status}</div>
                     <div style={{ marginTop: 4, padding: '0.2rem 0.5rem', borderRadius: 12, background: '#1a4a1a', color: '#2ecc71', fontSize: '0.68rem', fontWeight: 700 }}>
                       {item.job_status}

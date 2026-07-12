@@ -133,8 +133,11 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: '1.25rem' }}>
         {[
           { label: 'Total JOs', value: filtered.length },
-          { label: 'Total Grand Total', value: formatPeso(totalGrand) },
-          { label: 'Total Balance Due', value: formatPeso(totalBalance), warn: totalBalance > 0 },
+          // GA can see and manage JOs but not the shop's money totals — Admin/Treasury only.
+          ...(currentUser.role === 'Admin' || currentUser.role === 'Treasury' ? [
+            { label: 'Total Grand Total', value: formatPeso(totalGrand) },
+            { label: 'Total Balance Due', value: formatPeso(totalBalance), warn: totalBalance > 0 },
+          ] : []),
         ].map(stat => (
           <div key={stat.label} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.75rem 1rem', border: '1px solid #EDE0CC' }}>
             <div style={{ color: '#999', fontSize: '0.7rem', marginBottom: 4 }}>{stat.label}</div>
