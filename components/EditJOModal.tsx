@@ -185,19 +185,35 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
       const supabase = createSupabaseBrowserClient()
       const joId = jo.job_order_id
 
-      for (const id of removedItemIds) await supabase.from('job_order_items').delete().eq('item_id', id)
-      for (const id of removedPaymentIds) await supabase.from('payments').delete().eq('payment_id', id)
+      for (const id of removedItemIds) {
+        const { error } = await supabase.from('job_order_items').delete().eq('item_id', id)
+        if (error) throw error
+      }
+      for (const id of removedPaymentIds) {
+        const { error } = await supabase.from('payments').delete().eq('payment_id', id)
+        if (error) throw error
+      }
 
       const newItems = editItems.filter(i => !i._existing)
       const existingItems = editItems.filter(i => i._existing)
       const existingCount = existingItems.length
+      // Mark each item saved (real item_id, _existing) as soon as its insert succeeds — if a
+      // later write in this same save fails, editItems already reflects what's really in the
+      // database, so retrying "Save Changes" won't insert these a second time. newItemIdByTempId
+      // also lets the onSave() call below report real item_ids instead of the stale closure
+      // (setEditItems here won't be visible in this function's editItems variable).
+      const newItemIdByTempId: Record<string, string> = {}
       for (let i = 0; i < newItems.length; i++) {
-        const { category_name, subcategory_name, _existing, subcategories, ...item } = newItems[i]
-        await supabase.from('job_order_items').insert({ ...item, item_id: generateItemId(joId, existingCount + i + 1), job_order_id: joId })
+        const { category_name, subcategory_name, _existing, subcategories, _tempId, ...item } = newItems[i]
+        const itemId = generateItemId(joId, existingCount + i + 1)
+        const { error } = await supabase.from('job_order_items').insert({ ...item, item_id: itemId, job_order_id: joId })
+        if (error) throw error
+        if (_tempId) newItemIdByTempId[_tempId] = itemId
+        setEditItems(prev => prev.map(it => it._tempId === _tempId ? { ...it, item_id: itemId, _existing: true } : it))
       }
 
       for (const item of existingItems) {
-        await supabase.from('job_order_items').update({
+        const { error } = await supabase.from('job_order_items').update({
           subcategory_id: item.subcategory_id,
           pricing_model: item.pricing_model,
           base_price: item.base_price,
@@ -214,13 +230,15 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
           computed_line_total: item.computed_line_total,
           item_preview: item.item_preview,
         }).eq('item_id', item.item_id)
+        if (error) throw error
       }
 
       const newPays = editPayments.filter(p => !p._existing)
       const existingPayCount = editPayments.filter(p => p._existing).length
       for (let i = 0; i < newPays.length; i++) {
-        await supabase.from('payments').insert({
-          payment_id: generatePaymentId(joId, existingPayCount + i + 1),
+        const paymentId = generatePaymentId(joId, existingPayCount + i + 1)
+        const { error } = await supabase.from('payments').insert({
+          payment_id: paymentId,
           job_order_id: joId,
           client_id: jo.client_id,
           grand_total: grandTotal,
@@ -229,6 +247,9 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
           payment_date: newPays[i].payment_date || getPhilippineDateStr(),
           recorded_by: currentUser.name,
         })
+        if (error) throw error
+        const savedPay = newPays[i]
+        setEditPayments(prev => prev.map(p => p === savedPay ? { ...p, payment_id: paymentId, _existing: true } : p))
       }
 
       const { error: joUpdateErr } = await supabase.from('job_orders').update({
@@ -268,7 +289,13 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
         request_override: overrideReason || null,
         override_status: needsOverride ? 'Pending' : null,
         source_channel: editSourceChannel || null,
-        job_order_items: editItems.map(i => ({ item_id: i.item_id, computed_line_total: i.computed_line_total, job_status: i.job_status, date_time_needed: i.date_time_needed, subcategories: i.subcategories })),
+        job_order_items: editItems.map(i => ({
+          item_id: i.item_id || (i._tempId ? newItemIdByTempId[i._tempId] : undefined),
+          computed_line_total: i.computed_line_total,
+          job_status: i.job_status,
+          date_time_needed: i.date_time_needed,
+          subcategories: i.subcategories || { subcategory_name: i.subcategory_name },
+        })),
       })
       onClose()
     } catch (e: any) {
