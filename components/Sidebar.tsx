@@ -101,6 +101,41 @@ const NAV_ITEMS: NavItem[] = [
   },
 ]
 
+function renderNavItem(item: NavItem, activeHref: string | null, pendingCount: number) {
+  const active = item.href === activeHref
+  return (
+    <Link
+      key={item.href}
+      href={item.href}
+      prefetch={true}
+      className="nav-link"
+      style={{
+        color: active ? '#fff' : '#ddd',
+        background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
+        borderLeft: active ? '3px solid #C9A84C' : '3px solid transparent',
+      }}
+    >
+      <span style={{ color: active ? '#C9A84C' : '#ccc', display: 'flex' }}>{item.icon}</span>
+      <span style={{ flex: 1 }}>{item.label}</span>
+      {item.href === '/jos/pending-approval' && pendingCount > 0 && (
+        <span style={{
+          background: '#e74c3c',
+          color: '#fff',
+          fontSize: '0.68rem',
+          fontWeight: 700,
+          lineHeight: 1,
+          borderRadius: 999,
+          padding: '0.2rem 0.42rem',
+          minWidth: 18,
+          textAlign: 'center',
+        }}>
+          {pendingCount > 99 ? '99+' : pendingCount}
+        </span>
+      )}
+    </Link>
+  )
+}
+
 interface Props {
   role: UserRole
   name: string
@@ -110,6 +145,11 @@ export default function Sidebar({ role, name }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const items = NAV_ITEMS.filter(i => i.roles.includes(role))
+  // Admin-only links (Pending Approval, Sales Reports, etc.) are scattered through
+  // NAV_ITEMS in whatever order they were added — group them below a divider instead,
+  // so an Admin's sidebar reads as "everyday tools" then "admin-only tools".
+  const regularItems = items.filter(i => !(i.roles.length === 1 && i.roles[0] === 'Admin'))
+  const adminOnlyItems = items.filter(i => i.roles.length === 1 && i.roles[0] === 'Admin')
   // Pick the longest matching href so sibling routes sharing a prefix (e.g. /purchases
   // and /purchases/deliveries) don't both light up when only one is actually active.
   const activeHref = items.reduce<string | null>((best, item) => {
@@ -225,40 +265,11 @@ export default function Sidebar({ role, name }: Props) {
 
         {/* Nav */}
         <nav style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0' }}>
-          {items.map(item => {
-            const active = item.href === activeHref
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                prefetch={true}
-                className="nav-link"
-                style={{
-                  color: active ? '#fff' : '#ddd',
-                  background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
-                  borderLeft: active ? '3px solid #C9A84C' : '3px solid transparent',
-                }}
-              >
-                <span style={{ color: active ? '#C9A84C' : '#ccc', display: 'flex' }}>{item.icon}</span>
-                <span style={{ flex: 1 }}>{item.label}</span>
-                {item.href === '/jos/pending-approval' && pendingCount > 0 && (
-                  <span style={{
-                    background: '#e74c3c',
-                    color: '#fff',
-                    fontSize: '0.68rem',
-                    fontWeight: 700,
-                    lineHeight: 1,
-                    borderRadius: 999,
-                    padding: '0.2rem 0.42rem',
-                    minWidth: 18,
-                    textAlign: 'center',
-                  }}>
-                    {pendingCount > 99 ? '99+' : pendingCount}
-                  </span>
-                )}
-              </Link>
-            )
-          })}
+          {regularItems.map(item => renderNavItem(item, activeHref, pendingCount))}
+          {adminOnlyItems.length > 0 && (
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', margin: '0.5rem 1rem' }} />
+          )}
+          {adminOnlyItems.map(item => renderNavItem(item, activeHref, pendingCount))}
         </nav>
 
         {/* User + Sign out */}
