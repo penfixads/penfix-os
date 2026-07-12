@@ -206,7 +206,7 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
                         const canMarkUnclaimed = item.job_status !== 'Done' && !receivedToday
                         return (
                           <span key={item.item_id} style={{ background: '#f0f0f0', color: '#999', fontSize: '0.65rem', padding: '0.15rem 0.5rem', borderRadius: 10, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            {item.subcategories?.subcategory_name || item.item_id} · {item.job_status}
+                            {item.subcategories?.subcategory_name || item.item_id} · {item.job_status} · {formatPeso(item.computed_line_total || 0)}
                             {canMarkUnclaimed && (
                               <button
                                 title="Mark unclaimed — client never came back for this item"
@@ -245,6 +245,7 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
                     </div>
 
                     <div style={{ textAlign: 'right' }}>
+                      <div style={{ color: '#999', fontSize: '0.65rem' }}>JO Total</div>
                       <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.9rem' }}>{formatPeso(jo.grand_total || 0)}</div>
                       <div style={{ color: (jo.balance_due || 0) > 0 ? '#e74c3c' : '#2ecc71', fontSize: '0.75rem' }}>
                         Bal: {formatPeso(jo.balance_due || 0)}
