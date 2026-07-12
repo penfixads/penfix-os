@@ -7,6 +7,7 @@ import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
 import JOReceiptModal from '@/components/JOReceiptModal'
+import BillingStatementModal from '@/components/BillingStatementModal'
 import { IconPlus, IconCirclePlus, IconEdit, IconX, IconCheck } from '@/components/icons'
 
 interface Props {
@@ -45,6 +46,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   const [pendingChange, setPendingChange] = useState<{ itemId: string; completedStatus: string; targetStatus: string } | null>(null)
   const [selectedProponents, setSelectedProponents] = useState<string[]>([])
   const [showReceipt, setShowReceipt] = useState(false)
+  const [showBillingStatement, setShowBillingStatement] = useState(false)
 
   const client = jo.clients
 
@@ -322,6 +324,12 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E8B9C6', padding: 2, display: 'flex', alignItems: 'center' }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
             </button>
+            {editIsForBilling && (
+              <button title="Generate billing statement listing every open job order for this client" onClick={() => setShowBillingStatement(true)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E8B9C6', padding: 2, display: 'flex', alignItems: 'center' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="7" y1="13" x2="17" y2="13"/><line x1="7" y1="17" x2="13" y2="17"/></svg>
+              </button>
+            )}
             <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#E8B9C6', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
           </div>
         </div>
@@ -540,6 +548,14 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
 
       {showReceipt && (
         <JOReceiptModal jobOrderId={jo.job_order_id} onClose={() => setShowReceipt(false)} />
+      )}
+
+      {showBillingStatement && (
+        <BillingStatementModal
+          clientId={jo.client_id}
+          clientName={client?.client_name || client?.company_name || jo.client_id}
+          onClose={() => setShowBillingStatement(false)}
+        />
       )}
 
       {showItemForm && (
