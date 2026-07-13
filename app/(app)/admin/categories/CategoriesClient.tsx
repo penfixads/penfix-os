@@ -277,8 +277,8 @@ export default function CategoriesClient({ categories: initialCategories, subcat
                           {s.subcategory_id} · {PRICING_MODELS.find(p => p.value === s.pricing_model)?.label.split(' — ')[0] || s.pricing_model} · {formatPeso(s.base_price || 0)}{s.unit ? ` / ${s.unit}` : ''}
                         </div>
                       </div>
-                      <button onClick={() => openEditSub(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7A1828', padding: 2 }}><IconEdit /></button>
-                      <button onClick={() => deleteSub(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c', padding: 2, fontSize: '0.9rem' }}>✕</button>
+                      <button onClick={() => openEditSub(s)} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7A1828', padding: 2, display: 'flex', flexShrink: 0 }}><IconEdit width={16} height={16} /></button>
+                      <button onClick={() => deleteSub(s)} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c', padding: 2, fontSize: '0.9rem', flexShrink: 0 }}>✕</button>
                     </div>
                   ))}
                 </div>
