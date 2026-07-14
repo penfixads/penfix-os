@@ -19,6 +19,20 @@ const JO_STATUS_COLORS: Record<string, string> = {
   'Pending Payment': '#e74c3c',
 }
 
+// overhead_expenses.expense_name is free text (e.g. "Employees salary", "Electric Bill"),
+// no fixed category column — bucket it by keyword so Salary and each bill type show up as
+// their own line instead of one lumped "Overhead" number.
+type OverheadBucket = 'salary' | 'telephone' | 'electric' | 'water' | 'internet' | 'other'
+function classifyOverhead(name: string): OverheadBucket {
+  const n = (name || '').toLowerCase()
+  if (/salary|sueldo|payroll|wage|sahod/.test(n)) return 'salary'
+  if (/pldt|internet|wifi|telecom|converge|fiber|broadband/.test(n)) return 'internet'
+  if (/electric|meralco|kuryente/.test(n)) return 'electric'
+  if (/\bwater\b|maynilad|manila water|tubig/.test(n)) return 'water'
+  if (/telephone|landline|globe|smart|load\b/.test(n)) return 'telephone'
+  return 'other'
+}
+
 type Period = 'weekly' | 'monthly' | 'yearly'
 
 function getPeriodKey(date: string, period: Period): string {
@@ -50,8 +64,13 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
       collections: number; sales: number; expenses: number; overhead: number; joCount: number
       byMethod: Record<string, number>
       dailyExpenses: number; purchasesAmt: number; supplierDeliveriesAmt: number
+      overheadByBucket: Record<OverheadBucket, number>
     }> = {}
-    const blank = () => ({ collections: 0, sales: 0, expenses: 0, overhead: 0, joCount: 0, byMethod: {}, dailyExpenses: 0, purchasesAmt: 0, supplierDeliveriesAmt: 0 })
+    const blank = () => ({
+      collections: 0, sales: 0, expenses: 0, overhead: 0, joCount: 0, byMethod: {},
+      dailyExpenses: 0, purchasesAmt: 0, supplierDeliveriesAmt: 0,
+      overheadByBucket: { salary: 0, telephone: 0, electric: 0, water: 0, internet: 0, other: 0 },
+    })
 
     for (const p of payments) {
       const d = p.payment_date
@@ -110,6 +129,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
       const key = getPeriodKey(d, period)
       if (!map[key]) map[key] = blank()
       map[key].overhead += oh.amount || 0
+      map[key].overheadByBucket[classifyOverhead(oh.expense_name)] += oh.amount || 0
     }
 
     // Supplier deliveries are keyed by billing_month (next month's cheque), which can
@@ -131,6 +151,10 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
   const grandDailyExpenses = report.reduce((s, [, r]) => s + r.dailyExpenses, 0)
   const grandPurchases = report.reduce((s, [, r]) => s + r.purchasesAmt, 0)
   const grandSupplierDeliveries = report.reduce((s, [, r]) => s + r.supplierDeliveriesAmt, 0)
+  const grandOverheadByBucket = report.reduce((acc, [, r]) => {
+    for (const b of Object.keys(acc) as OverheadBucket[]) acc[b] += r.overheadByBucket[b]
+    return acc
+  }, { salary: 0, telephone: 0, electric: 0, water: 0, internet: 0, other: 0 } as Record<OverheadBucket, number>)
   const pagedReport = report.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   // How many JOs actually processed, broken down by where they stand on payment — this is
@@ -145,12 +169,30 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
     return Object.entries(counts).sort((a, b) => b[1] - a[1])
   }, [jobOrders])
 
-  const expenseBreakdown = [
-    { label: 'Daily Expenses', value: grandDailyExpenses, color: '#e74c3c' },
-    { label: 'Purchases', value: grandPurchases, color: '#e67e22' },
-    { label: 'Supplier Deliveries', value: grandSupplierDeliveries, color: '#d35400' },
-    { label: 'Overhead (salaries, utilities, etc.)', value: grandOverhead, color: '#c0392b' },
+  const grandBills = grandOverheadByBucket.telephone + grandOverheadByBucket.electric + grandOverheadByBucket.water + grandOverheadByBucket.internet
+  // Top-level categories the user asked for: deliveries, everyday purchases, salary, bills.
+  // "Everyday Purchases" combines the daily expenses log (Lalamove, supplies, snacks, cash
+  // advances) with the same-day-cash Purchases table — both are day-to-day spend, distinct
+  // from Deliveries (bulk supplier orders billed next month) and the fixed monthly Bills/Salary.
+  const expenseBreakdown: { label: string; value: number; color: string; sub?: { label: string; value: number }[] }[] = [
+    { label: 'Deliveries', value: grandSupplierDeliveries, color: '#d35400' },
+    { label: 'Everyday Purchases', value: grandDailyExpenses + grandPurchases, color: '#e67e22' },
+    { label: 'Salary', value: grandOverheadByBucket.salary, color: '#8e44ad' },
+    {
+      label: 'Bills', value: grandBills, color: '#c0392b',
+      sub: [
+        { label: 'Telephone', value: grandOverheadByBucket.telephone },
+        { label: 'Electric', value: grandOverheadByBucket.electric },
+        { label: 'Water', value: grandOverheadByBucket.water },
+        { label: 'Internet/Telecom', value: grandOverheadByBucket.internet },
+      ],
+    },
   ]
+  // Overhead entries that don't match Salary or a bill keyword (e.g. BIR, rent) still need to
+  // show up somewhere rather than silently vanish from the total.
+  if (grandOverheadByBucket.other > 0) {
+    expenseBreakdown.push({ label: 'Other Overhead', value: grandOverheadByBucket.other, color: '#7f8c8d' })
+  }
   const expenseGrandTotal = expenseBreakdown.reduce((s, e) => s + e.value, 0) || 1
 
   return (
@@ -240,16 +282,26 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
           <div style={{ color: '#7A1828', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.75rem' }}>
             Expense Breakdown — {formatPeso(grandExpenses + grandOverhead)}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {expenseBreakdown.map(e => (
               <div key={e.label}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                  <span style={{ color: '#555', fontSize: '0.78rem' }}>{e.label}</span>
+                  <span style={{ color: '#555', fontSize: '0.78rem', fontWeight: e.sub ? 700 : 400 }}>{e.label}</span>
                   <span style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.8rem' }}>{formatPeso(e.value)}</span>
                 </div>
                 <div style={{ background: '#f0f0f0', borderRadius: 4, height: 5, overflow: 'hidden' }}>
                   <div style={{ width: `${Math.min((e.value / expenseGrandTotal) * 100, 100)}%`, height: '100%', background: e.color, borderRadius: 4 }} />
                 </div>
+                {e.sub && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 6, paddingLeft: 10, borderLeft: '2px solid #EDE0CC' }}>
+                    {e.sub.map(s => (
+                      <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#999', fontSize: '0.7rem' }}>{s.label}</span>
+                        <span style={{ color: '#777', fontSize: '0.7rem' }}>{formatPeso(s.value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
