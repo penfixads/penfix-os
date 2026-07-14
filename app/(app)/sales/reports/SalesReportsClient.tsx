@@ -54,10 +54,42 @@ function periodLabel(key: string, period: Period): string {
   return key
 }
 
+// YYYY-MM key for the month-filter dropdown — same idea as getPeriodKey('monthly') but as a
+// plain function so it can filter the raw arrays before anything else runs.
+function monthKeyOf(dateStr: string): string {
+  return dateStr.slice(0, 7)
+}
+function monthLabelOf(key: string): string {
+  const [y, m] = key.split('-')
+  return new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleDateString('en-PH', { month: 'long', year: 'numeric' })
+}
+
 export default function SalesReportsClient({ payments, jobOrders, expenses, purchases, supplierDeliveries, overheadExpenses }: Props) {
   const [period, setPeriod] = useState<Period>('monthly')
   const [page, setPage] = useState(1)
-  useEffect(() => { setPage(1) }, [period])
+  const [monthFilter, setMonthFilter] = useState('all')
+  useEffect(() => { setPage(1) }, [period, monthFilter])
+
+  // Every month that actually has data, newest first — feeds the dropdown below.
+  const availableMonths = useMemo(() => {
+    const keys = new Set<string>()
+    for (const jo of jobOrders) if (jo.date_time_received) keys.add(monthKeyOf(getPhilippineDateStr(new Date(jo.date_time_received))))
+    for (const p of payments) if (p.payment_date) keys.add(monthKeyOf(p.payment_date))
+    for (const e of expenses) { const d = e.expense_date || e.date; if (d) keys.add(monthKeyOf(d)) }
+    for (const p of purchases) if (p.purchase_date) keys.add(monthKeyOf(p.purchase_date))
+    for (const sd of supplierDeliveries) if (sd.billing_month) keys.add(monthKeyOf(sd.billing_month))
+    for (const oh of overheadExpenses) if (oh.month) keys.add(monthKeyOf(oh.month))
+    return Array.from(keys).sort((a, b) => b.localeCompare(a))
+  }, [jobOrders, payments, expenses, purchases, supplierDeliveries, overheadExpenses])
+
+  // When a specific month is picked, every panel on the page (top summary, chart, and the
+  // period-by-period list) scopes down to just that month instead of the full 12-month window.
+  const fPayments = useMemo(() => monthFilter === 'all' ? payments : payments.filter(p => p.payment_date && monthKeyOf(p.payment_date) === monthFilter), [payments, monthFilter])
+  const fJobOrders = useMemo(() => monthFilter === 'all' ? jobOrders : jobOrders.filter(jo => jo.date_time_received && monthKeyOf(getPhilippineDateStr(new Date(jo.date_time_received))) === monthFilter), [jobOrders, monthFilter])
+  const fExpenses = useMemo(() => monthFilter === 'all' ? expenses : expenses.filter(e => { const d = e.expense_date || e.date; return d && monthKeyOf(d) === monthFilter }), [expenses, monthFilter])
+  const fPurchases = useMemo(() => monthFilter === 'all' ? purchases : purchases.filter(p => p.purchase_date && monthKeyOf(p.purchase_date) === monthFilter), [purchases, monthFilter])
+  const fSupplierDeliveries = useMemo(() => monthFilter === 'all' ? supplierDeliveries : supplierDeliveries.filter(sd => sd.billing_month && monthKeyOf(sd.billing_month) === monthFilter), [supplierDeliveries, monthFilter])
+  const fOverheadExpenses = useMemo(() => monthFilter === 'all' ? overheadExpenses : overheadExpenses.filter(oh => oh.month && monthKeyOf(oh.month) === monthFilter), [overheadExpenses, monthFilter])
 
   const report = useMemo(() => {
     const map: Record<string, {
@@ -72,7 +104,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
       overheadByBucket: { salary: 0, telephone: 0, electric: 0, water: 0, internet: 0, other: 0 },
     })
 
-    for (const p of payments) {
+    for (const p of fPayments) {
       const d = p.payment_date
       if (!d) continue
       const key = getPeriodKey(d, period)
@@ -81,7 +113,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
       map[key].byMethod[p.payment_method] = (map[key].byMethod[p.payment_method] || 0) + (p.amount || 0)
     }
 
-    for (const jo of jobOrders) {
+    for (const jo of fJobOrders) {
       const d = jo.date_time_received ? getPhilippineDateStr(new Date(jo.date_time_received)) : undefined
       if (!d) continue
       const key = getPeriodKey(d, period)
@@ -90,7 +122,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
       map[key].joCount += 1
     }
 
-    for (const e of expenses) {
+    for (const e of fExpenses) {
       const d = e.expense_date || e.date
       if (!d) continue
       const key = getPeriodKey(d, period)
@@ -102,7 +134,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
     // Purchases (same-day cash) and Supplier Deliveries (billed via next month's cheque)
     // are both real cash-out overhead — folded into the same Expenses bucket, but tracked
     // separately too so the breakdown below can show where the money actually went.
-    for (const p of purchases) {
+    for (const p of fPurchases) {
       const d = p.purchase_date
       if (!d) continue
       const key = getPeriodKey(d, period)
@@ -111,7 +143,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
       map[key].purchasesAmt += p.total_amount || 0
     }
 
-    for (const sd of supplierDeliveries) {
+    for (const sd of fSupplierDeliveries) {
       const d = sd.billing_month
       if (!d) continue
       const key = getPeriodKey(d, period)
@@ -123,7 +155,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
     // Fixed monthly overhead (utilities, salaries, BIR, etc.) — kept separate from
     // Expenses so Net Profit (Sales - Expenses) and final Profit (- Overhead) show
     // as two tiers, matching how the business actually tracks profitability.
-    for (const oh of overheadExpenses) {
+    for (const oh of fOverheadExpenses) {
       const d = oh.month
       if (!d) continue
       const key = getPeriodKey(d, period)
@@ -139,7 +171,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
     return Object.entries(map)
       .filter(([key]) => key <= currentKey)
       .sort((a, b) => b[0].localeCompare(a[0]))
-  }, [payments, jobOrders, expenses, purchases, supplierDeliveries, overheadExpenses, period])
+  }, [fPayments, fJobOrders, fExpenses, fPurchases, fSupplierDeliveries, fOverheadExpenses, period])
 
   const grandCollections = report.reduce((s, [, r]) => s + r.collections, 0)
   const grandSales = report.reduce((s, [, r]) => s + r.sales, 0)
@@ -162,12 +194,12 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
   // means the shop is doing the work but not collecting for it yet, not that sales are down.
   const joStatusCounts = useMemo(() => {
     const counts: Record<string, number> = {}
-    for (const jo of jobOrders) {
+    for (const jo of fJobOrders) {
       const status = jo.payment_status || 'Unknown'
       counts[status] = (counts[status] || 0) + 1
     }
     return Object.entries(counts).sort((a, b) => b[1] - a[1])
-  }, [jobOrders])
+  }, [fJobOrders])
 
   const grandBills = grandOverheadByBucket.telephone + grandOverheadByBucket.electric + grandOverheadByBucket.water + grandOverheadByBucket.internet
   // Top-level categories the user asked for: deliveries, everyday purchases, salary, bills.
@@ -197,9 +229,16 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
 
   return (
     <div>
-      <div style={{ marginBottom: '1.25rem' }}>
-        <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Sales Reports</h1>
-        <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>Last 12 months</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 10, marginBottom: '1.25rem' }}>
+        <div>
+          <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Sales Reports</h1>
+          <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{monthFilter === 'all' ? 'Last 12 months' : monthLabelOf(monthFilter)}</p>
+        </div>
+        <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)}
+          style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.85rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none', minWidth: 180 }}>
+          <option value="all">All Time</option>
+          {availableMonths.map(m => <option key={m} value={m}>{monthLabelOf(m)}</option>)}
+        </select>
       </div>
 
       {/* Chart */}
@@ -264,7 +303,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12, marginBottom: '1.25rem' }}>
         <div style={{ background: '#FDF5EC', borderRadius: 12, padding: '1rem', border: '1px solid #EDE0CC' }}>
           <div style={{ color: '#7A1828', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.75rem' }}>
-            Job Orders Processed — {grandJOs}
+            Job Orders Processed — {grandJOs} {monthFilter !== 'all' && <span style={{ color: '#aaa', fontWeight: 400 }}>({monthLabelOf(monthFilter)})</span>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {joStatusCounts.map(([status, count]) => (
@@ -280,7 +319,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
 
         <div style={{ background: '#FDF5EC', borderRadius: 12, padding: '1rem', border: '1px solid #EDE0CC' }}>
           <div style={{ color: '#7A1828', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.75rem' }}>
-            Expense Breakdown — {formatPeso(grandExpenses + grandOverhead)}
+            Expense Breakdown — {formatPeso(grandExpenses + grandOverhead)} {monthFilter !== 'all' && <span style={{ color: '#aaa', fontWeight: 400 }}>({monthLabelOf(monthFilter)})</span>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {expenseBreakdown.map(e => (
