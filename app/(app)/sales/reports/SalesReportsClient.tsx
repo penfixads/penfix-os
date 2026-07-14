@@ -333,8 +333,6 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
                 {[
                   { label: 'Sales', value: r.sales, color: '#2980b9' },
                   { label: 'Collections', value: r.collections, color: '#27ae60' },
-                  { label: 'Expenses', value: r.expenses, color: '#e74c3c' },
-                  { label: 'Overhead', value: r.overhead, color: '#c0392b' },
                 ].map(bar => (
                   <div key={bar.label}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
@@ -346,6 +344,38 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* Expense categories for this period — same Deliveries/Everyday Purchases/
+                  Salary/Bills split as the all-time panel above, but scoped to this one period. */}
+              <div style={{ marginTop: '0.65rem', paddingTop: '0.6rem', borderTop: '1px solid #e5e5e5' }}>
+                <div style={{ color: '#999', fontSize: '0.68rem', fontWeight: 700, marginBottom: 5 }}>Expenses ({formatPeso(r.expenses + r.overhead)})</div>
+                {(() => {
+                  const bills = r.overheadByBucket.telephone + r.overheadByBucket.electric + r.overheadByBucket.water + r.overheadByBucket.internet
+                  const cats = [
+                    { label: 'Deliveries', value: r.supplierDeliveriesAmt, color: '#d35400' },
+                    { label: 'Everyday Purchases', value: r.dailyExpenses + r.purchasesAmt, color: '#e67e22' },
+                    { label: 'Salary', value: r.overheadByBucket.salary, color: '#8e44ad' },
+                    { label: 'Bills', value: bills, color: '#c0392b' },
+                    ...(r.overheadByBucket.other > 0 ? [{ label: 'Other Overhead', value: r.overheadByBucket.other, color: '#7f8c8d' }] : []),
+                  ]
+                  const catMax = Math.max(...cats.map(c => c.value), 1)
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      {cats.map(c => (
+                        <div key={c.label}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                            <span style={{ color: '#777', fontSize: '0.68rem' }}>{c.label}</span>
+                            <span style={{ color: '#999', fontSize: '0.68rem' }}>{formatPeso(c.value)}</span>
+                          </div>
+                          <div style={{ background: '#f0f0f0', borderRadius: 4, height: 5, overflow: 'hidden' }}>
+                            <div style={{ width: `${Math.min((c.value / catMax) * 100, 100)}%`, height: '100%', background: c.color, borderRadius: 4 }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: '0.75rem', paddingTop: '0.65rem', borderTop: '1px solid #e5e5e5' }}>
