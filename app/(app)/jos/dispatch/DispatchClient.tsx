@@ -88,6 +88,16 @@ export default function DispatchClient({ items, currentUser }: Props) {
             return (
               <div key={item.item_id} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #EDE0CC' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                  {/* Prefer the small thumbnail; fall back to the full preview for items saved
+                      before item_preview_thumb existed. Lets a GA visually recognize the item
+                      at a glance instead of matching by JO id/subcategory name alone. */}
+                  {(item.item_preview_thumb || item.item_preview) && (
+                    <img
+                      src={item.item_preview_thumb || item.item_preview}
+                      alt={item.subcategories?.subcategory_name || 'Item preview'}
+                      style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 8, border: '1px solid #EDE0CC', background: '#fff', flexShrink: 0 }}
+                    />
+                  )}
                   <div style={{ flex: 1 }}>
                     <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.88rem' }}>{clientName}</div>
                     <div style={{ color: '#999', fontSize: '0.72rem', marginTop: 1 }}>{jo?.job_order_id} · {item.item_id}</div>

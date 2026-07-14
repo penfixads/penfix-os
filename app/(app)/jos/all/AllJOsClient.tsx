@@ -6,17 +6,18 @@ import type { AppUser } from '@/lib/user'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import Pagination from '@/components/Pagination'
 import ClientQrButton from '@/components/ClientQrButton'
+import EditJOModal from '@/components/EditJOModal'
 
 const PAGE_SIZE = 10
 
-interface Props { jobOrders: any[]; currentUser: AppUser }
+interface Props { jobOrders: any[]; categories: any[]; subcategories: any[]; currentUser: AppUser }
 
 function isJODone(jo: any): boolean {
   const items = jo.job_order_items || []
   return items.length > 0 && items.every((i: any) => i.job_status === 'Done' || i.job_status === 'Cancelled')
 }
 
-export default function AllJOsClient({ jobOrders: initialJobOrders, currentUser }: Props) {
+export default function AllJOsClient({ jobOrders: initialJobOrders, categories, subcategories, currentUser }: Props) {
   const [jobOrders, setJobOrders] = useState(initialJobOrders)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -25,6 +26,30 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, currentUser 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const toggleExpand = (joId: string) => setExpanded(prev => ({ ...prev, [joId]: !prev[joId] }))
   const [page, setPage] = useState(1)
+  // Temporary: lets Admin/Treasury correct historical-import records (wrong subcategory,
+  // received_by, etc.) directly from the archive view instead of only Active JOs.
+  const [editingJO, setEditingJO] = useState<any | null>(null)
+
+  function handleEditSave(joId: string, updates: any) {
+    setJobOrders(prev => prev.map(j => j.job_order_id !== joId ? j : { ...j, ...updates }))
+  }
+
+  // Temporary, same reason as the Edit button above: pull once historical-import
+  // verification is done and Done JOs are locked down for prod.
+  const [deletingJO, setDeletingJO] = useState<string | null>(null)
+  async function handleDelete(jo: any) {
+    const clientName = jo.clients?.client_name || jo.clients?.company_name || jo.client_id
+    if (!confirm(`Delete ${jo.job_order_id} (${clientName}, ${formatPeso(jo.grand_total || 0)})? This also deletes its items and payment records. This cannot be undone.`)) return
+    setDeletingJO(jo.job_order_id)
+    try {
+      const supabase = createSupabaseBrowserClient()
+      const { error } = await supabase.from('job_orders').delete().eq('job_order_id', jo.job_order_id)
+      if (error) { alert(error.message || 'Failed to delete job order.'); return }
+      setJobOrders(prev => prev.filter(j => j.job_order_id !== jo.job_order_id))
+    } finally {
+      setDeletingJO(null)
+    }
+  }
 
   const statuses = ['all', 'Done', ...Array.from(new Set(jobOrders.map(j => j.payment_status).filter(Boolean)))]
 
@@ -141,6 +166,14 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, currentUser 
                     <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.85rem' }}>{formatPeso(jo.grand_total || 0)}</div>
                     <div style={{ color: hasBalance ? '#e74c3c' : '#2ecc71', fontSize: '0.7rem' }}>Bal: {formatPeso(jo.balance_due || 0)}</div>
                   </div>
+                  <button title="Edit JO" onClick={() => setEditingJO(jo)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7A1828', padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button title="Delete JO (temporary — for verifying migrated records)" onClick={() => handleDelete(jo)} disabled={deletingJO === jo.job_order_id}
+                    style={{ background: 'none', border: 'none', cursor: deletingJO === jo.job_order_id ? 'not-allowed' : 'pointer', color: '#c0392b', padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0, opacity: deletingJO === jo.job_order_id ? 0.5 : 1 }}>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                  </button>
                   <ClientQrButton
                     clientId={jo.client_id}
                     clientLabel={clientName}
@@ -215,6 +248,17 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, currentUser 
       )}
 
       <Pagination page={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+
+      {editingJO && (
+        <EditJOModal
+          jo={editingJO}
+          categories={categories}
+          subcategories={subcategories}
+          currentUser={currentUser}
+          onClose={() => setEditingJO(null)}
+          onSave={handleEditSave}
+        />
+      )}
     </div>
   )
 }
