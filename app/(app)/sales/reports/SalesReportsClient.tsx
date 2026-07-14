@@ -11,6 +11,14 @@ const PAGE_SIZE = 10
 
 interface Props { payments: any[]; jobOrders: any[]; expenses: any[]; purchases: any[]; supplierDeliveries: any[]; overheadExpenses: any[] }
 
+const JO_STATUS_COLORS: Record<string, string> = {
+  'Fully Paid': '#27ae60',
+  'For Billing': '#9b59b6',
+  'Downpayment Received': '#2980b9',
+  'Below 50% Downpayment': '#e67e22',
+  'Pending Payment': '#e74c3c',
+}
+
 type Period = 'weekly' | 'monthly' | 'yearly'
 
 function getPeriodKey(date: string, period: Period): string {
@@ -38,8 +46,12 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
   useEffect(() => { setPage(1) }, [period])
 
   const report = useMemo(() => {
-    const map: Record<string, { collections: number; sales: number; expenses: number; overhead: number; joCount: number; byMethod: Record<string, number> }> = {}
-    const blank = () => ({ collections: 0, sales: 0, expenses: 0, overhead: 0, joCount: 0, byMethod: {} })
+    const map: Record<string, {
+      collections: number; sales: number; expenses: number; overhead: number; joCount: number
+      byMethod: Record<string, number>
+      dailyExpenses: number; purchasesAmt: number; supplierDeliveriesAmt: number
+    }> = {}
+    const blank = () => ({ collections: 0, sales: 0, expenses: 0, overhead: 0, joCount: 0, byMethod: {}, dailyExpenses: 0, purchasesAmt: 0, supplierDeliveriesAmt: 0 })
 
     for (const p of payments) {
       const d = p.payment_date
@@ -65,16 +77,19 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
       const key = getPeriodKey(d, period)
       if (!map[key]) map[key] = blank()
       map[key].expenses += e.amount || 0
+      map[key].dailyExpenses += e.amount || 0
     }
 
     // Purchases (same-day cash) and Supplier Deliveries (billed via next month's cheque)
-    // are both real cash-out overhead — folded into the same Expenses bucket.
+    // are both real cash-out overhead — folded into the same Expenses bucket, but tracked
+    // separately too so the breakdown below can show where the money actually went.
     for (const p of purchases) {
       const d = p.purchase_date
       if (!d) continue
       const key = getPeriodKey(d, period)
       if (!map[key]) map[key] = blank()
       map[key].expenses += p.total_amount || 0
+      map[key].purchasesAmt += p.total_amount || 0
     }
 
     for (const sd of supplierDeliveries) {
@@ -83,6 +98,7 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
       const key = getPeriodKey(d, period)
       if (!map[key]) map[key] = blank()
       map[key].expenses += sd.total_amount || 0
+      map[key].supplierDeliveriesAmt += sd.total_amount || 0
     }
 
     // Fixed monthly overhead (utilities, salaries, BIR, etc.) — kept separate from
@@ -112,7 +128,30 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
   const grandNetProfit = grandSales - grandExpenses
   const grandProfit = grandNetProfit - grandOverhead
   const grandJOs = report.reduce((s, [, r]) => s + r.joCount, 0)
+  const grandDailyExpenses = report.reduce((s, [, r]) => s + r.dailyExpenses, 0)
+  const grandPurchases = report.reduce((s, [, r]) => s + r.purchasesAmt, 0)
+  const grandSupplierDeliveries = report.reduce((s, [, r]) => s + r.supplierDeliveriesAmt, 0)
   const pagedReport = report.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  // How many JOs actually processed, broken down by where they stand on payment — this is
+  // the "what went wrong" view: a big JO count with a lot of Pending Payment / Below 50%
+  // means the shop is doing the work but not collecting for it yet, not that sales are down.
+  const joStatusCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const jo of jobOrders) {
+      const status = jo.payment_status || 'Unknown'
+      counts[status] = (counts[status] || 0) + 1
+    }
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])
+  }, [jobOrders])
+
+  const expenseBreakdown = [
+    { label: 'Daily Expenses', value: grandDailyExpenses, color: '#e74c3c' },
+    { label: 'Purchases', value: grandPurchases, color: '#e67e22' },
+    { label: 'Supplier Deliveries', value: grandSupplierDeliveries, color: '#d35400' },
+    { label: 'Overhead (salaries, utilities, etc.)', value: grandOverhead, color: '#c0392b' },
+  ]
+  const expenseGrandTotal = expenseBreakdown.reduce((s, e) => s + e.value, 0) || 1
 
   return (
     <div>
@@ -175,6 +214,46 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
             <div style={{ color: c.warn ? '#e74c3c' : c.profit !== undefined ? (c.profit ? '#27ae60' : '#e74c3c') : '#1a1a1a', fontWeight: 700, fontSize: '0.95rem', marginTop: 2 }}>{c.value}</div>
           </div>
         ))}
+      </div>
+
+      {/* JOs processed + Expense breakdown — the "what happened" view: a JO count with a lot
+          of Pending/Below-50% payment means work got done but wasn't collected yet, not that
+          business was slow. Expense breakdown shows where cash-out actually went. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12, marginBottom: '1.25rem' }}>
+        <div style={{ background: '#FDF5EC', borderRadius: 12, padding: '1rem', border: '1px solid #EDE0CC' }}>
+          <div style={{ color: '#7A1828', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.75rem' }}>
+            Job Orders Processed — {grandJOs}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {joStatusCounts.map(([status, count]) => (
+              <div key={status} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 8, height: 8, borderRadius: 999, background: JO_STATUS_COLORS[status] || '#999', flexShrink: 0 }} />
+                <span style={{ color: '#555', fontSize: '0.78rem', flex: 1 }}>{status}</span>
+                <span style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.8rem' }}>{count}</span>
+                <span style={{ color: '#aaa', fontSize: '0.7rem', width: 40, textAlign: 'right' }}>{grandJOs ? Math.round((count / grandJOs) * 100) : 0}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ background: '#FDF5EC', borderRadius: 12, padding: '1rem', border: '1px solid #EDE0CC' }}>
+          <div style={{ color: '#7A1828', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.75rem' }}>
+            Expense Breakdown — {formatPeso(grandExpenses + grandOverhead)}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {expenseBreakdown.map(e => (
+              <div key={e.label}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                  <span style={{ color: '#555', fontSize: '0.78rem' }}>{e.label}</span>
+                  <span style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.8rem' }}>{formatPeso(e.value)}</span>
+                </div>
+                <div style={{ background: '#f0f0f0', borderRadius: 4, height: 5, overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.min((e.value / expenseGrandTotal) * 100, 100)}%`, height: '100%', background: e.color, borderRadius: 4 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Period rows */}
