@@ -107,6 +107,32 @@ where jo.job_status not in ('Done', 'Cancelled')
       and i.job_status not in ('Done', 'Cancelled')
   );
 
+-- ── 11) migration 038 — public_job_order_items_receipt view missing computed_line_total,
+--      needed for the receipt's new Summary Billing per-item cost breakdown. ──
+create or replace view public_job_order_items_receipt as
+select
+  i.item_id,
+  i.job_order_id,
+  i.item_preview,
+  i.quantity,
+  i.width,
+  i.height,
+  i.production_specs,
+  i.notes,
+  i.date_time_needed,
+  i.job_status,
+  s.subcategory_name,
+  cat.category_name,
+  i.computed_line_total
+from job_order_items i
+left join subcategories s on s.subcategory_id = i.subcategory_id
+left join categories cat on cat.category_id = s.category_id;
+grant select on public_job_order_items_receipt to anon;
+
+-- ── 12) migration 039 — job_order_items.seaming_fee column, needed for the new
+--      "Needs seaming?" (₱10/sqft) add-on on Add/Edit Job Order Item. ──
+alter table job_order_items add column if not exists seaming_fee numeric(10,2) default 0;
+
 -- ── 9) migration 028 — job_orders.source_channel column never created, so New/Edit
 --      JO fails with "Could not find the 'source_channel' column ... in the schema
 --      cache" when saving. ──

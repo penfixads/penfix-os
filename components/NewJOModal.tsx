@@ -410,7 +410,7 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
           )}
           {selectedClient && (
             <div style={{ color: '#2ecc71', fontSize: '0.75rem', marginTop: 4 }}>
-              Earned Rewards: {formatPeso(earnedRewards)} · {selectedClient.credit_line_status ? 'Credit Line Active' : 'No Credit Line'}
+              Earned Rewards: {formatPeso(earnedRewards)}{selectedClient.credit_line_status ? ' · Credit Line Active' : ''}
             </div>
           )}
         </div>

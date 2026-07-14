@@ -18,6 +18,7 @@ interface Item {
   job_status?: string | null
   subcategory_name?: string | null
   category_name?: string | null
+  computed_line_total?: number | null
 }
 
 interface StatusLog {
@@ -49,8 +50,9 @@ interface Props {
 }
 
 // Lets the client flip between items themselves (same picker as the in-app "Generate Receipt"
-// modal) instead of only ever seeing the JO's first item — the Payment Details block inside
-// ReceiptCard stays fixed regardless of which item is selected, since payment is tracked per JO, not per item.
+// modal) instead of only ever seeing the JO's first item — the Summary Billing block inside
+// ReceiptCard always lists every item's cost regardless of which one is selected, since
+// payment itself is tracked per JO, not per item.
 export default function PublicReceiptView({ jo, items, statusLogs, paymentMethods }: Props) {
   const [selectedItemId, setSelectedItemId] = useState(items[0]?.item_id || '')
   const [downloading, setDownloading] = useState(false)
@@ -107,6 +109,8 @@ export default function PublicReceiptView({ jo, items, statusLogs, paymentMethod
           receivedBy={jo.received_by}
           accomplishedBy={accomplishedBy}
           sourceChannel={jo.source_channel}
+          itemCost={item?.computed_line_total || 0}
+          items={items.map(i => ({ id: i.item_id, name: i.subcategory_name || i.item_id, cost: i.computed_line_total || 0 }))}
           totalAmount={jo.grand_total || 0}
           amountPaid={jo.total_amount_paid || 0}
           balance={jo.balance_due || 0}

@@ -156,6 +156,8 @@ export default function JOReceiptModal({ jobOrderId, onClose }: Props) {
               receivedBy={jo.received_by}
               accomplishedBy={accomplishedBy}
               sourceChannel={jo.source_channel}
+              itemCost={item?.computed_line_total || 0}
+              items={items.map(i => ({ id: i.item_id, name: i.subcategories?.subcategory_name || i.item_id, cost: i.computed_line_total || 0 }))}
               totalAmount={jo.grand_total || 0}
               amountPaid={jo.total_amount_paid || 0}
               balance={jo.balance_due || 0}

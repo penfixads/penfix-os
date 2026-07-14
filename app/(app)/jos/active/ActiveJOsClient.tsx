@@ -19,6 +19,11 @@ interface Props {
   currentUser: AppUser
 }
 
+function getNearestDeadline(jo: any) {
+  const items = jo.job_order_items || []
+  return items.map((i: any) => i.date_time_needed).filter(Boolean).sort()[0] || null
+}
+
 const STATUS_COLORS: Record<string, string> = {
   'Pending Payment': '#e67e22',
   'Below 50% Downpayment': '#e74c3c',
@@ -31,6 +36,8 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
   const [jobOrders, setJobOrders] = useState(initialJOs)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [editingJO, setEditingJO] = useState<any | null>(null)
   const [addingItemToJO, setAddingItemToJO] = useState<string | null>(null)
   const [receiptJOId, setReceiptJOId] = useState<string | null>(null)
@@ -40,7 +47,16 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
     const client = jo.clients?.client_name || jo.clients?.company_name || ''
     const matchSearch = !search || fuzzyMatch(client, search) || fuzzyMatch(jo.job_order_id, search)
     const matchStatus = statusFilter === 'all' || jo.payment_status === statusFilter
-    return matchSearch && matchStatus
+    const d = jo.date_time_received ? getPhilippineDateStr(new Date(jo.date_time_received)) : undefined
+    const matchFrom = !dateFrom || d >= dateFrom
+    const matchTo = !dateTo || d <= dateTo
+    return matchSearch && matchStatus && matchFrom && matchTo
+  }).sort((a, b) => {
+    // Soonest Date Needed first; JOs with no date needed on any item sink to the bottom.
+    const da = getNearestDeadline(a)
+    const db = getNearestDeadline(b)
+    if (!da || !db) return (da ? -1 : 0) - (db ? -1 : 0)
+    return new Date(da).getTime() - new Date(db).getTime()
   })
 
   const currentPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)))
@@ -163,6 +179,18 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
         >
           {statuses.map(s => <option key={s} value={s}>{s === 'all' ? 'All Statuses' : s}</option>)}
         </select>
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={e => { setDateFrom(e.target.value); setPage(1) }}
+          style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }}
+        />
+        <input
+          type="date"
+          value={dateTo}
+          onChange={e => { setDateTo(e.target.value); setPage(1) }}
+          style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }}
+        />
       </div>
 
       {filtered.length === 0 ? (
@@ -177,7 +205,7 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
             // still in flight. (They stay fully visible in All Job Order Items.)
             const visibleItems = items.filter((i: any) => i.job_status !== 'Cancelled' && i.job_status !== 'Unclaimed')
             const receivedToday = getPhilippineDateStr(new Date(jo.date_time_received)) === getPhilippineDateStr()
-            const nearestDeadline = items.map((i: any) => i.date_time_needed).filter(Boolean).sort()[0]
+            const nearestDeadline = getNearestDeadline(jo)
             const isOverdue = nearestDeadline && new Date(nearestDeadline) < new Date()
             const statusColor = STATUS_COLORS[jo.payment_status] || '#555'
             const ageMs = Date.now() - new Date(jo.date_time_received).getTime()
