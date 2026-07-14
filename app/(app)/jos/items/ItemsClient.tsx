@@ -25,6 +25,8 @@ const PRIORITY_COLORS: Record<string, string> = {
   URGENT: '#e74c3c',
 }
 
+type ViewMode = 'list' | 'table'
+
 export default function ItemsClient({ items, currentUser }: Props) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -33,6 +35,7 @@ export default function ItemsClient({ items, currentUser }: Props) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const toggleExpand = (itemId: string) => setExpanded(prev => ({ ...prev, [itemId]: !prev[itemId] }))
   const [page, setPage] = useState(1)
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
 
   const statuses = ['all', ...Array.from(new Set(items.map(i => i.job_status).filter(Boolean)))]
 
@@ -96,10 +99,54 @@ export default function ItemsClient({ items, currentUser }: Props) {
           style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }} />
         <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1) }}
           style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.75rem', color: '#1a1a1a', fontSize: '0.82rem', outline: 'none' }} />
+        <div style={{ display: 'flex', border: '1.5px solid #d0d0d0', borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}>
+          <button onClick={() => setViewMode('list')} title="List view"
+            style={{ padding: '0.5rem 0.7rem', background: viewMode === 'list' ? '#7A1828' : '#FDF5EC', color: viewMode === 'list' ? '#fff' : '#7A1828', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          </button>
+          <button onClick={() => setViewMode('table')} title="Table view"
+            style={{ padding: '0.5rem 0.7rem', background: viewMode === 'table' ? '#7A1828' : '#FDF5EC', color: viewMode === 'table' ? '#fff' : '#7A1828', border: 'none', borderLeft: '1.5px solid #d0d0d0', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          </button>
+        </div>
       </div>
 
       {filtered.length === 0 ? (
         <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem' }}>No job order items match your filters.</div>
+      ) : viewMode === 'table' ? (
+        <div style={{ overflowX: 'auto', border: '1px solid #EDE0CC', borderRadius: 10 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+            <thead>
+              <tr style={{ background: '#FDF5EC' }}>
+                {['Item', 'JO ID', 'Client', 'Qty', 'GA', 'Received', 'Needed', 'Status', 'Value'].map(h => (
+                  <th key={h} style={{ textAlign: h === 'Value' || h === 'Qty' ? 'right' : 'left', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#999', padding: '0.6rem 0.75rem', borderBottom: '1px solid #EDE0CC' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {pageItems.map(item => {
+                const jo = item.job_orders
+                const clientName = jo?.clients?.client_name || jo?.clients?.company_name || '—'
+                const statusColor = STATUS_COLORS[item.job_status] || '#555'
+                return (
+                  <tr key={item.item_id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                    <td style={{ padding: '0.55rem 0.75rem', color: '#1a1a1a', fontWeight: 600 }}>{item.subcategories?.subcategory_name || item.item_id}</td>
+                    <td style={{ padding: '0.55rem 0.75rem', color: '#777' }}>{item.job_order_id}</td>
+                    <td style={{ padding: '0.55rem 0.75rem', color: '#555' }}>{clientName}</td>
+                    <td style={{ padding: '0.55rem 0.75rem', color: '#555', textAlign: 'right' }}>{item.quantity || 1}</td>
+                    <td style={{ padding: '0.55rem 0.75rem', color: '#777' }}>{jo?.received_by || '—'}</td>
+                    <td style={{ padding: '0.55rem 0.75rem', color: '#999' }}>{item.date_time_received ? new Date(item.date_time_received).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</td>
+                    <td style={{ padding: '0.55rem 0.75rem', color: '#999' }}>{item.date_time_needed ? new Date(item.date_time_needed).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) : '—'}</td>
+                    <td style={{ padding: '0.55rem 0.75rem' }}>
+                      <span style={{ padding: '0.2rem 0.55rem', borderRadius: 12, background: statusColor + '22', color: statusColor, fontSize: '0.66rem', fontWeight: 700 }}>{item.job_status}</span>
+                    </td>
+                    <td style={{ padding: '0.55rem 0.75rem', color: '#1a1a1a', fontWeight: 700, textAlign: 'right' }}>{formatPeso(item.computed_line_total || 0)}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {pageItems.map(item => {
