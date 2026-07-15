@@ -2,12 +2,46 @@
 
 import { useState } from 'react'
 import { formatPeso, fuzzyMatch, getPhilippineDateStr } from '@/lib/jo-helpers'
+import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
 import type { AppUser } from '@/lib/user'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import Pagination from '@/components/Pagination'
+import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
+import { IconEdit } from '@/components/icons'
 
 const PAGE_SIZE = 10
 
-interface Props { items: any[]; currentUser: AppUser }
+interface Props { items: any[]; categories: any[]; subcategories: any[]; currentUser: AppUser }
+
+// Recomputes the parent job order's grand_total/payment_status after an item is edited or
+// deleted from this flat cross-JO list — the item editor here only ever writes to
+// job_order_items, so without this the parent job_orders row (and anything reading it, like
+// Sales Reports or receipts) would keep showing stale totals.
+async function recalcJobOrderTotals(supabase: ReturnType<typeof createSupabaseBrowserClient>, joId: string) {
+  const [{ data: siblingItems }, { data: jo }] = await Promise.all([
+    supabase.from('job_order_items').select('computed_line_total').eq('job_order_id', joId),
+    supabase.from('job_orders').select('discount, total_amount_paid, cashback_discount, is_for_billing').eq('job_order_id', joId).single(),
+  ])
+  if (!jo) return
+  const grandTotal = (siblingItems || []).reduce((s: number, i: any) => s + (i.computed_line_total || 0), 0) - (jo.discount || 0)
+  const totalPaid = jo.total_amount_paid || 0
+  const cashback = jo.cashback_discount || 0
+  const paymentStatus = jo.is_for_billing
+    ? 'For Billing'
+    : totalPaid === 0 && cashback === 0
+    ? 'Pending Payment'
+    : totalPaid + cashback >= grandTotal
+    ? 'Fully Paid'
+    : totalPaid + cashback >= grandTotal * 0.5
+    ? 'Downpayment Received'
+    : 'Below 50% Downpayment'
+  await supabase.from('job_orders').update({
+    grand_total: grandTotal,
+    payment_status: paymentStatus,
+    is_fully_paid: paymentStatus === 'Fully Paid',
+  }).eq('job_order_id', joId)
+  await syncJobOrderDoneStatus(supabase, joId)
+}
 
 const STATUS_COLORS: Record<string, string> = {
   'Received': '#e67e22',
@@ -27,7 +61,8 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 type ViewMode = 'list' | 'table'
 
-export default function ItemsClient({ items, currentUser }: Props) {
+export default function ItemsClient({ items: initialItems, categories, subcategories, currentUser }: Props) {
+  const [items, setItems] = useState(initialItems)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [dateFrom, setDateFrom] = useState('')
@@ -36,6 +71,64 @@ export default function ItemsClient({ items, currentUser }: Props) {
   const toggleExpand = (itemId: string) => setExpanded(prev => ({ ...prev, [itemId]: !prev[itemId] }))
   const [page, setPage] = useState(1)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
+  // Temporary: lets Admin/GA/Treasury correct historical-import item records (wrong
+  // subcategory, price, quantity, etc.) directly from this cross-JO view instead of having
+  // to hunt down the parent job order first. Pull once historical-import verification is done.
+  const [editingItem, setEditingItem] = useState<any | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  async function handleEditSave(updated: any) {
+    const supabase = createSupabaseBrowserClient()
+    const itemId = updated.item_id
+    const { error } = await supabase.from('job_order_items').update({
+      category_id: updated.category_id,
+      subcategory_id: updated.subcategory_id,
+      pricing_model: updated.pricing_model,
+      base_price: updated.base_price,
+      quantity: updated.quantity,
+      width: updated.width,
+      height: updated.height,
+      depth: updated.depth,
+      no_of_mins: updated.no_of_mins,
+      letter_count: updated.letter_count,
+      production_specs: updated.production_specs,
+      notes: updated.notes,
+      date_time_needed: updated.date_time_needed,
+      discount: updated.discount,
+      layout_fee: updated.layout_fee,
+      delivery_fee: updated.delivery_fee,
+      installation_fee: updated.installation_fee,
+      seaming_fee: updated.seaming_fee,
+      computed_line_total: updated.computed_line_total,
+      item_preview: updated.item_preview,
+      item_preview_thumb: updated.item_preview_thumb,
+    }).eq('item_id', itemId)
+    if (error) { alert(error.message || 'Failed to save item.'); return }
+    await recalcJobOrderTotals(supabase, editingItem.job_order_id)
+    setItems(prev => prev.map(i => i.item_id !== itemId ? i : {
+      ...i,
+      ...updated,
+      subcategories: { ...i.subcategories, subcategory_name: updated.subcategory_name, category_id: updated.category_id },
+    }))
+    setEditingItem(null)
+  }
+
+  async function handleDelete(item: any) {
+    const jo = item.job_orders
+    const clientName = jo?.clients?.client_name || jo?.clients?.company_name || ''
+    const label = item.subcategories?.subcategory_name || item.item_id
+    if (!confirm(`Delete item "${label}" from ${item.job_order_id}${clientName ? ` (${clientName})` : ''}? This cannot be undone.`)) return
+    setDeletingId(item.item_id)
+    try {
+      const supabase = createSupabaseBrowserClient()
+      const { error } = await supabase.from('job_order_items').delete().eq('item_id', item.item_id)
+      if (error) { alert(error.message || 'Failed to delete item.'); return }
+      await recalcJobOrderTotals(supabase, item.job_order_id)
+      setItems(prev => prev.filter(i => i.item_id !== item.item_id))
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const statuses = ['all', ...Array.from(new Set(items.map(i => i.job_status).filter(Boolean)))]
 
@@ -118,7 +211,7 @@ export default function ItemsClient({ items, currentUser }: Props) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
             <thead>
               <tr style={{ background: '#FDF5EC' }}>
-                {['Item', 'JO ID', 'Client', 'Qty', 'GA', 'Received', 'Needed', 'Status', 'Value'].map(h => (
+                {['Item', 'JO ID', 'Client', 'Qty', 'GA', 'Received', 'Needed', 'Status', 'Value', ''].map(h => (
                   <th key={h} style={{ textAlign: h === 'Value' || h === 'Qty' ? 'right' : 'left', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#999', padding: '0.6rem 0.75rem', borderBottom: '1px solid #EDE0CC' }}>{h}</th>
                 ))}
               </tr>
@@ -141,6 +234,16 @@ export default function ItemsClient({ items, currentUser }: Props) {
                       <span style={{ padding: '0.2rem 0.55rem', borderRadius: 12, background: statusColor + '22', color: statusColor, fontSize: '0.66rem', fontWeight: 700 }}>{item.job_status}</span>
                     </td>
                     <td style={{ padding: '0.55rem 0.75rem', color: '#1a1a1a', fontWeight: 700, textAlign: 'right' }}>{formatPeso(item.computed_line_total || 0)}</td>
+                    <td style={{ padding: '0.55rem 0.75rem', whiteSpace: 'nowrap' }}>
+                      <button title="Edit item" onClick={() => setEditingItem({ ...item, category_id: item.category_id || item.subcategories?.category_id })}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7A1828', padding: 2, display: 'inline-flex', alignItems: 'center', marginRight: 6 }}>
+                        <IconEdit style={{ width: 15, height: 15 }} />
+                      </button>
+                      <button title="Delete item (temporary — for verifying migrated records)" onClick={() => handleDelete(item)} disabled={deletingId === item.item_id}
+                        style={{ background: 'none', border: 'none', cursor: deletingId === item.item_id ? 'not-allowed' : 'pointer', color: '#c0392b', padding: 2, display: 'inline-flex', alignItems: 'center', opacity: deletingId === item.item_id ? 0.5 : 1 }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                      </button>
+                    </td>
                   </tr>
                 )
               })}
@@ -189,6 +292,14 @@ export default function ItemsClient({ items, currentUser }: Props) {
                       {item.job_status}
                     </div>
                   </div>
+                  <button title="Edit item" onClick={() => setEditingItem({ ...item, category_id: item.category_id || item.subcategories?.category_id })}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7A1828', padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                    <IconEdit style={{ width: 16, height: 16 }} />
+                  </button>
+                  <button title="Delete item (temporary — for verifying migrated records)" onClick={() => handleDelete(item)} disabled={deletingId === item.item_id}
+                    style={{ background: 'none', border: 'none', cursor: deletingId === item.item_id ? 'not-allowed' : 'pointer', color: '#c0392b', padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0, opacity: deletingId === item.item_id ? 0.5 : 1 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                  </button>
                 </div>
 
                 {isOpen && (
@@ -218,6 +329,18 @@ export default function ItemsClient({ items, currentUser }: Props) {
       )}
 
       <Pagination page={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+
+      {editingItem && (
+        <JOItemForm
+          categories={categories}
+          subcategories={subcategories}
+          editingItem={editingItem}
+          clientName={editingItem.job_orders?.clients?.client_name || editingItem.job_orders?.clients?.company_name}
+          currentUser={currentUser}
+          onSave={handleEditSave}
+          onClose={() => setEditingItem(null)}
+        />
+      )}
     </div>
   )
 }

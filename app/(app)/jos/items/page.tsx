@@ -4,8 +4,10 @@ import { redirect } from 'next/navigation'
 import ItemsClient from './ItemsClient'
 
 const ITEMS_SELECT = `
-  item_id, job_order_id, quantity, computed_line_total, job_status, priority,
-  date_time_needed, date_time_received, production_specs,
+  item_id, job_order_id, category_id, subcategory_id, quantity, computed_line_total, job_status, priority,
+  date_time_needed, date_time_received, production_specs, notes,
+  pricing_model, base_price, width, height, depth, no_of_mins, letter_count, discount,
+  layout_fee, delivery_fee, installation_fee, seaming_fee, item_preview, item_preview_thumb,
   subcategories(subcategory_name, category_id, categories(category_name)),
   job_orders(received_by, clients(client_name, company_name)),
   job_order_item_status_log(status_name, changed_by_name, changed_by_role, created_at)
@@ -39,7 +41,12 @@ export default async function AllJobOrderItemsPage() {
   if (!user) redirect('/login')
 
   const supabase = createSupabaseServerClient()
-  const items = await fetchAllItems(supabase)
 
-  return <ItemsClient items={items} currentUser={user} />
+  const [items, { data: categories }, { data: subcategories }] = await Promise.all([
+    fetchAllItems(supabase),
+    supabase.from('categories').select('*').eq('is_active', true).order('category_name'),
+    supabase.from('subcategories').select('*').eq('active', true).order('subcategory_name'),
+  ])
+
+  return <ItemsClient items={items} categories={categories || []} subcategories={subcategories || []} currentUser={user} />
 }
