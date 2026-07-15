@@ -263,7 +263,7 @@ export default function ItemsClient({ items: initialItems, categories, subcatego
 
             return (
               <div key={item.item_id} style={{ background: '#FDF5EC', borderRadius: 10, border: '1px solid #EDE0CC', overflow: 'hidden' }}>
-                <div style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                <div style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <button onClick={() => toggleExpand(item.item_id)} title="Show who did what, per SOP step"
                     style={{ background: 'none', border: 'none', color: '#7A1828', cursor: 'pointer', fontSize: '0.75rem', padding: 2, flexShrink: 0 }}>
                     {isOpen ? '▼' : '▶'}
