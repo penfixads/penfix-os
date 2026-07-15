@@ -20,7 +20,7 @@ export interface ReceiptCardProps {
   accomplishedBy?: string | null
   sourceChannel?: string | null
   itemCost: number
-  items: { id: string; name: string; cost: number }[]
+  costBreakdown: { label: string; amount: number }[]
   totalAmount: number
   amountPaid: number
   balance: number
@@ -35,7 +35,7 @@ export interface ReceiptCardProps {
 const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(function ReceiptCard(props, ref) {
   const {
     jobOrderId, dateReceived, clientName, contactNumber, itemPreview, itemName, categoryName,
-    size, quantity, specs, remarks, dateNeeded, receivedBy, accomplishedBy, itemCost, items, totalAmount, amountPaid, balance,
+    size, quantity, specs, remarks, dateNeeded, receivedBy, accomplishedBy, itemCost, costBreakdown, totalAmount, amountPaid, balance,
     paymentMethods, status, discount, sourceChannel,
   } = props
 
@@ -103,9 +103,9 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(function Receip
 
       <div style={{ padding: '1.1rem 1.25rem' }}>
         <div style={{ color: '#5C001F', fontWeight: 700, fontSize: '0.82rem', letterSpacing: '0.04em', marginBottom: 8 }}>SUMMARY BILLING</div>
-        {items.length > 0 && (
+        {costBreakdown.length > 0 && (
           <div style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #eee' }}>
-            {items.map(it => <Row key={it.id} label={it.name} value={formatPeso(it.cost)} />)}
+            {costBreakdown.map(row => <Row key={row.label} label={row.label} value={formatPeso(row.amount)} />)}
           </div>
         )}
         <Row label="Total Amount" value={formatPeso(totalAmount)} bold />

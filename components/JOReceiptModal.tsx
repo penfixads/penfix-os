@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import html2canvas from 'html2canvas'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { nameInitials } from '@/lib/jo-helpers'
+import { nameInitials, buildItemCostBreakdown } from '@/lib/jo-helpers'
 import ReceiptCard from '@/components/ReceiptCard'
 import { IconX, IconDownload } from '@/components/icons'
 
@@ -157,7 +157,7 @@ export default function JOReceiptModal({ jobOrderId, onClose }: Props) {
               accomplishedBy={accomplishedBy}
               sourceChannel={jo.source_channel}
               itemCost={item?.computed_line_total || 0}
-              items={items.map(i => ({ id: i.item_id, name: i.subcategories?.subcategory_name || i.item_id, cost: i.computed_line_total || 0 }))}
+              costBreakdown={buildItemCostBreakdown(item)}
               totalAmount={jo.grand_total || 0}
               amountPaid={jo.total_amount_paid || 0}
               balance={jo.balance_due || 0}

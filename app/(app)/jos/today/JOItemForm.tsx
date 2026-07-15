@@ -126,7 +126,14 @@ function StatusChecklist({ statusChecklist }: { statusChecklist: StatusChecklist
           // as done once it has its own logged proponent(s), same as every other step.
           const terminalConfirmed = step.is_terminal && !!(namesByStatus[step.status_name]?.length)
           const isDone = isPast || (isCurrentRow && step.is_terminal && terminalConfirmed)
-          const isActionable = isCurrentRow && (!step.is_terminal || !terminalConfirmed)
+          // Temporary: historically-migrated items often carry a job_status from before this
+          // SOP checklist existed (or from a subcategory whose steps changed since import), so
+          // it matches none of the steps here — currentIndex comes out -1, isCurrentRow is never
+          // true for any step, and every checkbox stays permanently disabled with no way to fix
+          // it. While historical-import verification is ongoing, treat every step as actionable
+          // (not just the one at currentIndex) so staff can click the checkbox that reflects
+          // reality and correct the item. Pull the `currentIndex === -1 ||` once that's done.
+          const isActionable = currentIndex === -1 || isCurrentRow ? (!step.is_terminal || !terminalConfirmed) : false
           const names = namesByStatus[step.status_name]
           const nextStep = steps[i + 1]
           const inProductionPhase = productionStartIndex !== -1 && i >= productionStartIndex && !step.is_terminal

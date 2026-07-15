@@ -178,6 +178,32 @@ export function computeLineTotal(
   return Math.max(0, total - discount)
 }
 
+// Breaks a single item's stored computed_line_total back down into the price + add-on fees
+// that made it up, for the receipt's per-item "computation details" — the fees are stored
+// pre-summed into computed_line_total, so the base price line is derived by subtracting them
+// back out rather than re-deriving it from pricing_model/width/height (which would drift from
+// whatever was actually charged if that item was manually overridden).
+export function buildItemCostBreakdown(item: {
+  computed_line_total?: number | null
+  layout_fee?: number | null
+  delivery_fee?: number | null
+  installation_fee?: number | null
+  seaming_fee?: number | null
+} | null | undefined): { label: string; amount: number }[] {
+  if (!item) return []
+  const layoutFee = item.layout_fee || 0
+  const deliveryFee = item.delivery_fee || 0
+  const installationFee = item.installation_fee || 0
+  const seamingFee = item.seaming_fee || 0
+  const basePrice = (item.computed_line_total || 0) - layoutFee - deliveryFee - installationFee - seamingFee
+  const rows = [{ label: 'Item Price', amount: basePrice }]
+  if (layoutFee > 0) rows.push({ label: 'Layout & Design Fee', amount: layoutFee })
+  if (deliveryFee > 0) rows.push({ label: 'Delivery Fee', amount: deliveryFee })
+  if (installationFee > 0) rows.push({ label: 'Installation Fee', amount: installationFee })
+  if (seamingFee > 0) rows.push({ label: 'Seaming Fee', amount: seamingFee })
+  return rows
+}
+
 // Splits the legacy freeform `subcategories.job_flow` text into individual step names,
 // trimmed and de-duped (some entries have "For Production" listed twice, inconsistent
 // spacing, etc.) — used as a fallback status list until real subcategory_sop steps exist.
