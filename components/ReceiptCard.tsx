@@ -81,6 +81,11 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(function Receip
         {categoryName && <Row label="Category" value={categoryName} />}
         {size && <Row label="Size" value={size} />}
         <Row label="No. of Pcs" value={String(quantity ?? 1)} />
+        {costBreakdown.length > 0 && (
+          <div style={{ margin: '0.2rem 0', padding: '0.4rem 0.6rem', background: '#faf5f6', borderRadius: 6 }}>
+            {costBreakdown.map(row => <Row key={row.label} label={row.label} value={formatPeso(row.amount)} />)}
+          </div>
+        )}
         <Row label="Item Cost" value={formatPeso(itemCost)} bold />
         {specs && <Row label="Specs" value={specs} />}
         {remarks && <Row label="Remarks" value={remarks} />}
@@ -103,11 +108,6 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(function Receip
 
       <div style={{ padding: '1.1rem 1.25rem' }}>
         <div style={{ color: '#5C001F', fontWeight: 700, fontSize: '0.82rem', letterSpacing: '0.04em', marginBottom: 8 }}>SUMMARY BILLING</div>
-        {costBreakdown.length > 0 && (
-          <div style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #eee' }}>
-            {costBreakdown.map(row => <Row key={row.label} label={row.label} value={formatPeso(row.amount)} />)}
-          </div>
-        )}
         <Row label="Total Amount" value={formatPeso(totalAmount)} bold />
         <Row label="Amount Paid" value={formatPeso(amountPaid)} />
         <Row label="Balance" value={formatPeso(balance)} bold color={balance > 0 ? '#c0392b' : '#1a7a3a'} />
