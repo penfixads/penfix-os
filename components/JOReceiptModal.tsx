@@ -17,7 +17,6 @@ interface Props {
 // payment breakdown), just generated from the data already captured when the JO was created.
 export default function JOReceiptModal({ jobOrderId, onClose }: Props) {
   const [jo, setJo] = useState<any | null>(null)
-  const [payments, setPayments] = useState<any[]>([])
   const [statusLogs, setStatusLogs] = useState<any[]>([])
   const [selectedItemId, setSelectedItemId] = useState<string>('')
   const [loading, setLoading] = useState(true)
@@ -27,19 +26,15 @@ export default function JOReceiptModal({ jobOrderId, onClose }: Props) {
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient()
-    Promise.all([
-      supabase.from('job_orders').select(`
-        *, clients(client_name, company_name, contact_number, email),
-        job_order_items(*, subcategories(subcategory_name, categories(category_name)))
-      `).eq('job_order_id', jobOrderId).single(),
-      supabase.from('payments').select('*').eq('job_order_id', jobOrderId).order('created_at'),
-    ]).then(async ([{ data: joData }, { data: pays }]) => {
+    supabase.from('job_orders').select(`
+      *, clients(client_name, company_name, contact_number, email),
+      job_order_items(*, subcategories(subcategory_name, categories(category_name)))
+    `).eq('job_order_id', jobOrderId).single().then(async ({ data: joData }) => {
       const itemIds = (joData?.job_order_items || []).map((i: any) => i.item_id)
       const { data: logs } = itemIds.length > 0
         ? await supabase.from('job_order_item_status_log').select('*').in('item_id', itemIds).order('created_at')
         : { data: [] }
       setJo(joData)
-      setPayments(pays || [])
       setStatusLogs(logs || [])
       setSelectedItemId(joData?.job_order_items?.[0]?.item_id || '')
       setLoading(false)
@@ -112,7 +107,6 @@ export default function JOReceiptModal({ jobOrderId, onClose }: Props) {
   const item = items.find(i => i.item_id === selectedItemId) || items[0]
   const client = jo.clients
   const clientName = client?.client_name || client?.company_name || jo.client_id
-  const methodsUsed = Array.from(new Set(payments.map(p => p.payment_method).filter(Boolean))) as string[]
   const sizeLabel = item?.width && item?.height ? `${item.width} × ${item.height} ft` : (item?.width ? `${item.width} ft` : '')
   // "Accomplished By" reflects whoever confirmed the item's current status — blank while it's
   // still sitting at "Received" (nothing beyond intake has happened yet).
@@ -158,12 +152,6 @@ export default function JOReceiptModal({ jobOrderId, onClose }: Props) {
               sourceChannel={jo.source_channel}
               itemCost={item?.computed_line_total || 0}
               costBreakdown={buildItemCostBreakdown(item)}
-              totalAmount={jo.grand_total || 0}
-              amountPaid={jo.total_amount_paid || 0}
-              balance={jo.balance_due || 0}
-              paymentMethods={methodsUsed}
-              status={jo.payment_status}
-              discount={jo.discount}
             />
           </div>
         </div>

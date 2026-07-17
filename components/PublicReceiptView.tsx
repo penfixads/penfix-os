@@ -35,11 +35,6 @@ interface Jo {
   job_order_id: string
   date_time_received: string
   received_by?: string | null
-  grand_total: number
-  total_amount_paid: number
-  balance_due: number
-  payment_status?: string | null
-  discount?: number | null
   client_name?: string | null
   company_name?: string | null
   contact_number?: string | null
@@ -50,14 +45,12 @@ interface Props {
   jo: Jo
   items: Item[]
   statusLogs: StatusLog[]
-  paymentMethods: string[]
 }
 
 // Lets the client flip between items themselves (same picker as the in-app "Generate Receipt"
-// modal) instead of only ever seeing the JO's first item. The Summary Billing block inside
-// ReceiptCard shows only the selected item's own price/fee breakdown — Total Amount/Amount
-// Paid/Balance below it still reflect the whole JO, since payment is tracked per JO, not per item.
-export default function PublicReceiptView({ jo, items, statusLogs, paymentMethods }: Props) {
+// modal) instead of only ever seeing the JO's first item — each item shows only its own
+// price/fee breakdown; billing totals live in the separate Billing Statement, not here.
+export default function PublicReceiptView({ jo, items, statusLogs }: Props) {
   const [selectedItemId, setSelectedItemId] = useState(items[0]?.item_id || '')
   const [downloading, setDownloading] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -115,12 +108,6 @@ export default function PublicReceiptView({ jo, items, statusLogs, paymentMethod
           sourceChannel={jo.source_channel}
           itemCost={item?.computed_line_total || 0}
           costBreakdown={buildItemCostBreakdown(item)}
-          totalAmount={jo.grand_total || 0}
-          amountPaid={jo.total_amount_paid || 0}
-          balance={jo.balance_due || 0}
-          paymentMethods={paymentMethods}
-          status={jo.payment_status}
-          discount={jo.discount}
         />
       </div>
 

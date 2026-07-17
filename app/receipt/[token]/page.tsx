@@ -18,12 +18,7 @@ export default async function ReceiptPage({ params }: { params: { token: string 
   if (error) console.error('Receipt page query failed:', error.message)
   if (!jo) notFound()
 
-  const [{ data: items }, { data: methodRows }] = await Promise.all([
-    supabase.from('public_job_order_items_receipt').select('*').eq('job_order_id', jo.job_order_id),
-    supabase.from('public_job_order_payment_methods').select('payment_method').eq('job_order_id', jo.job_order_id),
-  ])
-
-  const paymentMethods = Array.from(new Set((methodRows || []).map(r => r.payment_method).filter(Boolean))) as string[]
+  const { data: items } = await supabase.from('public_job_order_items_receipt').select('*').eq('job_order_id', jo.job_order_id)
 
   // "Accomplished By" per item reflects whoever confirmed that item's current status — fetched
   // for all items at once so the client can flip between them without extra round-trips.
@@ -53,7 +48,7 @@ export default async function ReceiptPage({ params }: { params: { token: string 
         </div>
       </div>
 
-      <PublicReceiptView jo={jo} items={items || []} statusLogs={statusLogs || []} paymentMethods={paymentMethods} />
+      <PublicReceiptView jo={jo} items={items || []} statusLogs={statusLogs || []} />
 
       <div style={{ textAlign: 'center', marginTop: '1.5rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>
         Penfix Advertising &amp; Business Solutions<br />

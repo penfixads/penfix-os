@@ -21,12 +21,6 @@ export interface ReceiptCardProps {
   sourceChannel?: string | null
   itemCost: number
   costBreakdown: { label: string; amount: number }[]
-  totalAmount: number
-  amountPaid: number
-  balance: number
-  paymentMethods: string[]
-  status?: string | null
-  discount?: number | null
 }
 
 // Shared by the in-app "Generate Receipt" modal and the public /receipt/[token] link so
@@ -35,8 +29,7 @@ export interface ReceiptCardProps {
 const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(function ReceiptCard(props, ref) {
   const {
     jobOrderId, dateReceived, clientName, contactNumber, itemPreview, itemName, categoryName,
-    size, quantity, specs, remarks, dateNeeded, receivedBy, accomplishedBy, itemCost, costBreakdown, totalAmount, amountPaid, balance,
-    paymentMethods, status, discount, sourceChannel,
+    size, quantity, specs, remarks, dateNeeded, receivedBy, accomplishedBy, itemCost, costBreakdown, sourceChannel,
   } = props
 
   // html2canvas doesn't reliably respect CSS object-fit, so the image's displayed size is
@@ -104,16 +97,6 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(function Receip
           <div style={{ fontSize: '0.65rem', opacity: 0.8, letterSpacing: '0.04em' }}>ACCOMPLISHED BY</div>
           <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{accomplishedBy || '—'}</div>
         </div>
-      </div>
-
-      <div style={{ padding: '1.1rem 1.25rem' }}>
-        <div style={{ color: '#5C001F', fontWeight: 700, fontSize: '0.82rem', letterSpacing: '0.04em', marginBottom: 8 }}>SUMMARY BILLING</div>
-        <Row label="Total Amount" value={formatPeso(totalAmount)} bold />
-        <Row label="Amount Paid" value={formatPeso(amountPaid)} />
-        <Row label="Balance" value={formatPeso(balance)} bold color={balance > 0 ? '#c0392b' : '#1a7a3a'} />
-        <Row label="Mode of Payment" value={paymentMethods.length > 0 ? paymentMethods.join(', ') : '—'} />
-        {status && <Row label="Status" value={status} />}
-        {!!discount && discount > 0 && <Row label="Discount" value={formatPeso(discount)} />}
       </div>
     </div>
   )
