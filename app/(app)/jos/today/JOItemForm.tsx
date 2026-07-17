@@ -453,11 +453,13 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
               </div>
             )}
 
-            <div className="pf-grid-2" style={{ marginBottom: '0.85rem' }}>
-              <div>
-                <label className="pf-label">Base Price (₱)</label>
-                <input type="number" value={basePrice} disabled={readOnly} onChange={e => setBasePrice(e.target.value)} className="pf-input" />
-              </div>
+            <div className={canSeeLineTotal ? 'pf-grid-2' : undefined} style={{ marginBottom: '0.85rem' }}>
+              {canSeeLineTotal && (
+                <div>
+                  <label className="pf-label">Base Price (₱)</label>
+                  <input type="number" value={basePrice} disabled={readOnly} onChange={e => setBasePrice(e.target.value)} className="pf-input" />
+                </div>
+              )}
               <div>
                 <label className="pf-label">Quantity</label>
                 <input type="number" value={quantity} disabled={readOnly} onChange={e => setQuantity(e.target.value)} min="1" className="pf-input" />
@@ -507,7 +509,7 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
                 <input type="checkbox" checked={needsLayout} disabled={readOnly} onChange={e => setNeedsLayout(e.target.checked)} />
                 <span className="pf-label" style={{ marginBottom: 0 }}>Needs layout/design for this item?</span>
               </label>
-              {needsLayout && (
+              {needsLayout && canSeeLineTotal && (
                 <div style={{ marginTop: 6 }}>
                   <label className="pf-label">Layout Fee (₱)</label>
                   <input type="number" value={layoutFee} disabled={readOnly} onChange={e => setLayoutFee(e.target.value)} min="0" className="pf-input" />
@@ -520,7 +522,7 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
                 <input type="checkbox" checked={needsDelivery} disabled={readOnly} onChange={e => setNeedsDelivery(e.target.checked)} />
                 <span className="pf-label" style={{ marginBottom: 0 }}>Needs delivery for this item?</span>
               </label>
-              {needsDelivery && (
+              {needsDelivery && canSeeLineTotal && (
                 <div style={{ marginTop: 6 }}>
                   <label className="pf-label">Delivery Fee (₱)</label>
                   <input type="number" value={deliveryFee} disabled={readOnly} onChange={e => setDeliveryFee(e.target.value)} min="0" placeholder="0.00" className="pf-input" />
@@ -533,7 +535,7 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
                 <input type="checkbox" checked={needsInstallation} disabled={readOnly} onChange={e => setNeedsInstallation(e.target.checked)} />
                 <span className="pf-label" style={{ marginBottom: 0 }}>Needs installation for this item?</span>
               </label>
-              {needsInstallation && (
+              {needsInstallation && canSeeLineTotal && (
                 <div style={{ marginTop: 6 }}>
                   <label className="pf-label">Installation Fee (₱)</label>
                   <input type="number" value={installationFee} disabled={readOnly} onChange={e => setInstallationFee(e.target.value)} min="0" placeholder="0.00" className="pf-input" />
@@ -558,7 +560,7 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
                 />
                 <span className="pf-label" style={{ marginBottom: 0 }}>Needs seaming for this item? (₱10/sqft)</span>
               </label>
-              {needsSeaming && (
+              {needsSeaming && canSeeLineTotal && (
                 <div style={{ marginTop: 6 }}>
                   <label className="pf-label">Seaming Fee (₱)</label>
                   <input type="number" value={seamingFee} disabled={readOnly} onChange={e => setSeamingFee(e.target.value)} min="0" placeholder="0.00" className="pf-input" />
