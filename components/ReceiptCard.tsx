@@ -74,12 +74,6 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(function Receip
         {categoryName && <Row label="Category" value={categoryName} />}
         {size && <Row label="Size" value={size} />}
         <Row label="No. of Pcs" value={String(quantity ?? 1)} />
-        {costBreakdown.length > 0 && (
-          <div style={{ margin: '0.2rem 0', padding: '0.4rem 0.6rem', background: '#faf5f6', borderRadius: 6 }}>
-            {costBreakdown.map(row => <Row key={row.label} label={row.label} value={formatPeso(row.amount)} />)}
-          </div>
-        )}
-        <Row label="Item Cost" value={formatPeso(itemCost)} bold />
         {specs && <Row label="Specs" value={specs} />}
         {remarks && <Row label="Remarks" value={remarks} />}
         {dateNeeded && (
@@ -97,6 +91,12 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(function Receip
           <div style={{ fontSize: '0.65rem', opacity: 0.8, letterSpacing: '0.04em' }}>ACCOMPLISHED BY</div>
           <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{accomplishedBy || '—'}</div>
         </div>
+      </div>
+
+      <div style={{ padding: '1.1rem 1.25rem' }}>
+        <div style={{ color: '#5C001F', fontWeight: 700, fontSize: '0.82rem', letterSpacing: '0.04em', marginBottom: 8 }}>ITEM COST BREAKDOWN</div>
+        {costBreakdown.map(row => <Row key={row.label} label={row.label} value={formatPeso(row.amount)} />)}
+        <Row label="Item Cost" value={formatPeso(itemCost)} bold />
       </div>
     </div>
   )
