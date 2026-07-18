@@ -138,6 +138,7 @@ export default function BillingStatementModal({ clientId, clientName, onClose }:
                         <div style={{ color: '#E8B9C6', fontSize: '0.7rem', marginTop: 1 }}>
                           {new Date(jo.date_time_received).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </div>
+                        {jo.payment_status && <div style={{ color: '#F5C842', fontSize: '0.68rem', marginTop: 1 }}>{jo.payment_status}</div>}
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.82rem' }}>{formatPeso(jo.grand_total || 0)}</div>

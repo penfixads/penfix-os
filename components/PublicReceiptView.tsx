@@ -39,6 +39,11 @@ interface Jo {
   company_name?: string | null
   contact_number?: string | null
   source_channel?: string | null
+  grand_total?: number | null
+  total_amount_paid?: number | null
+  balance_due?: number | null
+  payment_status?: string | null
+  discount?: number | null
 }
 
 interface Props {
@@ -49,7 +54,9 @@ interface Props {
 
 // Lets the client flip between items themselves (same picker as the in-app "Generate Receipt"
 // modal) instead of only ever seeing the JO's first item — each item shows only its own
-// price/fee breakdown; billing totals live in the separate Billing Statement, not here.
+// price/fee breakdown. JO-level billing totals live in the separate Billing Statement for
+// multi-item JOs, but that never applies to a single-item JO, so ReceiptCard shows them
+// inline there instead (see billingSummary below).
 export default function PublicReceiptView({ jo, items, statusLogs }: Props) {
   const [selectedItemId, setSelectedItemId] = useState(items[0]?.item_id || '')
   const [downloading, setDownloading] = useState(false)
@@ -108,6 +115,13 @@ export default function PublicReceiptView({ jo, items, statusLogs }: Props) {
           sourceChannel={jo.source_channel}
           itemCost={item?.computed_line_total || 0}
           costBreakdown={buildItemCostBreakdown(item)}
+          billingSummary={items.length === 1 ? {
+            totalAmount: jo.grand_total || 0,
+            amountPaid: jo.total_amount_paid || 0,
+            balance: jo.balance_due || 0,
+            status: jo.payment_status,
+            discount: jo.discount,
+          } : undefined}
         />
       </div>
 

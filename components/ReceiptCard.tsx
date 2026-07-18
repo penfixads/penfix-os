@@ -21,6 +21,10 @@ export interface ReceiptCardProps {
   sourceChannel?: string | null
   itemCost: number
   costBreakdown: { label: string; amount: number }[]
+  // Only passed for single-item job orders — the Billing Statement covers the
+  // JO/aggregate totals for multi-item JOs, but that button never appears for a
+  // JO with just one item, so this item's own receipt needs to carry the totals.
+  billingSummary?: { totalAmount: number; amountPaid: number; balance: number; status?: string | null; discount?: number | null }
 }
 
 // Shared by the in-app "Generate Receipt" modal and the public /receipt/[token] link so
@@ -30,6 +34,7 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(function Receip
   const {
     jobOrderId, dateReceived, clientName, contactNumber, itemPreview, itemName, categoryName,
     size, quantity, specs, remarks, dateNeeded, receivedBy, accomplishedBy, itemCost, costBreakdown, sourceChannel,
+    billingSummary,
   } = props
 
   // html2canvas doesn't reliably respect CSS object-fit, so the image's displayed size is
@@ -98,6 +103,17 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(function Receip
         {costBreakdown.map(row => <Row key={row.label} label={row.label} value={formatPeso(row.amount)} />)}
         <Row label="Item Cost" value={formatPeso(itemCost)} bold />
       </div>
+
+      {billingSummary && (
+        <div style={{ padding: '1.1rem 1.25rem', borderTop: '1px solid #eee' }}>
+          <div style={{ color: '#5C001F', fontWeight: 700, fontSize: '0.82rem', letterSpacing: '0.04em', marginBottom: 8 }}>BILLING SUMMARY</div>
+          <Row label="Total Amount" value={formatPeso(billingSummary.totalAmount)} bold />
+          <Row label="Amount Paid" value={formatPeso(billingSummary.amountPaid)} />
+          <Row label="Balance" value={formatPeso(billingSummary.balance)} bold color={billingSummary.balance > 0 ? '#c0392b' : '#1a7a3a'} />
+          {billingSummary.status && <Row label="Status" value={billingSummary.status} />}
+          {!!billingSummary.discount && billingSummary.discount > 0 && <Row label="Discount" value={formatPeso(billingSummary.discount)} />}
+        </div>
+      )}
     </div>
   )
 })

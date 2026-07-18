@@ -152,6 +152,13 @@ export default function JOReceiptModal({ jobOrderId, onClose }: Props) {
               sourceChannel={jo.source_channel}
               itemCost={item?.computed_line_total || 0}
               costBreakdown={buildItemCostBreakdown(item)}
+              billingSummary={items.length === 1 ? {
+                totalAmount: jo.grand_total || 0,
+                amountPaid: jo.total_amount_paid || 0,
+                balance: jo.balance_due || 0,
+                status: jo.payment_status,
+                discount: jo.discount,
+              } : undefined}
             />
           </div>
         </div>
