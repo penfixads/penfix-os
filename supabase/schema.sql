@@ -30,6 +30,7 @@ create table if not exists clients (
   credit_line_status boolean default false,
   earned_rewards numeric(10,2) default 0,
   claimed_rewards numeric(10,2) default 0,
+  password_hash text,
   created_at timestamptz default now()
 );
 
