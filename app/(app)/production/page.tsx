@@ -36,8 +36,9 @@ export default async function ProductionPage() {
     subcategoryIds.length > 0
       ? supabase.from('subcategory_sop').select('*').eq('is_active', true).in('subcategory_id', subcategoryIds).order('sequence')
       : Promise.resolve({ data: [] }),
-    // Fabricators and GAs who can be tagged as having worked together on a step
-    supabase.from('users').select('user_email, name, role').in('role', ['Fabricator', 'GA']).eq('is_active', true).order('name'),
+    // Fabricators, GAs, and Treasury (who sometimes help on the floor) who can be tagged
+    // as having worked together on a step
+    supabase.from('users').select('user_email, name, role').in('role', ['Fabricator', 'GA', 'Treasury']).eq('is_active', true).order('name'),
     supabase.from('categories').select('*').eq('is_active', true).order('category_name'),
     supabase.from('subcategories').select('*').eq('active', true).order('subcategory_name'),
     itemIds.length > 0

@@ -59,23 +59,12 @@ grant insert on client_feedback to anon;
 grant all on client_feedback to authenticated, service_role;
 
 -- ── 6) migration 017 — public_job_order_receipt view is missing the discount column,
---      so the public receipt page silently omits it when a discount was applied. ──
-create or replace view public_job_order_receipt as
-select
-  jo.job_order_id,
-  jo.date_time_received,
-  jo.received_by,
-  jo.grand_total,
-  jo.total_amount_paid,
-  jo.balance_due,
-  jo.payment_status,
-  jo.discount,
-  c.client_name,
-  c.company_name,
-  c.contact_number
-from job_orders jo
-left join clients c on c.client_id = jo.client_id;
-grant select on public_job_order_receipt to anon;
+--      so the public receipt page silently omits it when a discount was applied.
+--      SUPERSEDED 2026-07-20 — checked the live view, it already has this column plus
+--      everything from migrations 029/034 too (source_channel, public_token). The
+--      original CREATE OR REPLACE below only listed 11 columns, which would DROP the
+--      already-live source_channel/public_token and fail with "42P16: cannot drop
+--      columns from view". See item 10 for the up-to-date, safe version of this view. ──
 
 -- ── 7) Data fix for JO-06262026-001-6a1b — EditJOModal's job_orders update always
 --      included balance_due, a generated/computed column, so Postgres rejected the
@@ -139,7 +128,10 @@ alter table job_order_items add column if not exists seaming_fee numeric(10,2) d
 alter table job_orders add column if not exists source_channel text
   check (source_channel in ('Walk-in', 'Messenger', 'Viber', 'WhatsApp', 'Phone Call', 'Email'));
 
--- ── 10) migration 029 — public_job_order_receipt view missing source_channel. ──
+-- ── 10) migration 029 — public_job_order_receipt view missing source_channel.
+--       Updated 2026-07-20 to also include public_token (migration 034) so this
+--       matches the view's actual current live definition exactly — a true no-op
+--       if already applied, safe if not. ──
 create or replace view public_job_order_receipt as
 select
   jo.job_order_id,
@@ -153,7 +145,8 @@ select
   c.client_name,
   c.company_name,
   c.contact_number,
-  jo.source_channel
+  jo.source_channel,
+  jo.public_token
 from job_orders jo
 left join clients c on c.client_id = jo.client_id;
 grant select on public_job_order_receipt to anon;
@@ -184,3 +177,67 @@ from job_order_items i
 left join subcategories s on s.subcategory_id = i.subcategory_id
 left join categories cat on cat.category_id = s.category_id;
 grant select on public_job_order_items_receipt to anon;
+
+-- ============================================================
+-- Re-audited 2026-07-20 against production's live schema. Items 1-13 above
+-- are drafted but confirmed NOT yet applied to staging (checked via live
+-- PostgREST schema diff) except items 1, 2, and 4, which are already in
+-- effect. Items 14-16 below are new gaps found this pass: two migrations
+-- (036, 037) that shipped straight to production without ever touching
+-- staging, plus data drift in subcategories.
+-- ============================================================
+
+-- ── 14) migration 036 -- client billing statement. clients.public_token +
+--      public_client_billing / public_client_billing_jobs views. Live on
+--      production; never applied to staging. ──
+alter table clients add column if not exists public_token uuid;
+update clients set public_token = gen_random_uuid() where public_token is null;
+alter table clients alter column public_token set default gen_random_uuid();
+alter table clients alter column public_token set not null;
+create unique index if not exists clients_public_token_idx on clients(public_token);
+
+create or replace view public_client_billing as
+select
+  client_id,
+  client_name,
+  company_name,
+  contact_number,
+  public_token
+from clients;
+grant select on public_client_billing to anon;
+
+create or replace view public_client_billing_jobs as
+select
+  job_order_id,
+  client_id,
+  date_time_received,
+  grand_total,
+  total_amount_paid,
+  balance_due,
+  payment_status
+from job_orders;
+grant select on public_client_billing_jobs to anon;
+
+-- ── 15) migration 037 -- public_client_billing_items view. Confirmed missing
+--      from BOTH staging and production (never applied to either). ──
+create or replace view public_client_billing_items as
+select
+  i.item_id,
+  i.job_order_id,
+  i.quantity,
+  i.job_status,
+  i.computed_line_total,
+  s.subcategory_name
+from job_order_items i
+left join subcategories s on s.subcategory_id = i.subcategory_id;
+grant select on public_client_billing_items to anon;
+
+-- ── 16) Data catchup -- 4 subcategories added on staging since the last
+--      PENFIX_CRM seed sync, never carried over to production (confirmed via
+--      row-count diff: staging has 225 subcategories, production has 221). ──
+INSERT INTO subcategories (subcategory_id, subcategory_name, category_id, subcategory_type, description, thickness, color, print_type, pricing_model, base_price, unit, job_flow, min_qty, accepted_units, require_specs, spec_fields, roll_widths_ft, active, tags, material_options, print_quality, pass_options, image_link, installation_surcharge) VALUES
+  ('BAN-SUBLIPAP-48', 'Pattern Print on Subli Paper', 'CAT_BAN', 'Sublimation Paper', 'Printing 3 pass for sublimation paper', NULL, NULL, NULL, 'area', 10, 'sqft', NULL, 1, NULL, false, NULL, NULL, true, NULL, NULL, NULL, NULL, NULL, NULL),
+  ('DSP-SNTR-SQ-05', 'Sintra with Stickers (4-edged, 5mm)', 'CAT_DAD', 'Sintra with Stickers', 'Rectangular shaped sintra boards with stickers, 5mm thickness', NULL, NULL, NULL, 'area', 195, 'sqft', 'Received, For Layout/Vectoring,For Production,For Printing,For Assembly,Packaging, Ready For Pickup/Delivery/Installation,Done,Cancelled', 1, 'ft,cm,in,m', false, 'Height,Width,AcceptedUnits,Qty', NULL, true, 'standee,sintra,table', '["Sintra", "Acrylic"]', '[]', '[]', NULL, NULL),
+  ('DTP-CARDBOAR-56', 'Cardboard Tickets', 'CAT_DTP', 'Tickets on Photopaper', 'Perforated 230 GSM Tickets', NULL, NULL, NULL, 'area', 0.45, 'inch', NULL, 1, NULL, false, NULL, NULL, true, NULL, NULL, NULL, NULL, NULL, NULL),
+  ('PSVC-SC05', 'Signage Installation', 'CAT_FPS', 'Installation', 'Installation of Billboards and Signages (installation only, no dismantling)', NULL, NULL, NULL, 'starts_with', 2500, 'per service', 'Received,For Production,Installation,Done,Cancelled', 1, '-', false, 'Height,Width,AcceptedUnits,Qty', NULL, true, 'installation,signage,custom,phoenix', '["-"]', '[]', '[]', NULL, NULL)
+ON CONFLICT (subcategory_id) DO NOTHING;

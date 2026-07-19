@@ -162,3 +162,107 @@ create policy "auth_users_tool_borrow_logs" on tool_borrow_logs for all using (a
 grant usage on schema public to anon, authenticated, service_role;
 grant all on tool_users, tool_catalog, tool_borrow_requests, tool_borrow_proponents, tool_borrow_logs to anon, authenticated, service_role;
 grant select on tool_catalog_availability to anon, authenticated, service_role;
+
+-- ============================================================
+-- Re-audited 2026-07-20 against migrations 023-042 (previous pass only covered
+-- up to 022). Sections 1-2 above were already live on production by this point.
+-- Sections 3-8 below are new gaps found this pass.
+-- ============================================================
+
+-- ============================================================
+-- 3) OVERHEAD_EXPENSES (migration 022)
+--    Monthly fixed overhead used to compute final Profit in Sales Reports.
+--    Carries real salary data, so it's the one table with an actual
+--    role-based RLS policy instead of a blanket authenticated-user policy.
+-- ============================================================
+create table if not exists overhead_expenses (
+  overhead_id text primary key,
+  month date not null,
+  expense_name text not null,
+  amount numeric(10,2) not null default 0,
+  remarks text,
+  recorded_by text,
+  created_at timestamptz default now()
+);
+create index if not exists idx_overhead_expenses_month on overhead_expenses(month);
+alter table overhead_expenses enable row level security;
+drop policy if exists "admin_only_overhead_expenses" on overhead_expenses;
+create policy "admin_only_overhead_expenses" on overhead_expenses for all
+  using (exists (select 1 from users u where u.user_email = auth.email() and u.role = 'Admin'))
+  with check (exists (select 1 from users u where u.user_email = auth.email() and u.role = 'Admin'));
+grant select, insert, update, delete on overhead_expenses to authenticated;
+grant all on overhead_expenses to service_role;
+
+-- ============================================================
+-- 4) JO PRINT STORAGE (migration 025)
+--    Private bucket for full-resolution client print files, separate from
+--    job_order_items.item_preview's compressed on-screen thumbnail.
+-- ============================================================
+insert into storage.buckets (id, name, public)
+values ('jo-print-files', 'jo-print-files', false)
+on conflict (id) do nothing;
+
+alter table job_order_items
+  add column if not exists original_file_path text;
+
+-- ============================================================
+-- 5) ITEM SEAMING FEE (migration 039)
+--    Seaming add-on charge (P10/sqft), computed from width x height like the
+--    item's own area-based pricing but kept editable.
+-- ============================================================
+alter table job_order_items add column if not exists seaming_fee numeric(10,2) default 0;
+
+-- ============================================================
+-- 6) RECEIPT ITEM FEE BREAKDOWN (migration 040)
+--    Recreates the anon-safe receipt items view with computed_line_total and
+--    the layout/delivery/installation/seaming fee columns -- production's copy
+--    of this view predates all of them. Must run after section 5 above (needs
+--    job_order_items.seaming_fee to exist).
+-- ============================================================
+create or replace view public_job_order_items_receipt as
+select
+  i.item_id,
+  i.job_order_id,
+  i.item_preview,
+  i.quantity,
+  i.width,
+  i.height,
+  i.production_specs,
+  i.notes,
+  i.date_time_needed,
+  i.job_status,
+  s.subcategory_name,
+  cat.category_name,
+  i.computed_line_total,
+  i.layout_fee,
+  i.delivery_fee,
+  i.installation_fee,
+  i.seaming_fee
+from job_order_items i
+left join subcategories s on s.subcategory_id = i.subcategory_id
+left join categories cat on cat.category_id = s.category_id;
+grant select on public_job_order_items_receipt to anon;
+
+-- ============================================================
+-- 7) DAILY SUMMARY LOCK (migration 042)
+-- ============================================================
+alter table daily_sales_summary
+  add column if not exists is_locked boolean not null default false;
+
+-- ============================================================
+-- 8) CLIENT BILLING STATEMENT ITEM DETAIL (migration 037)
+--    Never applied to either project -- the per-item detail view for the
+--    billing statement (migration 036, already live on production via
+--    public_client_billing / public_client_billing_jobs).
+-- ============================================================
+create or replace view public_client_billing_items as
+select
+  i.item_id,
+  i.job_order_id,
+  i.quantity,
+  i.job_status,
+  i.computed_line_total,
+  s.subcategory_name
+from job_order_items i
+left join subcategories s on s.subcategory_id = i.subcategory_id;
+grant select on public_client_billing_items to anon;
