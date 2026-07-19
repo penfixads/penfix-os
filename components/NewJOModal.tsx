@@ -60,11 +60,14 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
   // this browser session's "Add Historical Job Order" clicks skip asking again — without
   // this, every single record would need its own fresh approval, which doesn't scale when
   // backfilling a whole month of paper records in one sitting.
+  // TEMPORARILY DISABLED (2026-07-20): the Jan-present historical migration review is still
+  // in progress, so the Admin-approval gate is just friction right now — Date Received opens
+  // unlocked by default. Restore the `return typeof window === 'undefined' || ...` line below
+  // once that review is confirmed done.
   const historicalUnlockKey = `pf_historical_unlock_${currentUser.email}`
   const [dateReceived, setDateReceived] = useState(() => toLocalDateTimeInput(new Date().toISOString()))
   const [dateLocked, setDateLocked] = useState(() => {
-    if (!allowDateOverride) return false
-    return typeof window === 'undefined' || !sessionStorage.getItem(historicalUnlockKey)
+    return false
   })
   const [unlockedByName, setUnlockedByName] = useState<string | null>(() => {
     if (!allowDateOverride || typeof window === 'undefined') return null
@@ -87,6 +90,20 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
       createSupabaseBrowserClient().from('historical_unlock_requests').delete().eq('request_id', pendingRequestRef.current)
     }
   }, [])
+
+  // Warn before a real browser navigation (tab close, refresh, typed URL) discards an
+  // in-progress draft — this form only lives in local state until Save, so leaving via
+  // anything other than Cancel/Save silently loses whatever was filled in.
+  const hasUnsavedWork = !!selectedClientId || items.length > 0 || payments.length > 0
+  useEffect(() => {
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (!hasUnsavedWork) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [hasUnsavedWork])
 
   useEffect(() => {
     if (!selectedClientId) { setRewardsBalance(0); return }
@@ -356,7 +373,7 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
                 Request was rejected. <button type="button" onClick={() => setUnlockRequestStatus('idle')} className="pf-link-btn" style={{ display: 'inline', fontSize: '0.75rem' }}>Send another request</button>
               </div>
             )}
-            {!dateLocked && (
+            {!dateLocked && unlockedByName && (
               <div style={{ color: '#2ecc71', fontSize: '0.72rem', marginTop: 4 }}>Unlocked by {unlockedByName} (Admin)</div>
             )}
           </div>
