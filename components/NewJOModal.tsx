@@ -55,10 +55,21 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
   const [payCashback, setPayCashback] = useState(0)
   const [payDate, setPayDate] = useState(getPhilippineDateStr())
 
-  // Date Received override (historical records only)
+  // Date Received override (historical records only). Once an Admin approves an unlock
+  // request, it's remembered in sessionStorage (keyed per logged-in user) so the rest of
+  // this browser session's "Add Historical Job Order" clicks skip asking again — without
+  // this, every single record would need its own fresh approval, which doesn't scale when
+  // backfilling a whole month of paper records in one sitting.
+  const historicalUnlockKey = `pf_historical_unlock_${currentUser.email}`
   const [dateReceived, setDateReceived] = useState(() => toLocalDateTimeInput(new Date().toISOString()))
-  const [dateLocked, setDateLocked] = useState(!!allowDateOverride)
-  const [unlockedByName, setUnlockedByName] = useState<string | null>(null)
+  const [dateLocked, setDateLocked] = useState(() => {
+    if (!allowDateOverride) return false
+    return typeof window === 'undefined' || !sessionStorage.getItem(historicalUnlockKey)
+  })
+  const [unlockedByName, setUnlockedByName] = useState<string | null>(() => {
+    if (!allowDateOverride || typeof window === 'undefined') return null
+    return sessionStorage.getItem(historicalUnlockKey)
+  })
   // 'idle' | 'pending' | 'rejected' — remote-approval flow, so an Admin can approve from
   // their own phone instead of needing to type credentials into the requester's device.
   const [unlockRequestId, setUnlockRequestId] = useState<string | null>(null)
@@ -148,6 +159,7 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
       if (data.status === 'Approved') {
         setDateLocked(false)
         setUnlockedByName(data.approved_by)
+        if (typeof window !== 'undefined') sessionStorage.setItem(historicalUnlockKey, data.approved_by)
         setUnlockRequestStatus('idle')
         setUnlockRequestId(null)
       } else if (data.status === 'Rejected') {

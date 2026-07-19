@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { formatPeso, getEffectiveSteps, canPushToProduction } from '@/lib/jo-helpers'
+import { getEffectiveSteps, canPushToProduction } from '@/lib/jo-helpers'
 import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
@@ -355,10 +355,11 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
                               )}
                             </div>
 
-                            {/* Right: amount + qty */}
+                            {/* Right: dates + qty */}
                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                              {!isFabricator && <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.85rem' }}>{formatPeso(item.computed_line_total || 0)}</div>}
-                              <div style={{ color: '#aaa', fontSize: '0.68rem' }}>qty: {item.quantity || 1}</div>
+                              {item.date_time_received && <div style={{ color: '#777', fontSize: '0.68rem' }}>Received: {formatDeadline(item.date_time_received)}</div>}
+                              {item.date_time_needed && <div style={{ color: '#777', fontSize: '0.68rem', marginTop: 1 }}>Needed: {formatDeadline(item.date_time_needed)}</div>}
+                              <div style={{ color: '#aaa', fontSize: '0.68rem', marginTop: 1 }}>qty: {item.quantity || 1}</div>
                               <button
                                 onClick={e => { e.stopPropagation(); requestCancel(item.item_id, item.job_order_id, item.subcategories?.subcategory_name || item.item_id) }}
                                 style={{ marginTop: 6, background: 'none', border: '1px solid #3a0000', color: '#7A1828', fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: 6, cursor: 'pointer' }}

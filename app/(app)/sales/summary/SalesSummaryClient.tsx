@@ -31,7 +31,8 @@ function reconciliationBadge(excessDeficit: number): { label: string; bg: string
   return { label: 'Deficit', bg: '#4a1a1a', color: '#e74c3c' }
 }
 
-function HistoryRow({ row, isAdmin }: { row: any; isAdmin: boolean }) {
+function HistoryRow({ row, currentUser }: { row: any; currentUser: AppUser }) {
+  const isAdmin = currentUser.role === 'Admin'
   const [expanded, setExpanded] = useState(false)
   const [rowExpenses, setRowExpenses] = useState<any[] | null>(null)
   const [rowPayments, setRowPayments] = useState<any[] | null>(null)
@@ -41,6 +42,12 @@ function HistoryRow({ row, isAdmin }: { row: any; isAdmin: boolean }) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(row)
   const [error, setError] = useState('')
+  const [showExpenseForm, setShowExpenseForm] = useState(false)
+  const [expDesc, setExpDesc] = useState('')
+  const [expAmount, setExpAmount] = useState('')
+  const [expCategory, setExpCategory] = useState('Operations')
+  const [savingExp, setSavingExp] = useState(false)
+  const [expError, setExpError] = useState('')
 
   const expectedCashOnHand = saved.expected_cash_on_hand || 0
   const cashOnHandNum = parseFloat(cashOnHand) || 0
@@ -86,6 +93,68 @@ function HistoryRow({ row, isAdmin }: { row: any; isAdmin: boolean }) {
       setError(e.message || 'Failed to save changes.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function addExpense() {
+    if (!expDesc) { setExpError('Please enter a description.'); return }
+    if (!expAmount || parseFloat(expAmount) <= 0) { setExpError('Please enter a valid amount.'); return }
+    setSavingExp(true)
+    setExpError('')
+    try {
+      const supabase = createSupabaseBrowserClient()
+      const amount = parseFloat(expAmount)
+      const { data, error: err } = await supabase.from('expenses').insert({
+        expense_date: row.date,
+        date: row.date,
+        expense_name: expDesc,
+        description: expDesc,
+        amount,
+        category: expCategory,
+        recorded_by: currentUser.name,
+        summary_id: saved.summary_id,
+      }).select().single()
+      if (err) throw err
+      // Recompute + persist this day's expected cash on hand / excess-deficit so the
+      // collapsed badge and reconciliation stay correct without a separate "Save Changes" —
+      // a new expense on a past day directly changes what cash was expected to be on hand.
+      const newTotalExpenses = (saved.total_expenses || 0) + amount
+      const newExpectedCashOnHand = (saved.initial_fund || 0) + (saved.cash || 0) - newTotalExpenses
+      const newExcessDeficit = cashOnHandNum - newExpectedCashOnHand
+      const { data: updatedSummary, error: updErr } = await supabase.from('daily_sales_summary').update({
+        total_expenses: newTotalExpenses,
+        expected_cash_on_hand: newExpectedCashOnHand,
+        excess_deficit: newExcessDeficit,
+      }).eq('summary_id', saved.summary_id).select().single()
+      if (updErr) throw updErr
+      if (data) setRowExpenses(prev => [data, ...(prev || [])])
+      if (updatedSummary) setSaved(updatedSummary)
+      setExpDesc('')
+      setExpAmount('')
+      setShowExpenseForm(false)
+    } catch (e: any) {
+      setExpError(e.message || 'Failed to save expense.')
+    } finally {
+      setSavingExp(false)
+    }
+  }
+
+  async function deleteExpense(expenseId: string) {
+    const target = rowExpenses?.find(e => e.expense_id === expenseId)
+    const supabase = createSupabaseBrowserClient()
+    const { error: err } = await supabase.from('expenses').delete().eq('expense_id', expenseId)
+    if (err) { setExpError(err.message || 'Failed to delete expense.'); return }
+    setRowExpenses(prev => (prev || []).filter(e => e.expense_id !== expenseId))
+    if (target) {
+      const newTotalExpenses = (saved.total_expenses || 0) - (target.amount || 0)
+      const newExpectedCashOnHand = (saved.initial_fund || 0) + (saved.cash || 0) - newTotalExpenses
+      const newExcessDeficit = cashOnHandNum - newExpectedCashOnHand
+      const { data: updatedSummary } = await supabase.from('daily_sales_summary').update({
+        total_expenses: newTotalExpenses,
+        expected_cash_on_hand: newExpectedCashOnHand,
+        excess_deficit: newExcessDeficit,
+      }).eq('summary_id', saved.summary_id).select().single()
+      if (updatedSummary) setSaved(updatedSummary)
     }
   }
 
@@ -168,15 +237,64 @@ function HistoryRow({ row, isAdmin }: { row: any; isAdmin: boolean }) {
             </div>
           )}
 
-          {rowExpenses && rowExpenses.length > 0 && (
-            <div>
-              <div style={{ color: '#666', fontWeight: 700, fontSize: '0.75rem', marginBottom: 6 }}>Expenses ({rowExpenses.length})</div>
-              {rowExpenses.map(e => (
-                <div key={e.expense_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', padding: '0.3rem 0', borderBottom: '1px solid #e5e5e5' }}>
-                  <span style={{ color: '#1a1a1a' }}>{e.description || e.expense_name}</span>
-                  <span style={{ color: '#e74c3c', fontWeight: 700 }}>{formatPeso(e.amount)}</span>
+          {rowExpenses !== null && (
+            <div style={{ marginTop: rowPayments ? 14 : 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <div style={{ color: '#666', fontWeight: 700, fontSize: '0.75rem' }}>Expenses ({rowExpenses.length})</div>
+                <button onClick={() => { setExpError(''); setShowExpenseForm(v => !v) }} className="pf-btn" style={{ padding: '0.2rem 0.55rem', fontSize: '0.7rem' }}>
+                  <IconPlus />Add
+                </button>
+              </div>
+
+              {showExpenseForm && (
+                <div style={{ background: '#fff', borderRadius: 8, padding: '0.75rem', marginBottom: '0.65rem', border: '1px solid #EDE0CC', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ flex: 2 }}>
+                      <label className="pf-label" style={{ color: '#999' }}>Description</label>
+                      <input type="text" value={expDesc} onChange={e => setExpDesc(e.target.value)} placeholder="e.g. Ink cartridge" className="pf-input" />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label className="pf-label" style={{ color: '#999' }}>Amount (₱)</label>
+                      <input type="number" value={expAmount} onChange={e => setExpAmount(e.target.value)} placeholder="0.00" className="pf-input" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="pf-label" style={{ color: '#999' }}>Category</label>
+                    <select value={expCategory} onChange={e => setExpCategory(e.target.value)} className="pf-select">
+                      {['Operations', 'Supplies', 'Utilities', 'Transport', 'Miscellaneous'].map(c => <option key={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  {expError && <div style={{ color: '#e74c3c', fontSize: '0.75rem' }}>{expError}</div>}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => { setExpError(''); setShowExpenseForm(false) }} className="pf-btn pf-btn-secondary" style={{ flex: 1 }}><IconX />Cancel</button>
+                    <button onClick={addExpense} disabled={savingExp} className="pf-btn" style={{ flex: 2 }}>
+                      <IconCheck />{savingExp ? '…' : 'Save Expense'}
+                    </button>
+                  </div>
                 </div>
-              ))}
+              )}
+
+              {rowExpenses.length === 0 ? (
+                <div style={{ color: '#aaa', fontSize: '0.75rem' }}>No expenses recorded for this day.</div>
+              ) : (
+                <>
+                  {rowExpenses.map(e => (
+                    <div key={e.expense_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', padding: '0.3rem 0', borderBottom: '1px solid #e5e5e5' }}>
+                      <span style={{ color: '#1a1a1a' }}>{e.description || e.expense_name}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ color: '#e74c3c', fontWeight: 700 }}>{formatPeso(e.amount)}</span>
+                        {isAdmin && (
+                          <button onClick={() => deleteExpense(e.expense_id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '0.75rem' }}>✕</button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 6, fontWeight: 700, fontSize: '0.78rem' }}>
+                    <span style={{ color: '#666' }}>Total Expenses</span>
+                    <span style={{ color: '#e74c3c' }}>{formatPeso(rowExpenses.reduce((s, e) => s + (e.amount || 0), 0))}</span>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -635,7 +753,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
         )}
         {searchResult && searchResult !== 'not_found' && (
           <div style={{ marginTop: '0.85rem' }}>
-            <HistoryRow row={searchResult} isAdmin={isAdmin} />
+            <HistoryRow row={searchResult} currentUser={currentUser} />
           </div>
         )}
 
@@ -648,7 +766,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
               <div style={{ color: '#aaa', fontSize: '0.8rem' }}>None found.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {filterResults.map(row => <HistoryRow key={row.summary_id} row={row} isAdmin={isAdmin} />)}
+                {filterResults.map(row => <HistoryRow key={row.summary_id} row={row} currentUser={currentUser} />)}
               </div>
             )}
           </div>
@@ -661,7 +779,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
           <div style={{ color: '#7A1828', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.6rem' }}>Recent Days</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {recentPageItems.map(row => (
-              <HistoryRow key={row.summary_id} row={row} isAdmin={isAdmin} />
+              <HistoryRow key={row.summary_id} row={row} currentUser={currentUser} />
             ))}
           </div>
           <Pagination page={recentCurrentPage} totalItems={recentDays.length} pageSize={PAGE_SIZE} onPageChange={setRecentPage} />
