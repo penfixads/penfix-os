@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import ClientQrDisplay from '@/components/ClientQrDisplay'
-import { useQrDownload } from '@/lib/useQrDownload'
+import { generateLoyaltyCardDataUrl } from '@/lib/loyaltyCard'
 import { IconQrCode, IconDownload, IconX } from '@/components/icons'
 
 interface Props {
@@ -17,7 +17,23 @@ interface Props {
 
 export default function ClientQrButton({ clientId, clientLabel, buttonClassName, buttonStyle, iconOnly }: Props) {
   const [open, setOpen] = useState(false)
-  const { ref, saving, download } = useQrDownload(`${clientId}-qr.png`)
+  const [saving, setSaving] = useState(false)
+
+  // Redrawn natively on Canvas rather than html2canvas-capturing the live preview below —
+  // see lib/loyaltyCard.ts for why. The on-screen ClientQrDisplay is just a preview now;
+  // this is what actually gets downloaded.
+  async function download() {
+    setSaving(true)
+    try {
+      const dataUrl = await generateLoyaltyCardDataUrl(clientId, clientLabel, window.location.origin)
+      const a = document.createElement('a')
+      a.href = dataUrl
+      a.download = `${clientId}-qr.png`
+      a.click()
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <>
@@ -33,7 +49,7 @@ export default function ClientQrButton({ clientId, clientLabel, buttonClassName,
               <button onClick={() => setOpen(false)} style={{ position: 'absolute', top: 0, right: 0, background: 'none', border: 'none', color: '#E8B9C6', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <ClientQrDisplay ref={ref} clientId={clientId} clientLabel={clientLabel} />
+            <ClientQrDisplay clientId={clientId} clientLabel={clientLabel} />
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
               <button onClick={() => setOpen(false)} className="pf-btn pf-btn-secondary"><IconX />Close</button>
