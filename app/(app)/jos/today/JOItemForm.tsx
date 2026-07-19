@@ -318,7 +318,10 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
 
   function handleSave() {
     if (!subcategoryId) { setFormError('Please select a subcategory/item.'); return }
-    if (!isProductionServices && !layoutPreview) { setFormError('Please upload an item preview image.'); return }
+    // TEMPORARILY not required (2026-07-19) — Facebook/Messenger (where the original layout
+    // files live for the January backlog) is under maintenance, so staff can't pull the images
+    // to attach while catching up on unentered January job orders. Restore this check once
+    // Facebook access is back and the backlog is caught up.
     if (!dateNeeded) { setFormError('Please set a deadline/date needed.'); return }
     setFormError('')
     const selectedCat = categories.find(c => c.category_id === categoryId)
@@ -410,7 +413,7 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
 
             {!isProductionServices && (
               <div className="pf-field">
-                <label className="pf-label">Item Preview <span className="pf-req">*</span></label>
+                <label className="pf-label">Item Preview <span style={{ color: '#999', fontWeight: 400 }}>(optional for now — Facebook is under maintenance)</span></label>
                 {layoutPreview ? (
                   <div onPaste={handleLayoutPaste} tabIndex={!readOnly ? 0 : undefined} style={{ display: 'flex', alignItems: 'center', gap: 12, outline: 'none' }}>
                     <img
@@ -448,7 +451,7 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
                 {compressing && <div style={{ color: '#E8B9C6', fontSize: '0.72rem', marginTop: 4 }}>Compressing image…</div>}
                 {layoutError && <div style={{ color: '#e74c3c', fontSize: '0.72rem', marginTop: 4 }}>{layoutError}</div>}
                 {!readOnly && !layoutPreview && !compressing && (
-                  <div style={{ color: '#E8B9C6', fontSize: '0.7rem', marginTop: 4 }}>Upload a preview of the layout or item before saving.</div>
+                  <div style={{ color: '#E8B9C6', fontSize: '0.7rem', marginTop: 4 }}>Optional for now — you can save without one while Facebook is under maintenance.</div>
                 )}
               </div>
             )}
