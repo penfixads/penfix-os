@@ -52,6 +52,10 @@ const NAV_ITEMS: NavItem[] = [
     icon: <I><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></I>
   },
   {
+    label: 'Job Order Receipts', href: '/jos/receipts', roles: ['Admin','GA','Treasury'],
+    icon: <I><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></I>
+  },
+  {
     label: 'Clients', href: '/clients', roles: ['Admin','GA','Treasury'],
     icon: <I><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></I>
   },
