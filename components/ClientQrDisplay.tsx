@@ -23,8 +23,8 @@ export default function ClientQrDisplay({ clientId, clientLabel }: Props) {
       }}
     >
       <img src="/loyalty-card-template.jpg" alt="" width={350} height={220} style={{ position: 'absolute', top: 0, left: 0, width: 350, height: 220, objectFit: 'cover' }} />
-      {/* Horizontally centered over "Valid until", sitting immediately above it. */}
-      <div style={{ position: 'absolute', top: 42, left: 237, width: 68, height: 68, background: '#fff', padding: 4, borderRadius: 4 }}>
+      {/* Horizontally centered over "Valid until". */}
+      <div style={{ position: 'absolute', top: 30, left: 237, width: 68, height: 68, background: '#fff', padding: 4, borderRadius: 4 }}>
         <QRCode value={buildClientJoLink(typeof window !== 'undefined' ? window.location.origin : '', clientId)} size={60} style={{ width: '100%', height: '100%' }} />
       </div>
       {/* Same left for both so ID/Name values line up with each other, not with their
