@@ -165,7 +165,7 @@ function HistoryRow({ row, currentUser }: { row: any; currentUser: AppUser }) {
       <button onClick={toggleExpand} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left' }}>
         <span style={{ color: '#7A1828', fontSize: '0.75rem' }}>{expanded ? '▼' : '▶'}</span>
         <div style={{ flex: 1 }}>
-          <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.85rem' }}>{dateLabel}</div>
+          <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.85rem' }}>{dateLabel}{saved.is_locked && <span style={{ marginLeft: 6 }} title="Locked">🔒</span>}</div>
           <div style={{ color: '#999', fontSize: '0.72rem' }}>Sales: {formatPeso(saved.total_sales || 0)}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -185,11 +185,11 @@ function HistoryRow({ row, currentUser }: { row: any; currentUser: AppUser }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, margin: '0.85rem 0' }}>
             <div>
               <label className="pf-label" style={{ color: '#999' }}>Cash On Hand</label>
-              <input type="number" value={cashOnHand} disabled={!isAdmin} onChange={e => setCashOnHand(e.target.value)} className="pf-input" />
+              <input type="number" value={cashOnHand} disabled={saved.is_locked} onChange={e => setCashOnHand(e.target.value)} className="pf-input" />
             </div>
             <div>
               <label className="pf-label" style={{ color: '#999' }}>Remitted Cash</label>
-              <input type="number" value={remittedCash} disabled={!isAdmin} onChange={e => setRemittedCash(e.target.value)} className="pf-input" />
+              <input type="number" value={remittedCash} disabled={saved.is_locked} onChange={e => setRemittedCash(e.target.value)} className="pf-input" />
             </div>
             <div>
               <label className="pf-label" style={{ color: '#999' }}>Excess/Deficit</label>
@@ -200,9 +200,11 @@ function HistoryRow({ row, currentUser }: { row: any; currentUser: AppUser }) {
               <div className="money" style={{ fontWeight: 700, padding: '0.4rem 0' }}>{formatPeso(nextDayFund)}</div>
             </div>
           </div>
-          <textarea value={remark} disabled={!isAdmin} onChange={e => setRemark(e.target.value)} rows={2} placeholder="Remark..." className="pf-textarea" style={{ marginBottom: 8 }} />
+          <textarea value={remark} disabled={saved.is_locked} onChange={e => setRemark(e.target.value)} rows={2} placeholder="Remark..." className="pf-textarea" style={{ marginBottom: 8 }} />
           {error && <div style={{ color: '#e74c3c', fontSize: '0.78rem', marginBottom: 8 }}>{error}</div>}
-          {isAdmin && (
+          {saved.is_locked ? (
+            <div style={{ color: '#999', fontSize: '0.75rem', marginBottom: 10 }}>🔒 Locked — an Admin must unlock this day before it can be edited again.</div>
+          ) : (
             <button onClick={save} disabled={saving} className="pf-btn" style={{ marginBottom: 10 }}>
               <IconCheck />{saving ? 'Saving…' : 'Save Changes'}
             </button>
@@ -241,9 +243,11 @@ function HistoryRow({ row, currentUser }: { row: any; currentUser: AppUser }) {
             <div style={{ marginTop: rowPayments ? 14 : 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <div style={{ color: '#666', fontWeight: 700, fontSize: '0.75rem' }}>Expenses ({rowExpenses.length})</div>
-                <button onClick={() => { setExpError(''); setShowExpenseForm(v => !v) }} className="pf-btn" style={{ padding: '0.2rem 0.55rem', fontSize: '0.7rem' }}>
-                  <IconPlus />Add
-                </button>
+                {!saved.is_locked && (
+                  <button onClick={() => { setExpError(''); setShowExpenseForm(v => !v) }} className="pf-btn" style={{ padding: '0.2rem 0.55rem', fontSize: '0.7rem' }}>
+                    <IconPlus />Add
+                  </button>
+                )}
               </div>
 
               {showExpenseForm && (
@@ -283,7 +287,7 @@ function HistoryRow({ row, currentUser }: { row: any; currentUser: AppUser }) {
                       <span style={{ color: '#1a1a1a' }}>{e.description || e.expense_name}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ color: '#e74c3c', fontWeight: 700 }}>{formatPeso(e.amount)}</span>
-                        {isAdmin && (
+                        {isAdmin && !saved.is_locked && (
                           <button onClick={() => deleteExpense(e.expense_id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '0.75rem' }}>✕</button>
                         )}
                       </div>
@@ -327,6 +331,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
   const [filterResults, setFilterResults] = useState<any[] | null>(null)
   const [filtering, setFiltering] = useState(false)
   const [recentPage, setRecentPage] = useState(1)
+  const [bulkLocking, setBulkLocking] = useState(false)
 
   const recentDays = recentSummaries.filter(r => r.date !== today)
   const recentCurrentPage = Math.min(recentPage, Math.max(1, Math.ceil(recentDays.length / PAGE_SIZE)))
@@ -467,6 +472,23 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
       setFilterResults(data || [])
     } finally {
       setFiltering(false)
+    }
+  }
+
+  // While January-to-present is being reconciled against the AppSheet migration, past days
+  // need to stay editable for whoever's helping — this is the "flip it back" step for once
+  // that pass is confirmed done, rather than locking/unlocking one day at a time.
+  async function lockAllHistorical(lock: boolean) {
+    const verb = lock ? 'Lock' : 'Unlock'
+    if (!confirm(`${verb} every past day's sales summary (before today)? ${lock ? 'Cash On Hand, Remitted Cash, Remark, and Expenses will stop being editable until unlocked again.' : 'Past days will become editable again.'}`)) return
+    setBulkLocking(true)
+    try {
+      const supabase = createSupabaseBrowserClient()
+      const { error } = await supabase.from('daily_sales_summary').update({ is_locked: lock }).lt('date', today)
+      if (error) { alert(error.message || 'Failed to update lock status.'); return }
+      window.location.reload()
+    } finally {
+      setBulkLocking(false)
     }
   }
 
@@ -719,7 +741,22 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
 
       {/* Search / filter */}
       <div style={{ background: '#FDF5EC', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem', border: '1px solid #EDE0CC' }}>
-        <div style={{ color: '#666', fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.75rem' }}>Search Sales Summary</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: '0.75rem' }}>
+          <div style={{ color: '#666', fontWeight: 700, fontSize: '0.8rem' }}>Search Sales Summary</div>
+          {isAdmin && (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => lockAllHistorical(false)} disabled={bulkLocking} className="pf-btn pf-btn-secondary" style={{ fontSize: '0.72rem', padding: '0.3rem 0.65rem' }}>
+                🔓 Unlock All Past Days
+              </button>
+              <button onClick={() => lockAllHistorical(true)} disabled={bulkLocking} className="pf-btn pf-btn-secondary" style={{ fontSize: '0.72rem', padding: '0.3rem 0.65rem' }}>
+                🔒 Lock All Past Days
+              </button>
+            </div>
+          )}
+        </div>
+        <div style={{ color: '#999', fontSize: '0.7rem', marginTop: -6, marginBottom: '0.65rem' }}>
+          While correcting migrated records, past days stay editable — lock them all once every day from January to present has been reviewed.
+        </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '0.65rem' }}>
           <input
             type="date"
