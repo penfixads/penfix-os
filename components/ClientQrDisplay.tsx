@@ -35,17 +35,22 @@ const ClientQrDisplay = forwardRef<HTMLDivElement, Props>(function ClientQrDispl
           shifting every absolutely-positioned overlay below in the exported PNG even
           though the live DOM looked correct. */}
       <img src="/loyalty-card-template.jpg" alt="" width={350} height={220} style={{ position: 'absolute', top: 0, left: 0, width: 350, height: 220, objectFit: 'cover' }} />
-      <div style={{ position: 'absolute', top: 42, right: 15, width: 68, height: 68, background: '#fff', padding: 4, borderRadius: 4 }}>
+      {/* Horizontally centered over "Valid until" (measured center x≈270 in this 350-wide
+          card; box is 68+4*2=76 wide, so left = 270 - 76/2 = 232). */}
+      <div style={{ position: 'absolute', top: 42, left: 237, width: 68, height: 68, background: '#fff', padding: 4, borderRadius: 4 }}>
         <QRCode value={buildClientJoLink(typeof window !== 'undefined' ? window.location.origin : '', clientId)} size={60} style={{ width: '100%', height: '100%' }} />
       </div>
+      {/* Same left for both so ID/Name values line up with each other, not with their
+          (differently-indented) labels — and widened almost to the card edge since 8px
+          text needs the room for longer names. */}
       <div style={{
-        position: 'absolute', left: 252, top: 131, width: 92, height: 9, lineHeight: '9px', color: '#fff', fontWeight: 700, fontSize: 8,
+        position: 'absolute', left: 248, top: 131, width: 98, height: 9, lineHeight: '9px', color: '#fff', fontWeight: 700, fontSize: 8,
         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
       }}>
         {clientId}
       </div>
       <div style={{
-        position: 'absolute', left: 244, top: 145, width: 100, height: 9, lineHeight: '9px', color: '#fff', fontWeight: 700, fontSize: 8,
+        position: 'absolute', left: 248, top: 145, width: 98, height: 9, lineHeight: '9px', color: '#fff', fontWeight: 700, fontSize: 8,
         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
       }}>
         {clientLabel}
