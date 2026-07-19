@@ -33,12 +33,12 @@ export async function generateLoyaltyCardDataUrl(clientId: string, clientLabel: 
   const qrDataUrl = await QRCode.toDataURL(qrValue, { margin: 0, width: 300 })
   const qrImg = await loadImage(qrDataUrl)
   ctx.fillStyle = '#fff'
-  roundRect(ctx, 237, 30, 76, 76, 4)
+  roundRect(ctx, 237, 38, 76, 76, 4)
   ctx.fill()
   // QR modules must stay crisp black/white — smoothing would blur their edges and hurt
   // scannability, unlike the background photo which benefits from smoothing.
   ctx.imageSmoothingEnabled = false
-  ctx.drawImage(qrImg, 241, 34, 68, 68)
+  ctx.drawImage(qrImg, 241, 42, 68, 68)
   ctx.imageSmoothingEnabled = true
 
   // I.D NO. / NAME values — left-aligned with each other, pixel-matched to the template's
