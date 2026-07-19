@@ -66,7 +66,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
           subcategoryIds.length > 0
             ? supabase.from('subcategory_sop').select('*').eq('is_active', true).in('subcategory_id', subcategoryIds).order('sequence')
             : Promise.resolve({ data: [] }),
-          supabase.from('users').select('user_email, name, role').in('role', ['Fabricator', 'GA']).eq('is_active', true).order('name'),
+          supabase.from('users').select('user_email, name, role').in('role', ['Fabricator', 'GA', 'Treasury']).eq('is_active', true).order('name'),
         ])
         setEditItems((items || []).map(i => ({ ...i, subcategory_name: i.subcategories?.subcategory_name || i.item_id, _existing: true })))
         setEditPayments((pays || []).map(p => ({ ...p, method: p.payment_method, cashback: p.cashback_amount || 0, _existing: true })))
