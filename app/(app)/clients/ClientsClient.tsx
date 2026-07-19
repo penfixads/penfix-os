@@ -10,6 +10,7 @@ import { IconUserPlus, IconEdit, IconCheck, IconX } from '@/components/icons'
 import Pagination from '@/components/Pagination'
 import ClientQrButton from '@/components/ClientQrButton'
 import DuplicateClientPrompt from '@/components/DuplicateClientPrompt'
+import { setClientPassword } from './actions'
 
 const PAGE_SIZE = 10
 
@@ -38,11 +39,15 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
   const [address, setAddress] = useState('')
   const [creditLine, setCreditLine] = useState(false)
   const [duplicateMatches, setDuplicateMatches] = useState<ClientMatch[] | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [settingPassword, setSettingPassword] = useState(false)
+  const [passwordMsg, setPasswordMsg] = useState<{ text: string; ok: boolean } | null>(null)
 
   function openAdd() {
     setEditing(null); setClientType('Individual'); setClientName(''); setCompanyName('')
     setContact(''); setEmail(''); setMessenger(''); setViber(''); setWhatsapp('')
     setAddress(''); setCreditLine(false); setError(''); setShowForm(true)
+    setNewPassword(''); setPasswordMsg(null)
   }
 
   function openEdit(c: any) {
@@ -59,6 +64,25 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
     setCreditLine(!!c.credit_line_status)
     setError('')
     setShowForm(true)
+    setNewPassword(''); setPasswordMsg(null)
+  }
+
+  // Separate from handleSave — this hashes server-side via a Server Action (bcryptjs
+  // isn't something we want in the browser bundle) and writes only password_hash,
+  // independent of whatever else is pending in the rest of the form.
+  async function handleSetPassword() {
+    if (!editing) return
+    setSettingPassword(true)
+    setPasswordMsg(null)
+    const result = await setClientPassword(editing.client_id, newPassword)
+    if (result.success) {
+      setPasswordMsg({ text: 'Password updated.', ok: true })
+      setNewPassword('')
+      setEditing((prev: any) => prev ? { ...prev, password_hash: 'set' } : prev)
+    } else {
+      setPasswordMsg({ text: result.message || 'Failed to update password.', ok: false })
+    }
+    setSettingPassword(false)
   }
 
   async function handleSave(skipDuplicateCheck?: boolean) {
@@ -243,6 +267,35 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
               <label className="pf-label">Address</label>
               <input type="text" value={address} onChange={e => setAddress(e.target.value)} className="pf-input" />
             </div>
+
+            {editing && currentUser.role === 'Admin' && (
+              <div className="pf-field">
+                <label className="pf-label">
+                  Shop Login Password
+                  <span style={{ marginLeft: 6, fontWeight: 400, color: editing.password_hash ? '#2ecc71' : '#999' }}>
+                    {editing.password_hash ? '(password set)' : '(no password yet — client hasn\'t registered on shop.penfixads.com)'}
+                  </span>
+                </label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="text"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    placeholder="New password (min. 6 characters)"
+                    className="pf-input"
+                    style={{ flex: 1 }}
+                  />
+                  <button type="button" onClick={handleSetPassword} disabled={settingPassword || !newPassword} className="pf-btn pf-btn-secondary" style={{ whiteSpace: 'nowrap' }}>
+                    {settingPassword ? 'Saving…' : 'Set Password'}
+                  </button>
+                </div>
+                {passwordMsg && (
+                  <div style={{ color: passwordMsg.ok ? '#2ecc71' : '#e74c3c', fontSize: '0.75rem', marginTop: 4 }}>{passwordMsg.text}</div>
+                )}
+                <div style={{ color: '#999', fontSize: '0.7rem', marginTop: 4 }}>This is what the client types in to log in on shop.penfixads.com — use this to set one up for them or reset a forgotten password.</div>
+              </div>
+            )}
+
             {(() => {
               const isAdmin = currentUser.role === 'Admin'
               const alreadyApproved = !!editing?.credit_line_status
