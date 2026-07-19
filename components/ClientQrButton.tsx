@@ -27,7 +27,7 @@ export default function ClientQrButton({ clientId, clientLabel, buttonClassName,
 
       {open && (
         <div className="pf-modal-overlay" style={{ background: 'rgba(0,0,0,0.8)' }}>
-          <div className="pf-modal-card pf-modal-wine" style={{ maxWidth: 340 }}>
+          <div className="pf-modal-card pf-modal-wine" style={{ maxWidth: 400 }}>
             <div style={{ position: 'relative', textAlign: 'center', marginBottom: '1.25rem' }}>
               <h3 style={{ color: '#fff', fontWeight: 700, fontSize: '1.4rem' }}>Client QR Code</h3>
               <button onClick={() => setOpen(false)} style={{ position: 'absolute', top: 0, right: 0, background: 'none', border: 'none', color: '#E8B9C6', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
