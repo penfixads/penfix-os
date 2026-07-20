@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import TrackItems from './TrackItems'
+import PaymentProofUpload from './PaymentProofUpload'
 import { formatPeso } from '@/lib/jo-helpers'
 
 export default async function TrackPage({ params }: { params: { token: string } }) {
@@ -82,6 +83,10 @@ export default async function TrackPage({ params }: { params: { token: string } 
             </div>
           ))}
         </div>
+
+        {(jo.balance_due || 0) > 0 && (
+          <PaymentProofUpload jobOrderId={jo.job_order_id} balanceDue={jo.balance_due} />
+        )}
 
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: '2rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>

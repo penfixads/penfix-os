@@ -26,3 +26,5 @@ export const IconQrCode = (p: React.SVGProps<SVGSVGElement>) => <S {...p}><rect 
 export const IconChevronLeft = (p: React.SVGProps<SVGSVGElement>) => <S {...p}><polyline points="15 18 9 12 15 6" /></S>
 export const IconChevronRight = (p: React.SVGProps<SVGSVGElement>) => <S {...p}><polyline points="9 18 15 12 9 6" /></S>
 export const IconImage = (p: React.SVGProps<SVGSVGElement>) => <S {...p}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></S>
+export const IconList = (p: React.SVGProps<SVGSVGElement>) => <S {...p}><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></S>
+export const IconGrid = (p: React.SVGProps<SVGSVGElement>) => <S {...p}><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></S>

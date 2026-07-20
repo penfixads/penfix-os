@@ -31,8 +31,92 @@ function reconciliationBadge(excessDeficit: number): { label: string; bg: string
   return { label: 'Deficit', bg: '#4a1a1a', color: '#e74c3c' }
 }
 
+// Shared by HistoryRow (past days) and the "today" expense list below — same edit/delete
+// UI either way, just wired to whichever recompute logic its parent needs.
+function ExpenseRow({ expense, canManage, locked, onSave, onDelete }: {
+  expense: any
+  canManage: boolean
+  locked: boolean
+  onSave: (expenseId: string, updates: { description: string; amount: number; category: string }) => Promise<void> | void
+  onDelete: (expenseId: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [desc, setDesc] = useState(expense.description || expense.expense_name || '')
+  const [amount, setAmount] = useState(String(expense.amount ?? ''))
+  const [category, setCategory] = useState(expense.category || 'Operations')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  function startEdit() {
+    setDesc(expense.description || expense.expense_name || '')
+    setAmount(String(expense.amount ?? ''))
+    setCategory(expense.category || 'Operations')
+    setError('')
+    setEditing(true)
+  }
+
+  async function save() {
+    if (!desc.trim()) { setError('Please enter a description.'); return }
+    const amt = parseFloat(amount)
+    if (!amt || amt <= 0) { setError('Please enter a valid amount.'); return }
+    setSaving(true)
+    setError('')
+    try {
+      await onSave(expense.expense_id, { description: desc.trim(), amount: amt, category })
+      setEditing(false)
+    } catch (e: any) {
+      setError(e.message || 'Failed to save expense.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (editing) {
+    return (
+      <div style={{ background: '#fff', borderRadius: 8, padding: '0.6rem 0.7rem', marginBottom: 6, border: '1px solid #EDE0CC', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input type="text" value={desc} onChange={e => setDesc(e.target.value)} className="pf-input" style={{ flex: 2 }} placeholder="Description" />
+          <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="pf-input" style={{ flex: 1 }} placeholder="0.00" />
+        </div>
+        <select value={category} onChange={e => setCategory(e.target.value)} className="pf-select">
+          {['Operations', 'Supplies', 'Utilities', 'Transport', 'Miscellaneous'].map(c => <option key={c}>{c}</option>)}
+        </select>
+        {error && <div style={{ color: '#e74c3c', fontSize: '0.72rem' }}>{error}</div>}
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={() => setEditing(false)} disabled={saving} className="pf-btn pf-btn-secondary" style={{ flex: 1, padding: '0.3rem 0.6rem', fontSize: '0.72rem' }}><IconX />Cancel</button>
+          <button onClick={save} disabled={saving} className="pf-btn" style={{ flex: 1, padding: '0.3rem 0.6rem', fontSize: '0.72rem' }}><IconCheck />{saving ? '…' : 'Save'}</button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', padding: '0.4rem 0', borderBottom: '1px solid #e5e5e5' }}>
+      <div>
+        <span style={{ color: '#1a1a1a' }}>{expense.description || expense.expense_name}</span>
+        {expense.category && <span style={{ color: '#666', marginLeft: 8 }}>{expense.category}</span>}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ color: '#e74c3c', fontWeight: 700 }}>{formatPeso(expense.amount)}</span>
+        {canManage && !locked && (
+          <>
+            <button onClick={startEdit} title="Edit" style={{ background: 'none', border: 'none', color: '#7A1828', cursor: 'pointer', display: 'flex' }}>
+              <IconEdit style={{ width: 13, height: 13 }} />
+            </button>
+            <button onClick={() => onDelete(expense.expense_id)} title="Delete" style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', display: 'flex' }}>
+              <IconX style={{ width: 13, height: 13 }} />
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function HistoryRow({ row, currentUser }: { row: any; currentUser: AppUser }) {
-  const isAdmin = currentUser.role === 'Admin'
+  // Expense edit/delete is available to whoever actually logs these day-to-day (Admin +
+  // Treasury), not just Admin — Treasury should be able to fix their own typos directly.
+  const canManageExpenses = currentUser.role === 'Admin' || currentUser.role === 'Treasury'
   const [expanded, setExpanded] = useState(false)
   const [rowExpenses, setRowExpenses] = useState<any[] | null>(null)
   const [rowPayments, setRowPayments] = useState<any[] | null>(null)
@@ -158,6 +242,34 @@ function HistoryRow({ row, currentUser }: { row: any; currentUser: AppUser }) {
     }
   }
 
+  // Same recompute as deleteExpense, but by the amount delta instead of the full amount —
+  // a past day's total_expenses/expected_cash_on_hand/excess_deficit are stored, not derived,
+  // so an edited amount has to be pushed through the same way a delete or a new expense does.
+  async function editExpense(expenseId: string, updates: { description: string; amount: number; category: string }) {
+    const target = rowExpenses?.find(e => e.expense_id === expenseId)
+    const supabase = createSupabaseBrowserClient()
+    const { data, error: err } = await supabase.from('expenses').update({
+      description: updates.description,
+      expense_name: updates.description,
+      amount: updates.amount,
+      category: updates.category,
+    }).eq('expense_id', expenseId).select().single()
+    if (err) throw err
+    setRowExpenses(prev => (prev || []).map(e => e.expense_id === expenseId ? data : e))
+    if (target) {
+      const amountDelta = updates.amount - (target.amount || 0)
+      const newTotalExpenses = (saved.total_expenses || 0) + amountDelta
+      const newExpectedCashOnHand = (saved.initial_fund || 0) + (saved.cash || 0) - newTotalExpenses
+      const newExcessDeficit = cashOnHandNum - newExpectedCashOnHand
+      const { data: updatedSummary } = await supabase.from('daily_sales_summary').update({
+        total_expenses: newTotalExpenses,
+        expected_cash_on_hand: newExpectedCashOnHand,
+        excess_deficit: newExcessDeficit,
+      }).eq('summary_id', saved.summary_id).select().single()
+      if (updatedSummary) setSaved(updatedSummary)
+    }
+  }
+
   const dateLabel = new Date(row.date + 'T00:00:00').toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 
   return (
@@ -244,8 +356,8 @@ function HistoryRow({ row, currentUser }: { row: any; currentUser: AppUser }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <div style={{ color: '#666', fontWeight: 700, fontSize: '0.75rem' }}>Expenses ({rowExpenses.length})</div>
                 {!saved.is_locked && (
-                  <button onClick={() => { setExpError(''); setShowExpenseForm(v => !v) }} className="pf-btn" style={{ padding: '0.2rem 0.55rem', fontSize: '0.7rem' }}>
-                    <IconPlus />Add
+                  <button onClick={() => { setExpError(''); setShowExpenseForm(v => !v) }} title="Add expense" className="pf-btn" style={{ padding: '0.3rem', fontSize: '0.7rem' }}>
+                    <IconPlus />
                   </button>
                 )}
               </div>
@@ -283,15 +395,14 @@ function HistoryRow({ row, currentUser }: { row: any; currentUser: AppUser }) {
               ) : (
                 <>
                   {rowExpenses.map(e => (
-                    <div key={e.expense_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', padding: '0.3rem 0', borderBottom: '1px solid #e5e5e5' }}>
-                      <span style={{ color: '#1a1a1a' }}>{e.description || e.expense_name}</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ color: '#e74c3c', fontWeight: 700 }}>{formatPeso(e.amount)}</span>
-                        {isAdmin && !saved.is_locked && (
-                          <button onClick={() => deleteExpense(e.expense_id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '0.75rem' }}>✕</button>
-                        )}
-                      </div>
-                    </div>
+                    <ExpenseRow
+                      key={e.expense_id}
+                      expense={e}
+                      canManage={canManageExpenses}
+                      locked={!!saved.is_locked}
+                      onSave={editExpense}
+                      onDelete={deleteExpense}
+                    />
                   ))}
                   <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 6, fontWeight: 700, fontSize: '0.78rem' }}>
                     <span style={{ color: '#666' }}>Total Expenses</span>
@@ -338,6 +449,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
   const recentPageItems = recentDays.slice((recentCurrentPage - 1) * PAGE_SIZE, recentCurrentPage * PAGE_SIZE)
 
   const isAdmin = currentUser.role === 'Admin'
+  const canManageExpenses = currentUser.role === 'Admin' || currentUser.role === 'Treasury'
   const summaryId = `DSS-${today}`
 
   // Totals by method
@@ -438,6 +550,21 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
     const supabase = createSupabaseBrowserClient()
     await supabase.from('expenses').delete().eq('expense_id', expenseId)
     setExpenses(prev => prev.filter(e => e.expense_id !== expenseId))
+  }
+
+  // Unlike HistoryRow's editExpense, today's total_expenses/expected_cash_on_hand are derived
+  // live from the `expenses` array below (not yet persisted to daily_sales_summary until "Save
+  // Summary" is clicked), so editing here only needs to update local state — same as deleteExpense.
+  async function saveExpenseEdit(expenseId: string, updates: { description: string; amount: number; category: string }) {
+    const supabase = createSupabaseBrowserClient()
+    const { data, error } = await supabase.from('expenses').update({
+      description: updates.description,
+      expense_name: updates.description,
+      amount: updates.amount,
+      category: updates.category,
+    }).eq('expense_id', expenseId).select().single()
+    if (error) throw error
+    if (data) setExpenses(prev => prev.map(e => e.expense_id === expenseId ? data : e))
   }
 
   // Looks up any date directly, not just whatever happens to be in the last-30-days list —
@@ -668,7 +795,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
       <div style={{ background: '#FDF5EC', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem', border: '1px solid #EDE0CC' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
           <div style={{ color: '#666', fontWeight: 700, fontSize: '0.8rem' }}>Expenses</div>
-          <button onClick={() => { setExpError(''); setShowExpenseForm(v => !v) }} className="pf-btn" style={{ padding: '0.3rem 0.7rem', fontSize: '0.75rem' }}><IconPlus />Add</button>
+          <button onClick={() => { setExpError(''); setShowExpenseForm(v => !v) }} title="Add expense" className="pf-btn" style={{ padding: '0.4rem', fontSize: '0.75rem' }}><IconPlus /></button>
         </div>
 
         {showExpenseForm && (
@@ -705,18 +832,14 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {expenses.map(e => (
-              <div key={e.expense_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', padding: '0.4rem 0', borderBottom: '1px solid #e5e5e5' }}>
-                <div>
-                  <span style={{ color: '#1a1a1a' }}>{e.description || e.expense_name}</span>
-                  <span style={{ color: '#666', marginLeft: 8 }}>{e.category}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ color: '#e74c3c', fontWeight: 700 }}>{formatPeso(e.amount)}</span>
-                  {currentUser.role === 'Admin' && (
-                    <button onClick={() => deleteExpense(e.expense_id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '0.8rem' }}>✕</button>
-                  )}
-                </div>
-              </div>
+              <ExpenseRow
+                key={e.expense_id}
+                expense={e}
+                canManage={canManageExpenses}
+                locked={false}
+                onSave={saveExpenseEdit}
+                onDelete={deleteExpense}
+              />
             ))}
             <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 6, fontWeight: 700, fontSize: '0.82rem' }}>
               <span style={{ color: '#666' }}>Total Expenses</span>

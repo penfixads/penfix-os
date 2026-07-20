@@ -101,6 +101,11 @@ export default function DispatchClient({ items, currentUser }: Props) {
                   <div style={{ flex: 1 }}>
                     <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.88rem' }}>{clientName}</div>
                     <div style={{ color: '#999', fontSize: '0.72rem', marginTop: 1 }}>{jo?.job_order_id} · {item.item_id}</div>
+                    {item.date_time_received && (
+                      <div style={{ color: '#999', fontSize: '0.72rem', marginTop: 1 }}>
+                        Received: {new Date(item.date_time_received).toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    )}
                     <div style={{ color: '#999', fontSize: '0.8rem', marginTop: 3 }}>{item.subcategories?.subcategory_name}</div>
                     {item.production_specs && <div style={{ color: '#777', fontSize: '0.73rem', marginTop: 2 }}>{item.production_specs}</div>}
                     {c?.contact_number && <div style={{ color: '#777', fontSize: '0.72rem', marginTop: 2 }}>📞 {c.contact_number}</div>}

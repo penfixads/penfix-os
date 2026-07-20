@@ -56,6 +56,10 @@ const NAV_ITEMS: NavItem[] = [
     icon: <I><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></I>
   },
   {
+    label: 'Payment Proofs', href: '/jos/payment-proofs', roles: ['Admin','GA','Treasury'],
+    icon: <I><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></I>
+  },
+  {
     label: 'Clients', href: '/clients', roles: ['Admin','GA','Treasury'],
     icon: <I><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></I>
   },
@@ -105,8 +109,9 @@ const NAV_ITEMS: NavItem[] = [
   },
 ]
 
-function renderNavItem(item: NavItem, activeHref: string | null, pendingCount: number) {
+function renderNavItem(item: NavItem, activeHref: string | null, pendingCount: number, pendingProofCount: number) {
   const active = item.href === activeHref
+  const badgeCount = item.href === '/jos/pending-approval' ? pendingCount : item.href === '/jos/payment-proofs' ? pendingProofCount : 0
   return (
     <Link
       key={item.href}
@@ -121,7 +126,7 @@ function renderNavItem(item: NavItem, activeHref: string | null, pendingCount: n
     >
       <span style={{ color: active ? '#C9A84C' : '#ccc', display: 'flex' }}>{item.icon}</span>
       <span style={{ flex: 1 }}>{item.label}</span>
-      {item.href === '/jos/pending-approval' && pendingCount > 0 && (
+      {badgeCount > 0 && (
         <span style={{
           background: '#e74c3c',
           color: '#fff',
@@ -133,7 +138,7 @@ function renderNavItem(item: NavItem, activeHref: string | null, pendingCount: n
           minWidth: 18,
           textAlign: 'center',
         }}>
-          {pendingCount > 99 ? '99+' : pendingCount}
+          {badgeCount > 99 ? '99+' : badgeCount}
         </span>
       )}
     </Link>
@@ -163,6 +168,7 @@ export default function Sidebar({ role, name }: Props) {
   }, null)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
+  const [pendingProofCount, setPendingProofCount] = useState(0)
 
   useEffect(() => { setMobileOpen(false) }, [pathname])
 
@@ -183,6 +189,20 @@ export default function Sidebar({ role, name }: Props) {
     // Historical-unlock requests need faster feedback than the other two — the GA is
     // actively waiting on this one (it blocks their form), not just checking back later.
     const interval = setInterval(loadPendingCount, 10000)
+    return () => clearInterval(interval)
+  }, [role, pathname])
+
+  useEffect(() => {
+    if (!['Admin', 'GA', 'Treasury'].includes(role)) return
+    const supabase = createSupabaseBrowserClient()
+
+    async function loadPendingProofCount() {
+      const { count } = await supabase.from('payment_proofs').select('*', { count: 'exact', head: true }).eq('status', 'Pending')
+      setPendingProofCount(count || 0)
+    }
+
+    loadPendingProofCount()
+    const interval = setInterval(loadPendingProofCount, 10000)
     return () => clearInterval(interval)
   }, [role, pathname])
 
@@ -269,11 +289,11 @@ export default function Sidebar({ role, name }: Props) {
 
         {/* Nav */}
         <nav style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0' }}>
-          {regularItems.map(item => renderNavItem(item, activeHref, pendingCount))}
+          {regularItems.map(item => renderNavItem(item, activeHref, pendingCount, pendingProofCount))}
           {adminOnlyItems.length > 0 && (
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', margin: '0.5rem 1rem' }} />
           )}
-          {adminOnlyItems.map(item => renderNavItem(item, activeHref, pendingCount))}
+          {adminOnlyItems.map(item => renderNavItem(item, activeHref, pendingCount, pendingProofCount))}
         </nav>
 
         {/* User + Sign out */}

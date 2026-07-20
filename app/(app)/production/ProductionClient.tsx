@@ -54,25 +54,34 @@ const STATUS_COLORS: Record<string, string> = {
   'Materials & Tools Preparation': '#555',
 }
 
-const URGENCY_GROUPS = [
-  { key: 'overdue',  label: '🔴 Overdue',    color: '#c0392b', bg: '#2a0a0a', border: '#7A1828' },
-  { key: 'today',   label: '🟠 Due Today',   color: '#e67e22', bg: '#2a1a00', border: '#c0782b' },
-  { key: 'week',    label: '🟡 This Week',   color: '#f1c40f', bg: '#2a2a00', border: '#8a7a00' },
-  { key: 'upcoming',label: '🟢 Upcoming',    color: '#2ecc71', bg: '#0a2a0a', border: '#1a6a1a' },
-  { key: 'none',    label: '⬜ No Deadline', color: '#aaa',    bg: '#2a2a2a', border: '#444'    },
+// Top-level split is by when the item was *received*, not deadline urgency — today's intake
+// stands out as cards so a Fabricator sees what's new at a glance, while everything received
+// on prior days (the bulk of the backlog) reads as a denser list, newest received first.
+const SECTIONS = [
+  { key: 'todayReceived', label: "🆕 Today's Received JOs", color: '#2ecc71', bg: '#0a2a0a', border: '#1a6a1a', mode: 'grid' as const },
+  { key: 'allActive',     label: '📋 All Active JOs',        color: '#ccc',    bg: '#2a2a2a', border: '#444',    mode: 'list' as const },
 ]
 
-function getUrgencyKey(dateStr: string | null): string {
-  if (!dateStr) return 'none'
+function isReceivedToday(dateStr: string | null): boolean {
+  if (!dateStr) return false
+  const received = new Date(dateStr)
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const todayEnd = new Date(todayStart.getTime() + 86400000)
+  return received >= todayStart && received < todayEnd
+}
+
+// Deadline urgency still flags an individual card/row (the 📅 badge below), just no longer
+// used to group items into sections — that's now purely by received date, above.
+function getDeadlineUrgency(dateStr: string | null): 'overdue' | 'today' | 'other' {
+  if (!dateStr) return 'other'
   const deadline = new Date(dateStr)
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const todayEnd   = new Date(todayStart.getTime() + 86400000)
-  const weekEnd    = new Date(todayStart.getTime() + 7 * 86400000)
+  const todayEnd = new Date(todayStart.getTime() + 86400000)
   if (deadline < todayStart) return 'overdue'
-  if (deadline < todayEnd)   return 'today'
-  if (deadline < weekEnd)    return 'week'
-  return 'upcoming'
+  if (deadline < todayEnd) return 'today'
+  return 'other'
 }
 
 function formatDeadline(dateStr: string): string {
@@ -233,16 +242,16 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
     return (client + (item.job_orders?.job_order_id || '') + (item.subcategories?.subcategory_name || '')).toLowerCase().includes(q)
   })
 
-  // Group by urgency, sort within each group by deadline asc (no-deadline last)
-  const grouped: Record<string, any[]> = { overdue: [], today: [], week: [], upcoming: [], none: [] }
+  // Split by received date, each sorted latest received first.
+  const grouped: Record<string, any[]> = { todayReceived: [], allActive: [] }
   for (const item of filtered) {
-    grouped[getUrgencyKey(item.date_time_needed)].push(item)
+    grouped[isReceivedToday(item.date_time_received) ? 'todayReceived' : 'allActive'].push(item)
   }
   for (const key of Object.keys(grouped)) {
     grouped[key].sort((a, b) => {
-      if (!a.date_time_needed) return 1
-      if (!b.date_time_needed) return -1
-      return new Date(a.date_time_needed).getTime() - new Date(b.date_time_needed).getTime()
+      if (!a.date_time_received) return 1
+      if (!b.date_time_received) return -1
+      return new Date(b.date_time_received).getTime() - new Date(a.date_time_received).getTime()
     })
   }
 
@@ -260,20 +269,22 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
             {notYetStartedCount > 0 && <span style={{ color: '#e67e22', marginLeft: 8 }}>· {notYetStartedCount} not yet started by GA</span>}
           </p>
         </div>
-        <input
-          type="text"
-          placeholder="Search client, JO, item..."
-          value={search}
-          onChange={e => { setSearch(e.target.value); setGroupPage({}) }}
-          style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.85rem', color: '#1a1a1a', fontSize: '0.82rem', width: 220, outline: 'none' }}
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input
+            type="text"
+            placeholder="Search client, JO, item..."
+            value={search}
+            onChange={e => { setSearch(e.target.value); setGroupPage({}) }}
+            style={{ background: '#FDF5EC', border: '1.5px solid #d0d0d0', borderRadius: 8, padding: '0.5rem 0.85rem', color: '#1a1a1a', fontSize: '0.82rem', width: 220, outline: 'none' }}
+          />
+        </div>
       </div>
 
       {productionItems.length === 0 ? (
         <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No items in production queue.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {URGENCY_GROUPS.map(group => {
+          {SECTIONS.map(group => {
             const groupItems = grouped[group.key]
             if (groupItems.length === 0) return null
             const isCollapsed = collapsed[group.key]
@@ -295,7 +306,10 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
                 {/* Cards */}
                 {!isCollapsed && (
                   <>
-                  <div style={{ border: `1px solid ${group.border}`, borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
+                  <div style={group.mode === 'grid'
+                    ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.75rem', padding: '0.75rem', border: `1px solid ${group.border}`, borderTop: 'none', borderRadius: '0 0 10px 10px' }
+                    : { border: `1px solid ${group.border}`, borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden' }
+                  }>
                     {groupPageItems.map((item, idx) => {
                       const jo = item.job_orders
                       const clientName = jo?.clients?.client_name || jo?.clients?.company_name || jo?.client_id
@@ -305,8 +319,11 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
                       const itemSteps = getEffectiveSteps(sopBySubcategory[subcategoryId] || [], jobFlow)
                       const isTerminal = itemSteps.find(s => s.status_name === status)?.is_terminal
                       const isAdvancing = advancing === item.item_id
-                      const isOverdue = group.key === 'overdue'
-                      const isToday = group.key === 'today'
+                      // Per-item deadline urgency — independent of which section (received-date
+                      // based) this item landed in.
+                      const deadlineUrgency = getDeadlineUrgency(item.date_time_needed)
+                      const isOverdue = deadlineUrgency === 'overdue'
+                      const isToday = deadlineUrgency === 'today'
 
                       const currentIndex = itemSteps.findIndex(s => s.status_name === status)
                       // The terminal step needs its own logged proponent, same as every other
@@ -317,7 +334,14 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
                       return (
                         <div key={item.item_id}
                           onClick={() => setViewingItem(item)}
-                          style={{
+                          style={group.mode === 'grid' ? {
+                            background: '#FDF5EC',
+                            border: '1px solid #EDE0CC',
+                            borderLeft: `4px solid ${STATUS_COLORS[status] || '#555'}`,
+                            borderRadius: 8,
+                            padding: '0.9rem 1rem',
+                            cursor: 'pointer',
+                          } : {
                             background: '#FDF5EC',
                             borderTop: idx > 0 ? '1px solid #EDE0CC' : 'none',
                             padding: '0.9rem 1rem',
