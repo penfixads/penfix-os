@@ -18,6 +18,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "C:\\PENFIX~1\\shop", "run", "dev", "--", "-p", "3002"],
       "port": 3002
+    },
+    {
+      "name": "penfix-hr",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "C:\\PENFIX~1\\hr", "run", "dev", "--", "-p", "3003", "--webpack"],
+      "port": 3003
     }
   ]
 }
