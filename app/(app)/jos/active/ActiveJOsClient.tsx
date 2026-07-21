@@ -233,7 +233,7 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
                     )}
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
                       {visibleItems.slice(0, 4).map((item: any) => {
-                        const canMarkUnclaimed = item.job_status !== 'Done' && !receivedToday
+                        const canMarkUnclaimed = item.job_status !== 'Unclaimed' && item.job_status !== 'Cancelled' && !receivedToday
                         return (
                           <span key={item.item_id} style={{ background: '#f0f0f0', color: '#999', fontSize: '0.65rem', padding: '0.15rem 0.5rem', borderRadius: 10, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                             {item.subcategories?.subcategory_name || item.item_id} · {item.job_status} · {formatPeso(item.computed_line_total || 0)}

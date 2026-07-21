@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { getEffectiveSteps, canPushToProduction } from '@/lib/jo-helpers'
+import { getEffectiveSteps, canPushToProduction, canMarkItemDone } from '@/lib/jo-helpers'
 import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
@@ -155,6 +155,14 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
     const liveItem = localItems.find(i => i.item_id === itemId)
     if (!canPushToProduction(liveItem?.job_orders)) {
       alert('This job order needs 50% downpayment (or Admin-approved override) before it can advance past Received.')
+      setPendingChange(null)
+      return
+    }
+    // completedStatus === targetStatus only happens when confirming the checklist's terminal
+    // step (see JOItemForm.tsx's onRequestAdvance call — there's no nextStep past it), so this
+    // is the "marking the item done" case, distinct from the 50%-downpayment gate above.
+    if (completedStatus === targetStatus && !canMarkItemDone(liveItem?.job_orders)) {
+      alert('This job order still has a balance due. Fully collect payment (or mark the client for billing) before marking this item done.')
       setPendingChange(null)
       return
     }
@@ -446,6 +454,8 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
               advancing: advancing === liveItem.item_id,
               blocked: !canPushToProduction(liveItem.job_orders),
               blockedReason: 'Needs 50% downpayment (or Admin-approved override) before status can move past Received.',
+              terminalBlocked: !canMarkItemDone(liveItem.job_orders),
+              terminalBlockedReason: 'Needs full payment (or client marked for billing) before this item can be marked done.',
               onRequestAdvance: (completedStatus, targetStatus) => requestStatusChange(liveItem.item_id, liveItem.job_orders?.job_order_id, completedStatus, targetStatus),
               onToggleProponent: toggleProponent,
               onConfirmAdvance: confirmStatusChange,

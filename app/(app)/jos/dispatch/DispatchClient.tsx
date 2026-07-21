@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { formatPeso } from '@/lib/jo-helpers'
+import { formatPeso, canMarkItemDone } from '@/lib/jo-helpers'
 import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
 import type { AppUser } from '@/lib/user'
 import Pagination from '@/components/Pagination'
@@ -38,6 +38,13 @@ export default function DispatchClient({ items, currentUser }: Props) {
   const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   async function markDispatched(itemId: string, mode: string) {
+    // Defense in depth — the button is already hidden for a blocked item, but re-check here
+    // in case `items` went stale (e.g. someone else just reverted a payment in another tab).
+    const item = items.find(i => i.item_id === itemId)
+    if (!canMarkItemDone(item?.job_orders)) {
+      alert('This job order still has a balance due. Fully collect payment (or mark the client for billing) before dispatching this item.')
+      return
+    }
     setMarking(itemId)
     try {
       const supabase = createSupabaseBrowserClient()
@@ -48,7 +55,6 @@ export default function DispatchClient({ items, currentUser }: Props) {
       }).eq('item_id', itemId)
       if (markErr) { alert(markErr.message || 'Failed to mark item as dispatched.'); return }
 
-      const item = items.find(i => i.item_id === itemId)
       if (item?.job_orders?.job_order_id) {
         await syncJobOrderDoneStatus(supabase, item.job_orders.job_order_id)
       }
@@ -84,6 +90,7 @@ export default function DispatchClient({ items, currentUser }: Props) {
             const clientName = c?.client_name || c?.company_name || jo?.client_id
             const hasBalance = (jo?.balance_due || 0) > 0
             const isMarking = marking === item.item_id
+            const dispatchBlocked = !canMarkItemDone(jo)
 
             return (
               <div key={item.item_id} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #EDE0CC' }}>
@@ -123,13 +130,19 @@ export default function DispatchClient({ items, currentUser }: Props) {
                   </div>
                 </div>
 
+                {dispatchBlocked && (
+                  <div style={{ marginTop: '0.65rem', background: 'rgba(231,76,60,0.1)', border: '1px solid #e74c3c', borderRadius: 8, padding: '0.4rem 0.65rem', color: '#c0392b', fontSize: '0.72rem' }}>
+                    🔒 Balance due — collect full payment (or mark client for billing) before dispatching.
+                  </div>
+                )}
                 <div style={{ marginTop: '0.75rem', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {DISPATCH_MODES.map(mode => (
                     <button
                       key={mode}
                       onClick={() => markDispatched(item.item_id, mode)}
-                      disabled={!!isMarking}
-                      style={{ background: '#1a1a2a', border: '1px solid #27ae60', color: '#2ecc71', fontSize: '0.73rem', padding: '0.4rem 0.8rem', borderRadius: 6, cursor: isMarking ? 'not-allowed' : 'pointer', fontWeight: 600 }}
+                      disabled={!!isMarking || dispatchBlocked}
+                      title={dispatchBlocked ? 'Balance due — cannot dispatch until fully paid or marked for billing.' : undefined}
+                      style={{ background: '#1a1a2a', border: '1px solid #27ae60', color: '#2ecc71', fontSize: '0.73rem', padding: '0.4rem 0.8rem', borderRadius: 6, cursor: (isMarking || dispatchBlocked) ? 'not-allowed' : 'pointer', fontWeight: 600, opacity: dispatchBlocked ? 0.45 : 1 }}
                     >
                       {isMarking ? '…' : `✓ ${mode}`}
                     </button>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { generateItemId, generatePaymentId, formatPeso, getEffectiveSteps, getPhilippineDateStr, JO_SOURCE_CHANNELS, canPushToProduction } from '@/lib/jo-helpers'
+import { generateItemId, generatePaymentId, formatPeso, getEffectiveSteps, getPhilippineDateStr, JO_SOURCE_CHANNELS, canPushToProduction, canMarkItemDone } from '@/lib/jo-helpers'
 import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
 import { compressImageToDataUrl } from '@/lib/image-compress'
 import type { AppUser } from '@/lib/user'
@@ -126,6 +126,13 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
       setPendingChange(null)
       return
     }
+    // Same terminal-step signal as ProductionClient.tsx — completedStatus === targetStatus
+    // only happens when confirming the checklist's last (terminal) step.
+    if (completedStatus === targetStatus && !canMarkDone) {
+      alert('This job order still has a balance due. Fully collect payment (or mark the client for billing) before marking this item done.')
+      setPendingChange(null)
+      return
+    }
     const proponents = selectedProponents.length > 0 ? selectedProponents : [currentUser.email]
     setAdvancingItemId(itemId)
     try {
@@ -177,6 +184,9 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   // so adding a payment that crosses 50% unblocks the checklist in the same edit session —
   // override_status still comes from jo since that's only ever changed by an Admin elsewhere.
   const productionAllowed = canPushToProduction({ is_for_billing: editIsForBilling, payment_status: paymentStatus, override_status: jo.override_status })
+  // Same live-values reasoning as productionAllowed above, but for the stricter "can this item
+  // be marked done" rule — full payment (or billing), not just 50% down.
+  const canMarkDone = canMarkItemDone({ is_for_billing: editIsForBilling, payment_status: paymentStatus })
 
   async function handlePayProofFile(file: File | null) {
     if (!file) return
@@ -263,6 +273,12 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
           item_preview: item.item_preview,
           item_preview_thumb: item.item_preview_thumb,
         }).eq('item_id', item.item_id)
+        if (error) throw error
+      }
+
+      const existingPays = editPayments.filter(p => p._existing)
+      for (const p of existingPays) {
+        const { error } = await supabase.from('payments').update({ payment_date: p.payment_date }).eq('payment_id', p.payment_id)
         if (error) throw error
       }
 
@@ -486,7 +502,14 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                         {editPayments.map((p, i) => (
                           <tr key={p.payment_id || i} style={{ borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
                             <td style={{ ...td, fontWeight: 600, color: '#fff' }}>{p.method || p.payment_method}</td>
-                            <td style={{ ...td, color: '#E8B9C6' }}>{p.payment_date ? new Date(p.payment_date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</td>
+                            <td style={{ ...td, color: '#E8B9C6' }}>
+                              <input type="date" value={p.payment_date || ''} max={getPhilippineDateStr()}
+                                onChange={e => {
+                                  const val = e.target.value
+                                  setEditPayments(prev => prev.map((pp, j) => j === i ? { ...pp, payment_date: val } : pp))
+                                }}
+                                className="pf-input" style={{ padding: '0.2rem 0.35rem', fontSize: '0.75rem', width: 132 }} />
+                            </td>
                             <td style={{ ...td, color: '#E8B9C6' }}>{p.created_at ? new Date(p.created_at).toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'On save'}</td>
                             <td style={{ ...td, textAlign: 'right', color: '#fff' }}>{formatPeso(p.amount)}</td>
                             <td style={{ ...td, textAlign: 'right', color: '#E8B9C6' }}>{p.cashback > 0 ? formatPeso(p.cashback) : '—'}</td>
@@ -664,6 +687,8 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
               advancing: advancingItemId === liveItem.item_id,
               blocked: !productionAllowed,
               blockedReason: 'Needs 50% downpayment (or Admin-approved override) before status can move past Received.',
+              terminalBlocked: !canMarkDone,
+              terminalBlockedReason: 'Needs full payment (or client marked for billing) before this item can be marked done.',
               onRequestAdvance: (completedStatus, targetStatus) => requestStatusChange(liveItem.item_id, completedStatus, targetStatus),
               onToggleProponent: toggleProponent,
               onConfirmAdvance: confirmStatusChange,

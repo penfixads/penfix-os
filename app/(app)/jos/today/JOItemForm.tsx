@@ -19,6 +19,11 @@ export interface StatusChecklistProps {
   // enforce the 50%-down/Admin-override rule so status can't skip ahead of that approval.
   blocked?: boolean
   blockedReason?: string
+  // Narrower than `blocked` above — only disables the checklist's terminal (last) step, so
+  // earlier production steps stay actionable while payment is still being collected. Used to
+  // enforce full payment (or billing) before an item can be marked done.
+  terminalBlocked?: boolean
+  terminalBlockedReason?: string
   onRequestAdvance: (completedStatus: string, targetStatus: string) => void
   onToggleProponent: (email: string) => void
   onConfirmAdvance: () => void
@@ -52,7 +57,7 @@ const PRICING_LABELS: Record<string, string> = {
 
 function StatusChecklist({ statusChecklist }: { statusChecklist: StatusChecklistProps }) {
   const { steps, currentStatus, namesByStatus, staff, pendingStatus, selectedProponents, advancing,
-    blocked, blockedReason, onRequestAdvance, onToggleProponent, onConfirmAdvance, onCancelPending } = statusChecklist
+    blocked, blockedReason, terminalBlocked, terminalBlockedReason, onRequestAdvance, onToggleProponent, onConfirmAdvance, onCancelPending } = statusChecklist
   if (steps.length === 0) return null
   const currentIndex = steps.findIndex(s => s.status_name === currentStatus)
   // Steps from is_production_start up to (but excluding) the terminal step are the actual
@@ -84,7 +89,7 @@ function StatusChecklist({ statusChecklist }: { statusChecklist: StatusChecklist
           // it. While historical-import verification is ongoing, treat every step as actionable
           // (not just the one at currentIndex) so staff can click the checkbox that reflects
           // reality and correct the item. Pull the `currentIndex === -1 ||` once that's done.
-          const isActionable = currentIndex === -1 || isCurrentRow ? (!step.is_terminal || !terminalConfirmed) : false
+          const isActionable = (currentIndex === -1 || isCurrentRow ? (!step.is_terminal || !terminalConfirmed) : false) && !(step.is_terminal && terminalBlocked)
           const names = namesByStatus[step.status_name]
           const nextStep = steps[i + 1]
           const inProductionPhase = productionStartIndex !== -1 && i >= productionStartIndex && !step.is_terminal
@@ -115,6 +120,9 @@ function StatusChecklist({ statusChecklist }: { statusChecklist: StatusChecklist
                   </span>
                   {names && names.length > 0 && (
                     <div style={{ color: '#c99', fontSize: '0.68rem', marginTop: 1 }}>by {names.join(', ')}</div>
+                  )}
+                  {step.is_terminal && terminalBlocked && !isDone && (
+                    <div style={{ color: '#f0b27a', fontSize: '0.68rem', marginTop: 1 }}>🔒 {terminalBlockedReason || 'Balance due before this can be marked done.'}</div>
                   )}
                 </div>
                 {advancing && isActionable && <span style={{ color: '#E8B9C6', fontSize: '0.7rem' }}>Saving…</span>}

@@ -137,6 +137,18 @@ export function canPushToProduction(jo: { is_for_billing?: boolean | null; payme
   return false
 }
 
+// An item shouldn't reach a terminal status (Done / dispatched) while money is still owed —
+// unlike canPushToProduction above, a 50% downpayment isn't enough here, and an Admin override
+// doesn't bypass it either, since the override only unblocks production from starting, not the
+// job shipping out unpaid. Billing clients are exempt since they're invoiced after the fact.
+// Shared by DispatchClient.tsx, ProductionClient.tsx, and EditJOModal.tsx so the same rule
+// applies everywhere an item's status can be advanced to its terminal step.
+export function canMarkItemDone(jo: { is_for_billing?: boolean | null; payment_status?: string | null } | null | undefined): boolean {
+  if (!jo) return false
+  if (jo.is_for_billing) return true
+  return jo.payment_status === 'Fully Paid'
+}
+
 export function computeLineTotal(
   pricingModel: string,
   basePrice: number,
