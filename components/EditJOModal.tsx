@@ -4,11 +4,17 @@ import { useState, useEffect } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { generateItemId, generatePaymentId, formatPeso, getEffectiveSteps, getPhilippineDateStr, JO_SOURCE_CHANNELS, canPushToProduction } from '@/lib/jo-helpers'
 import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
+import { compressImageToDataUrl } from '@/lib/image-compress'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
 import JOReceiptModal from '@/components/JOReceiptModal'
 import BillingStatementModal from '@/components/BillingStatementModal'
 import { IconPlus, IconCirclePlus, IconEdit, IconX, IconCheck } from '@/components/icons'
+
+// Same budget PaymentProofUpload.tsx uses for client-submitted proofs — these need to stay
+// legible (reference numbers, amounts) when reviewed on /jos/payment-proofs.
+const MAX_PROOF_BYTES = 250 * 1024
+const MAX_PROOF_DIM = 1600
 
 interface Props {
   jo: any
@@ -36,6 +42,9 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   const [payMethod, setPayMethod] = useState('Cash')
   const [payCashback, setPayCashback] = useState(0)
   const [payDate, setPayDate] = useState(getPhilippineDateStr())
+  const [payProofImage, setPayProofImage] = useState('')
+  const [payProofCompressing, setPayProofCompressing] = useState(false)
+  const [payProofError, setPayProofError] = useState('')
   const [rewardsBalance, setRewardsBalance] = useState(0)
   const [overrideReason, setOverrideReason] = useState(jo.request_override || '')
   const [editingItem, setEditingItem] = useState<any | null>(null)
@@ -169,13 +178,30 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   // override_status still comes from jo since that's only ever changed by an Admin elsewhere.
   const productionAllowed = canPushToProduction({ is_for_billing: editIsForBilling, payment_status: paymentStatus, override_status: jo.override_status })
 
+  async function handlePayProofFile(file: File | null) {
+    if (!file) return
+    setPayProofError('')
+    setPayProofCompressing(true)
+    try {
+      const { dataUrl } = await compressImageToDataUrl(file, MAX_PROOF_BYTES, MAX_PROOF_DIM)
+      setPayProofImage(dataUrl)
+    } catch (e: any) {
+      setPayProofError(e.message || 'Failed to process image.')
+    } finally {
+      setPayProofCompressing(false)
+    }
+  }
+
   function addPayment() {
     const amt = parseFloat(payAmount) || 0
     if (amt <= 0) return
-    setEditPayments(prev => [...prev, { amount: amt, method: payMethod, cashback: payCashback, payment_date: payDate }])
+    if (payMethod === 'G-Cash' && !payProofImage) { setPayProofError('Please attach a screenshot of the G-Cash payment.'); return }
+    setEditPayments(prev => [...prev, { amount: amt, method: payMethod, cashback: payCashback, payment_date: payDate, proof_image: payMethod === 'G-Cash' ? payProofImage : undefined }])
     setPayAmount('')
     setPayCashback(0)
     setPayDate(getPhilippineDateStr())
+    setPayProofImage('')
+    setPayProofError('')
     setShowPayForm(false)
   }
 
@@ -255,6 +281,23 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
           recorded_by: currentUser.name,
         })
         if (error) throw error
+        if (newPays[i].proof_image) {
+          // Staff already recorded the payment above (unlike the client-submitted flow in
+          // /jos/payment-proofs), so this lands pre-confirmed — it's here purely so the
+          // screenshot is kept and visible in the Payment Proofs gallery.
+          const { error: proofErr } = await supabase.from('payment_proofs').insert({
+            job_order_id: joId,
+            claimed_amount: newPays[i].amount,
+            payment_method: newPays[i].method,
+            proof_image: newPays[i].proof_image,
+            status: 'Confirmed',
+            reviewed_by: currentUser.name,
+            reviewed_at: new Date().toISOString(),
+            linked_payment_id: paymentId,
+            client_note: 'Recorded directly by staff via Edit Job Order.',
+          })
+          if (proofErr) throw proofErr
+        }
         const savedPay = newPays[i]
         setEditPayments(prev => prev.map(p => p === savedPay ? { ...p, payment_id: paymentId, _existing: true } : p))
       }
@@ -477,6 +520,24 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                         </select>
                       </div>
                     </div>
+                    {payMethod === 'G-Cash' && (
+                      <div>
+                        <label className="pf-label">Proof of Payment (Screenshot)</label>
+                        {payProofImage ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <img src={payProofImage} alt="Payment proof" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 6, border: '1px solid #EDE0CC' }} />
+                            <label style={{ color: '#5C001F', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>
+                              Replace image
+                              <input type="file" accept="image/*" onChange={e => handlePayProofFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
+                            </label>
+                          </div>
+                        ) : (
+                          <input type="file" accept="image/*" onChange={e => handlePayProofFile(e.target.files?.[0] || null)} className="pf-input" style={{ padding: '0.4rem' }} />
+                        )}
+                        {payProofCompressing && <div style={{ color: '#999', fontSize: '0.72rem', marginTop: 4 }}>Processing image…</div>}
+                        {payProofError && <div style={{ color: '#c0392b', fontSize: '0.72rem', marginTop: 4 }}>{payProofError}</div>}
+                      </div>
+                    )}
                     <div>
                       <label className="pf-label">Date Paid</label>
                       <input type="date" value={payDate} max={getPhilippineDateStr()} onChange={e => setPayDate(e.target.value)} className="pf-input" />
