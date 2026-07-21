@@ -1,10 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { generatePaymentId, formatPeso, getPhilippineDateStr } from '@/lib/jo-helpers'
 import { IconCheck, IconX, IconImage } from '@/components/icons'
+import Pagination from '@/components/Pagination'
 import type { AppUser } from '@/lib/user'
+
+export type StatusFilter = 'Pending' | 'Confirmed' | 'Rejected' | 'All'
+
+const PAGE_SIZE = 12
 
 interface Proof {
   proof_id: string
@@ -14,6 +20,11 @@ interface Proof {
   proof_image: string
   client_note: string | null
   created_at: string
+  status: 'Pending' | 'Confirmed' | 'Rejected'
+  reviewed_by: string | null
+  reviewed_at: string | null
+  review_remarks: string | null
+  linked_payment_id: string | null
   job_orders: {
     client_id: string
     grand_total: number
@@ -28,6 +39,15 @@ interface Proof {
 interface Props {
   initialProofs: Proof[]
   currentUser: AppUser
+  statusFilter: StatusFilter
+}
+
+const TABS: StatusFilter[] = ['Pending', 'Confirmed', 'Rejected', 'All']
+
+const STATUS_BADGE: Record<Proof['status'], { bg: string; color: string }> = {
+  Pending: { bg: '#3a3010', color: '#C9A84C' },
+  Confirmed: { bg: '#1a4a1a', color: '#2ecc71' },
+  Rejected: { bg: '#4a1a1a', color: '#e74c3c' },
 }
 
 // Mirrors components/EditJOModal.tsx's payment_status derivation — kept as a small inline
@@ -42,7 +62,8 @@ function derivePaymentStatus(isForBilling: boolean, totalPaid: number, grandTota
   return 'Below 50% Downpayment'
 }
 
-export default function PaymentProofsClient({ initialProofs, currentUser }: Props) {
+export default function PaymentProofsClient({ initialProofs, currentUser, statusFilter }: Props) {
+  const router = useRouter()
   const [proofs, setProofs] = useState(initialProofs)
   const [amounts, setAmounts] = useState<Record<string, string>>(
     Object.fromEntries(initialProofs.map(p => [p.proof_id, String(p.claimed_amount)]))
@@ -51,6 +72,10 @@ export default function PaymentProofsClient({ initialProofs, currentUser }: Prop
   const [working, setWorking] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [zoomed, setZoomed] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(proofs.length / PAGE_SIZE)))
+  const pageProofs = proofs.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   function setError(id: string, msg: string) {
     setErrors(prev => ({ ...prev, [id]: msg }))
@@ -136,21 +161,40 @@ export default function PaymentProofsClient({ initialProofs, currentUser }: Prop
   return (
     <div style={{ padding: '1.5rem' }}>
       <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#5C001F', marginBottom: 4 }}>Payment Proofs</h1>
-      <div style={{ fontSize: '0.82rem', color: '#777', marginBottom: '1.25rem' }}>
-        {proofs.length} pending confirmation
+      <div style={{ fontSize: '0.82rem', color: '#777', marginBottom: '1rem' }}>
+        {proofs.length} {statusFilter === 'Pending' ? 'pending confirmation' : statusFilter === 'All' ? 'total' : statusFilter.toLowerCase()}
+      </div>
+
+      <div style={{ display: 'flex', gap: 6, marginBottom: '1.25rem', borderBottom: '1px solid #eee' }}>
+        {TABS.map(tab => (
+          <button
+            key={tab}
+            onClick={() => router.push(tab === 'Pending' ? '/jos/payment-proofs' : `/jos/payment-proofs?status=${tab}`)}
+            style={{
+              background: 'none', border: 'none', borderBottom: `2px solid ${statusFilter === tab ? '#7A1828' : 'transparent'}`,
+              color: statusFilter === tab ? '#7A1828' : '#999', fontWeight: statusFilter === tab ? 700 : 500,
+              fontSize: '0.82rem', padding: '0.5rem 0.85rem', cursor: 'pointer',
+            }}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
 
       {proofs.length === 0 ? (
         <div style={{ color: '#999', fontSize: '0.85rem', padding: '2rem', textAlign: 'center', background: '#fafafa', borderRadius: 10 }}>
-          No pending payment proofs.
+          No {statusFilter === 'All' ? '' : statusFilter.toLowerCase() + ' '}payment proofs.
         </div>
       ) : (
+        <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
-          {proofs.map(proof => {
+          {pageProofs.map(proof => {
             const jo = proof.job_orders
             const client = jo?.clients
             const clientName = client?.client_name || client?.company_name || '—'
             const busy = working === proof.proof_id
+            const isPending = proof.status === 'Pending'
+            const badge = STATUS_BADGE[proof.status]
             return (
               <div key={proof.proof_id} style={{ background: '#fff', border: '1px solid #eee', borderRadius: 10, padding: '1rem', display: 'flex', gap: '0.85rem' }}>
                 <button
@@ -177,42 +221,65 @@ export default function PaymentProofsClient({ initialProofs, currentUser }: Prop
                     <div style={{ fontSize: '0.75rem', color: '#555', marginTop: 4, fontStyle: 'italic' }}>&quot;{proof.client_note}&quot;</div>
                   )}
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: '0.6rem' }}>
-                    <span style={{ fontSize: '0.72rem', color: '#777' }}>Amount</span>
-                    <input
-                      type="number" min="0" step="0.01" disabled={busy}
-                      value={amounts[proof.proof_id] ?? ''}
-                      onChange={e => setAmounts(prev => ({ ...prev, [proof.proof_id]: e.target.value }))}
-                      style={{ width: 100, padding: '0.35rem 0.5rem', borderRadius: 6, border: '1.5px solid #d0d0d0', fontSize: '0.8rem' }}
-                    />
-                  </div>
+                  {!isPending && (
+                    <div style={{ marginTop: '0.6rem' }}>
+                      <span style={{ background: badge.bg, color: badge.color, borderRadius: 20, padding: '0.15rem 0.55rem', fontSize: '0.68rem', fontWeight: 700 }}>
+                        {proof.status} — {formatPeso(proof.claimed_amount)}
+                      </span>
+                      <div style={{ fontSize: '0.7rem', color: '#999', marginTop: 4 }}>
+                        by {proof.reviewed_by || '—'}{proof.reviewed_at && ` · ${new Date(proof.reviewed_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}`}
+                      </div>
+                      {proof.status === 'Rejected' && proof.review_remarks && (
+                        <div style={{ fontSize: '0.72rem', color: '#c0392b', marginTop: 2 }}>&quot;{proof.review_remarks}&quot;</div>
+                      )}
+                      {proof.status === 'Confirmed' && proof.linked_payment_id && (
+                        <div style={{ fontSize: '0.7rem', color: '#999', marginTop: 2 }}>Payment: {proof.linked_payment_id}</div>
+                      )}
+                    </div>
+                  )}
 
-                  {errors[proof.proof_id] && <div style={{ color: '#c0392b', fontSize: '0.75rem', marginTop: 6 }}>{errors[proof.proof_id]}</div>}
+                  {isPending && (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: '0.6rem' }}>
+                        <span style={{ fontSize: '0.72rem', color: '#777' }}>Amount</span>
+                        <input
+                          type="number" min="0" step="0.01" disabled={busy}
+                          value={amounts[proof.proof_id] ?? ''}
+                          onChange={e => setAmounts(prev => ({ ...prev, [proof.proof_id]: e.target.value }))}
+                          style={{ width: 100, padding: '0.35rem 0.5rem', borderRadius: 6, border: '1.5px solid #d0d0d0', fontSize: '0.8rem' }}
+                        />
+                      </div>
 
-                  <div style={{ display: 'flex', gap: 8, marginTop: '0.75rem' }}>
-                    <button onClick={() => handleConfirm(proof)} disabled={busy} className="pf-btn" style={{ padding: '0.4rem 0.7rem' }}>
-                      <IconCheck />{busy ? 'Working…' : 'Confirm'}
-                    </button>
-                    <button
-                      onClick={() => { const r = remarks[proof.proof_id]; if (r === undefined) setRemarks(prev => ({ ...prev, [proof.proof_id]: '' })); else handleReject(proof) }}
-                      disabled={busy} className="pf-btn pf-btn-secondary" style={{ padding: '0.4rem 0.7rem', color: '#c0392b', borderColor: '#e0b4b4' }}
-                    >
-                      <IconX />{remarks[proof.proof_id] !== undefined ? 'Confirm Reject' : 'Reject'}
-                    </button>
-                  </div>
-                  {remarks[proof.proof_id] !== undefined && (
-                    <input
-                      type="text" placeholder="Reason (optional)" disabled={busy}
-                      value={remarks[proof.proof_id]}
-                      onChange={e => setRemarks(prev => ({ ...prev, [proof.proof_id]: e.target.value }))}
-                      style={{ width: '100%', boxSizing: 'border-box', marginTop: 6, padding: '0.35rem 0.5rem', borderRadius: 6, border: '1.5px solid #d0d0d0', fontSize: '0.78rem' }}
-                    />
+                      {errors[proof.proof_id] && <div style={{ color: '#c0392b', fontSize: '0.75rem', marginTop: 6 }}>{errors[proof.proof_id]}</div>}
+
+                      <div style={{ display: 'flex', gap: 8, marginTop: '0.75rem' }}>
+                        <button onClick={() => handleConfirm(proof)} disabled={busy} className="pf-btn" style={{ padding: '0.4rem 0.7rem' }}>
+                          <IconCheck />{busy ? 'Working…' : 'Confirm'}
+                        </button>
+                        <button
+                          onClick={() => { const r = remarks[proof.proof_id]; if (r === undefined) setRemarks(prev => ({ ...prev, [proof.proof_id]: '' })); else handleReject(proof) }}
+                          disabled={busy} className="pf-btn pf-btn-secondary" style={{ padding: '0.4rem 0.7rem', color: '#c0392b', borderColor: '#e0b4b4' }}
+                        >
+                          <IconX />{remarks[proof.proof_id] !== undefined ? 'Confirm Reject' : 'Reject'}
+                        </button>
+                      </div>
+                      {remarks[proof.proof_id] !== undefined && (
+                        <input
+                          type="text" placeholder="Reason (optional)" disabled={busy}
+                          value={remarks[proof.proof_id]}
+                          onChange={e => setRemarks(prev => ({ ...prev, [proof.proof_id]: e.target.value }))}
+                          style={{ width: '100%', boxSizing: 'border-box', marginTop: 6, padding: '0.35rem 0.5rem', borderRadius: 6, border: '1.5px solid #d0d0d0', fontSize: '0.78rem' }}
+                        />
+                      )}
+                    </>
                   )}
                 </div>
               </div>
             )
           })}
         </div>
+        <Pagination page={currentPage} totalItems={proofs.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+        </>
       )}
 
       {zoomed && (
