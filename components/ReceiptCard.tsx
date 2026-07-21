@@ -19,12 +19,15 @@ export interface ReceiptCardProps {
   receivedBy?: string | null
   accomplishedBy?: string | null
   sourceChannel?: string | null
-  itemCost: number
-  costBreakdown: { label: string; amount: number }[]
+  itemCost?: number
+  costBreakdown?: { label: string; amount: number }[]
   // Only passed for single-item job orders — the Billing Statement covers the
   // JO/aggregate totals for multi-item JOs, but that button never appears for a
   // JO with just one item, so this item's own receipt needs to carry the totals.
   billingSummary?: { totalAmount: number; amountPaid: number; balance: number; status?: string | null; discount?: number | null }
+  // Fabricator-facing use (Production panel) shows the same fields the shop already
+  // crops out before posting to the Daily Job Orders GC — no pricing.
+  hideCost?: boolean
 }
 
 // Shared by the in-app "Generate Receipt" modal and the public /receipt/[token] link so
@@ -34,7 +37,7 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(function Receip
   const {
     jobOrderId, dateReceived, clientName, contactNumber, itemPreview, itemName, categoryName,
     size, quantity, specs, remarks, dateNeeded, receivedBy, accomplishedBy, itemCost, costBreakdown, sourceChannel,
-    billingSummary,
+    billingSummary, hideCost,
   } = props
 
   // html2canvas doesn't reliably respect CSS object-fit, so the image's displayed size is
@@ -98,13 +101,15 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(function Receip
         </div>
       </div>
 
-      <div style={{ padding: '1.1rem 1.25rem' }}>
-        <div style={{ color: '#5C001F', fontWeight: 700, fontSize: '0.82rem', letterSpacing: '0.04em', marginBottom: 8 }}>ITEM COST BREAKDOWN</div>
-        {costBreakdown.map(row => <Row key={row.label} label={row.label} value={formatPeso(row.amount)} />)}
-        <Row label="Item Cost" value={formatPeso(itemCost)} bold />
-      </div>
+      {!hideCost && (
+        <div style={{ padding: '1.1rem 1.25rem' }}>
+          <div style={{ color: '#5C001F', fontWeight: 700, fontSize: '0.82rem', letterSpacing: '0.04em', marginBottom: 8 }}>ITEM COST BREAKDOWN</div>
+          {(costBreakdown || []).map(row => <Row key={row.label} label={row.label} value={formatPeso(row.amount)} />)}
+          <Row label="Item Cost" value={formatPeso(itemCost || 0)} bold />
+        </div>
+      )}
 
-      {billingSummary && (
+      {!hideCost && billingSummary && (
         <div style={{ padding: '1.1rem 1.25rem', borderTop: '1px solid #eee' }}>
           <div style={{ color: '#5C001F', fontWeight: 700, fontSize: '0.82rem', letterSpacing: '0.04em', marginBottom: 8 }}>BILLING SUMMARY</div>
           <Row label="Total Amount" value={formatPeso(billingSummary.totalAmount)} bold />

@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { getEffectiveSteps, canPushToProduction, canMarkItemDone } from '@/lib/jo-helpers'
+import { getEffectiveSteps, canPushToProduction, canMarkItemDone, nameInitials } from '@/lib/jo-helpers'
 import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
 import Pagination from '@/components/Pagination'
+import ReceiptCard from '@/components/ReceiptCard'
 
 const PAGE_SIZE = 10
 
@@ -114,12 +115,25 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
     sopBySubcategory[s.subcategory_id].push(s)
   }
 
+  // item.subcategories only carries category_id (not the joined category row), so the
+  // receipt card's "Category" field is looked up from the categories list passed in.
+  const categoryNameById: Record<string, string> = {}
+  for (const c of categories) categoryNameById[c.category_id] = c.category_name
+
   // Who worked on each already-completed step, per item — feeds the checklist display.
   const namesByItemStatus: Record<string, Record<string, string[]>> = {}
   for (const log of localLogs) {
     if (!namesByItemStatus[log.item_id]) namesByItemStatus[log.item_id] = {}
     if (!namesByItemStatus[log.item_id][log.status_name]) namesByItemStatus[log.item_id][log.status_name] = []
     namesByItemStatus[log.item_id][log.status_name].push(log.changed_by_name)
+  }
+
+  // Mirrors dispatch/page.tsx's "ready for dispatch" predicate exactly — an item at its own
+  // terminal SOP step (name varies per subcategory, e.g. "Ready For Pickup/Delivery/Installation")
+  // belongs on that page instead, not lingering here alongside the in-progress queue.
+  function isAtTerminalStep(subcategoryId: string, jobFlow: string | null | undefined, status: string): boolean {
+    const steps = getEffectiveSteps(sopBySubcategory[subcategoryId] || [], jobFlow)
+    return !!steps.find(s => s.status_name === status)?.is_terminal
   }
 
   // A subcategory's SOP can include GA-owned steps (layout, client approval) before the
@@ -238,11 +252,15 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
   // sees it, so payment status alone isn't enough to enter their queue. GA/Admin/Treasury
   // still see Received items here so they have somewhere to perform that first advance.
   const paymentEligible = items.filter(i => canPushToProduction(i.job_orders))
-  const productionItems = paymentEligible.filter(i =>
+  const notYetDispatchable = paymentEligible.filter(i =>
+    !isAtTerminalStep(i.subcategory_id, i.subcategories?.job_flow, i.job_status || 'Received')
+  )
+  const productionItems = notYetDispatchable.filter(i =>
     !isFabricator || isVisibleToFabricator(i.subcategory_id, i.subcategories?.job_flow, i.job_status || 'Received')
   )
   const pendingCount = items.length - paymentEligible.length
-  const notYetStartedCount = paymentEligible.length - productionItems.length
+  const readyForDispatchCount = paymentEligible.length - notYetDispatchable.length
+  const notYetStartedCount = notYetDispatchable.length - productionItems.length
 
   const filtered = productionItems.filter(item => {
     const q = search.toLowerCase()
@@ -275,6 +293,7 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
             {productionItems.length} item(s) in queue
             {pendingCount > 0 && <span style={{ color: '#e67e22', marginLeft: 8 }}>· {pendingCount} awaiting payment/approval</span>}
             {notYetStartedCount > 0 && <span style={{ color: '#e67e22', marginLeft: 8 }}>· {notYetStartedCount} not yet started by GA</span>}
+            {readyForDispatchCount > 0 && <span style={{ color: '#27ae60', marginLeft: 8 }}>· {readyForDispatchCount} moved to Ready for Dispatch</span>}
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -311,22 +330,23 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
                   <span style={{ color: group.color, fontSize: '0.75rem' }}>{isCollapsed ? '▶' : '▼'}</span>
                 </button>
 
-                {/* Cards */}
+                {/* Cards — rendered as the same branded JO receipt the shop already posts to
+                    the Daily Job Orders GC (pricing stripped), with status/deadline/progress
+                    and the Cancel action layered around it so nothing fabricators rely on today
+                    is lost. */}
                 {!isCollapsed && (
                   <>
-                  <div style={group.mode === 'grid'
-                    ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.75rem', padding: '0.75rem', border: `1px solid ${group.border}`, borderTop: 'none', borderRadius: '0 0 10px 10px' }
-                    : { border: `1px solid ${group.border}`, borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden' }
-                  }>
-                    {groupPageItems.map((item, idx) => {
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', padding: '0.75rem', border: `1px solid ${group.border}`, borderTop: 'none', borderRadius: '0 0 10px 10px' }}>
+                    {groupPageItems.map((item) => {
                       const jo = item.job_orders
                       const clientName = jo?.clients?.client_name || jo?.clients?.company_name || jo?.client_id
                       const subcategoryId = item.subcategory_id
                       const jobFlow = item.subcategories?.job_flow
                       const status = item.job_status || 'Received'
+                      // Items at their own terminal SOP step never reach this list (see
+                      // isAtTerminalStep above — they've moved to Ready for Dispatch), so
+                      // doneCount here is always "steps completed before the current one".
                       const itemSteps = getEffectiveSteps(sopBySubcategory[subcategoryId] || [], jobFlow)
-                      const isTerminal = itemSteps.find(s => s.status_name === status)?.is_terminal
-                      const isAdvancing = advancing === item.item_id
                       // Per-item deadline urgency — independent of which section (received-date
                       // based) this item landed in.
                       const deadlineUrgency = getDeadlineUrgency(item.date_time_needed)
@@ -334,80 +354,70 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
                       const isToday = deadlineUrgency === 'today'
 
                       const currentIndex = itemSteps.findIndex(s => s.status_name === status)
-                      // The terminal step needs its own logged proponent, same as every other
-                      // step — arriving at it isn't enough to count it as done.
-                      const terminalConfirmed = isTerminal && !!(namesByItemStatus[item.item_id]?.[status]?.length)
-                      const doneCount = currentIndex >= 0 ? currentIndex + (terminalConfirmed ? 1 : 0) : 0
+                      const doneCount = Math.max(currentIndex, 0)
+
+                      const sizeLabel = item.width && item.height ? `${item.width} × ${item.height} ft` : (item.width ? `${item.width} ft` : '')
+                      // Same "who accomplished the current step" logic as the Generate Receipt
+                      // modal — blank while still sitting at Received, initials once it's moved.
+                      const accomplishedBy = status !== 'Received'
+                        ? Array.from(new Set(namesByItemStatus[item.item_id]?.[status] || [])).map(nameInitials).join(', ')
+                        : ''
 
                       return (
                         <div key={item.item_id}
                           onClick={() => setViewingItem(item)}
-                          style={group.mode === 'grid' ? {
-                            background: '#FDF5EC',
-                            border: '1px solid #EDE0CC',
-                            borderLeft: `4px solid ${STATUS_COLORS[status] || '#555'}`,
-                            borderRadius: 8,
-                            padding: '0.9rem 1rem',
-                            cursor: 'pointer',
-                          } : {
-                            background: '#FDF5EC',
-                            borderTop: idx > 0 ? '1px solid #EDE0CC' : 'none',
-                            padding: '0.9rem 1rem',
-                            borderLeft: `4px solid ${STATUS_COLORS[status] || '#555'}`,
-                            cursor: 'pointer',
-                          }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              {/* Client + JO */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                <span style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.88rem' }}>{clientName}</span>
-                                <span style={{ background: STATUS_COLORS[status] || '#555', color: '#fff', borderRadius: 20, padding: '0.1rem 0.5rem', fontSize: '0.65rem', fontWeight: 700 }}>{status}</span>
-                              </div>
-                              <div style={{ color: '#999', fontSize: '0.7rem', marginTop: 2 }}>{jo?.job_order_id} · {item.item_id}</div>
+                          style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: `2px solid ${STATUS_COLORS[status] || '#555'}`, cursor: 'pointer' }}
+                        >
+                          {/* Status bar */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.35rem 0.85rem', background: STATUS_COLORS[status] || '#555' }}>
+                            <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.7rem' }}>{status}</span>
+                            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.65rem' }}>{jo?.job_order_id}</span>
+                          </div>
 
-                              {/* Service */}
-                              <div style={{ color: '#555', fontSize: '0.82rem', fontWeight: 600, marginTop: 4 }}>{item.subcategories?.subcategory_name}</div>
-                              {item.production_specs && <div style={{ color: '#777', fontSize: '0.72rem', marginTop: 2 }}>{item.production_specs}</div>}
-                              {item.notes && <div style={{ color: '#aaa', fontSize: '0.7rem', marginTop: 1, fontStyle: 'italic' }}>"{item.notes}"</div>}
+                          <ReceiptCard
+                            jobOrderId={jo?.job_order_id}
+                            dateReceived={item.date_time_received}
+                            clientName={clientName}
+                            contactNumber={jo?.clients?.contact_number}
+                            itemPreview={item.item_preview_thumb || item.item_preview}
+                            itemName={item.subcategories?.subcategory_name || '—'}
+                            categoryName={categoryNameById[item.subcategories?.category_id]}
+                            size={sizeLabel}
+                            quantity={item.quantity ?? 1}
+                            specs={item.production_specs}
+                            remarks={item.notes}
+                            dateNeeded={item.date_time_needed}
+                            receivedBy={jo?.received_by}
+                            accomplishedBy={accomplishedBy}
+                            sourceChannel={jo?.source_channel}
+                            hideCost
+                          />
 
-                              {/* Deadline */}
+                          {/* Footer: deadline, progress, cancel — the parts of the old card
+                              that don't belong on the client-facing receipt itself */}
+                          <div style={{ background: '#FDF5EC', padding: '0.6rem 0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
+                            <div style={{ minWidth: 0 }}>
                               {item.date_time_needed && (
-                                <div style={{ marginTop: 5, display: 'inline-flex', alignItems: 'center', gap: 4, background: isOverdue ? '#3a0a0a' : isToday ? '#2a1a00' : '#2a2a2a', borderRadius: 6, padding: '0.2rem 0.55rem' }}>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: isOverdue ? '#3a0a0a' : isToday ? '#2a1a00' : '#2a2a2a', borderRadius: 6, padding: '0.2rem 0.55rem' }}>
                                   <span style={{ fontSize: '0.68rem' }}>📅</span>
                                   <span style={{ color: isOverdue ? '#e74c3c' : isToday ? '#e67e22' : '#aaa', fontSize: '0.72rem', fontWeight: 600 }}>
                                     {isOverdue ? 'OVERDUE · ' : ''}{formatDeadline(item.date_time_needed)}
                                   </span>
                                 </div>
                               )}
-
                               {itemSteps.length > 0 && (
                                 <div style={{ color: '#999', fontSize: '0.7rem', marginTop: 5 }}>
                                   {doneCount} / {itemSteps.length} steps done · <span style={{ color: '#7A1828', fontWeight: 600 }}>click to view checklist</span>
                                 </div>
                               )}
                             </div>
-
-                            {/* Right: dates + qty */}
-                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                              {item.date_time_received && <div style={{ color: '#777', fontSize: '0.68rem' }}>Received: {formatDeadline(item.date_time_received)}</div>}
-                              {item.date_time_needed && <div style={{ color: '#777', fontSize: '0.68rem', marginTop: 1 }}>Needed: {formatDeadline(item.date_time_needed)}</div>}
-                              <div style={{ color: '#aaa', fontSize: '0.68rem', marginTop: 1 }}>qty: {item.quantity || 1}</div>
-                              <button
-                                onClick={e => { e.stopPropagation(); requestCancel(item.item_id, item.job_order_id, item.subcategories?.subcategory_name || item.item_id) }}
-                                style={{ marginTop: 6, background: 'none', border: '1px solid #3a0000', color: '#7A1828', fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: 6, cursor: 'pointer' }}
-                              >
-                                Cancel
-                              </button>
-                            </div>
+                            <button
+                              onClick={e => { e.stopPropagation(); requestCancel(item.item_id, item.job_order_id, item.subcategories?.subcategory_name || item.item_id) }}
+                              style={{ flexShrink: 0, background: 'none', border: '1px solid #3a0000', color: '#7A1828', fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: 6, cursor: 'pointer' }}
+                            >
+                              Cancel
+                            </button>
                           </div>
-
-                          {isTerminal && (
-                            terminalConfirmed ? (
-                              <div style={{ marginTop: '0.6rem', color: '#27ae60', fontSize: '0.75rem', fontWeight: 600 }}>✓ Complete — Ready for dispatch</div>
-                            ) : (
-                              <div style={{ marginTop: '0.6rem', color: '#e67e22', fontSize: '0.75rem', fontWeight: 600 }}>⚠ Open the checklist to confirm who marked this ready</div>
-                            )
-                          )}
                         </div>
                       )
                     })}

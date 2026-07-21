@@ -16,7 +16,8 @@ export default async function ProductionPage() {
       *,
       job_orders(
         job_order_id, payment_status, override_status, client_id, is_for_billing,
-        clients(client_name, company_name)
+        received_by, source_channel,
+        clients(client_name, company_name, contact_number)
       ),
       subcategories(subcategory_name, category_id, job_flow)
     `)
