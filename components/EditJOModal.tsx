@@ -300,7 +300,10 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
         if (newPays[i].proof_image) {
           // Staff already recorded the payment above (unlike the client-submitted flow in
           // /jos/payment-proofs), so this lands pre-confirmed — it's here purely so the
-          // screenshot is kept and visible in the Payment Proofs gallery.
+          // screenshot is kept and visible in the Payment Proofs gallery. Best-effort: the
+          // payment itself is already committed by this point, so a screenshot-save hiccup
+          // (e.g. a transient schema-cache blip) must never block the job_orders update below
+          // from running and leave total_amount_paid/balance_due/payment_status stale.
           const { error: proofErr } = await supabase.from('payment_proofs').insert({
             job_order_id: joId,
             claimed_amount: newPays[i].amount,
@@ -312,7 +315,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
             linked_payment_id: paymentId,
             client_note: 'Recorded directly by staff via Edit Job Order.',
           })
-          if (proofErr) throw proofErr
+          if (proofErr) console.warn('Payment recorded, but saving its proof screenshot failed:', proofErr.message)
         }
         const savedPay = newPays[i]
         setEditPayments(prev => prev.map(p => p === savedPay ? { ...p, payment_id: paymentId, _existing: true } : p))
