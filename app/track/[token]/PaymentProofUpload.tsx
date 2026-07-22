@@ -11,7 +11,7 @@ import { IconSend, IconCheck } from '@/components/icons'
 const MAX_PROOF_BYTES = 250 * 1024
 const MAX_PROOF_DIM = 1600
 
-const METHODS = ['G-Cash', 'Maya', 'Bank Transfer via BPI Acct.', 'Bank Transfer via BDO Acct.']
+const METHODS = ['G-Cash', 'Maya', 'Bank Transfer via BPI Acct.', 'Bank Transfer via BDO Acct.', 'Cheque']
 
 interface Props {
   jobOrderId: string
@@ -88,8 +88,8 @@ export default function PaymentProofUpload({ jobOrderId, balanceDue }: Props) {
 
   return (
     <form onSubmit={handleSubmit} style={{ background: '#FDF5EC', borderRadius: 14, padding: '1.25rem', marginTop: '1rem', border: '1px solid #EDE0CC', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
-      <div style={{ color: '#7A1828', fontWeight: 700, fontSize: '0.9rem', marginBottom: 4 }}>Pay via E-Wallet / Bank Transfer</div>
-      <div style={{ color: '#999', fontSize: '0.72rem', marginBottom: '0.9rem' }}>Upload a screenshot of your payment and we&apos;ll confirm it.</div>
+      <div style={{ color: '#7A1828', fontWeight: 700, fontSize: '0.9rem', marginBottom: 4 }}>Pay via E-Wallet / Bank / Cheque</div>
+      <div style={{ color: '#999', fontSize: '0.72rem', marginBottom: '0.9rem' }}>Upload a screenshot or photo of your payment and we&apos;ll confirm it.</div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.85rem' }}>
         <div>
@@ -111,7 +111,7 @@ export default function PaymentProofUpload({ jobOrderId, balanceDue }: Props) {
       </div>
 
       <div style={{ marginBottom: '0.85rem' }}>
-        <label style={{ display: 'block', color: '#777', fontSize: '0.72rem', marginBottom: 4 }}>Payment Screenshot</label>
+        <label style={{ display: 'block', color: '#777', fontSize: '0.72rem', marginBottom: 4 }}>{method === 'Cheque' ? 'Cheque Photo' : 'Payment Screenshot'}</label>
         {preview ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <img src={preview} alt="Payment proof" style={{ width: 72, height: 72, objectFit: 'contain', borderRadius: 8, border: '1px solid #EDE0CC', background: '#fff' }} />

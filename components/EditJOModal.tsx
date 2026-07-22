@@ -16,6 +16,11 @@ import { IconPlus, IconCirclePlus, IconEdit, IconX, IconCheck } from '@/componen
 const MAX_PROOF_BYTES = 250 * 1024
 const MAX_PROOF_DIM = 1600
 
+// Methods where staff recording the payment directly can attach proof — mirrors what
+// payment_proofs.payment_method allows (see migration 043) minus the bank transfers, which
+// aren't wired up here (only the client tracking page currently offers those two).
+const PROOF_UPLOAD_METHODS = ['G-Cash', 'Maya', 'Cheque']
+
 interface Props {
   jo: any
   categories: any[]
@@ -205,8 +210,8 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   function addPayment() {
     const amt = parseFloat(payAmount) || 0
     if (amt <= 0) return
-    if (payMethod === 'G-Cash' && !payProofImage) { setPayProofError('Please attach a screenshot of the G-Cash payment.'); return }
-    setEditPayments(prev => [...prev, { amount: amt, method: payMethod, cashback: payCashback, payment_date: payDate, proof_image: payMethod === 'G-Cash' ? payProofImage : undefined }])
+    if (PROOF_UPLOAD_METHODS.includes(payMethod) && !payProofImage) { setPayProofError(`Please attach proof of the ${payMethod} payment.`); return }
+    setEditPayments(prev => [...prev, { amount: amt, method: payMethod, cashback: payCashback, payment_date: payDate, proof_image: PROOF_UPLOAD_METHODS.includes(payMethod) ? payProofImage : undefined }])
     setPayAmount('')
     setPayCashback(0)
     setPayDate(getPhilippineDateStr())
@@ -546,9 +551,9 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                         </select>
                       </div>
                     </div>
-                    {payMethod === 'G-Cash' && (
+                    {PROOF_UPLOAD_METHODS.includes(payMethod) && (
                       <div>
-                        <label className="pf-label">Proof of Payment (Screenshot)</label>
+                        <label className="pf-label">Proof of Payment ({payMethod === 'Cheque' ? 'Photo of Cheque' : 'Screenshot'})</label>
                         {payProofImage ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <img src={payProofImage} alt="Payment proof" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 6, border: '1px solid #EDE0CC' }} />
