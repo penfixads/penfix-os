@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso, getPhilippineDayOfWeek } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
@@ -16,6 +17,7 @@ interface Props {
   summary: any
   previousSummary: any
   recentSummaries: any[]
+  date: string
   today: string
   currentUser: AppUser
 }
@@ -418,7 +420,9 @@ function HistoryRow({ row, currentUser }: { row: any; currentUser: AppUser }) {
   )
 }
 
-export default function SalesSummaryClient({ payments, expenses: initExpenses, jobOrders, summary, previousSummary, recentSummaries, today, currentUser }: Props) {
+export default function SalesSummaryClient({ payments, expenses: initExpenses, jobOrders, summary, previousSummary, recentSummaries, date, today, currentUser }: Props) {
+  const router = useRouter()
+  const isToday = date === today
   const [expenses, setExpenses] = useState(initExpenses)
   const [showExpenseForm, setShowExpenseForm] = useState(false)
   const [expDesc, setExpDesc] = useState('')
@@ -443,14 +447,16 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
   const [filtering, setFiltering] = useState(false)
   const [recentPage, setRecentPage] = useState(1)
   const [bulkLocking, setBulkLocking] = useState(false)
+  const [showHistoricalModal, setShowHistoricalModal] = useState(false)
+  const [historicalDate, setHistoricalDate] = useState('')
 
-  const recentDays = recentSummaries.filter(r => r.date !== today)
+  const recentDays = recentSummaries.filter(r => r.date !== date)
   const recentCurrentPage = Math.min(recentPage, Math.max(1, Math.ceil(recentDays.length / PAGE_SIZE)))
   const recentPageItems = recentDays.slice((recentCurrentPage - 1) * PAGE_SIZE, recentCurrentPage * PAGE_SIZE)
 
   const isAdmin = currentUser.role === 'Admin'
   const canManageExpenses = currentUser.role === 'Admin' || currentUser.role === 'Treasury'
-  const summaryId = `DSS-${today}`
+  const summaryId = `DSS-${date}`
 
   // Totals by method
   const byMethod: Record<string, number> = {}
@@ -474,14 +480,14 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
   const excessDeficit = cashOnHandNum - expectedCashOnHand
   const nextDayFund = cashOnHandNum - remittedCashNum
 
-  const isSunday = getPhilippineDayOfWeek(today) === 0
+  const isSunday = getPhilippineDayOfWeek(date) === 0
 
   async function ensureSummaryRow() {
     if (summaryExists) return
     const supabase = createSupabaseBrowserClient()
     await supabase.from('daily_sales_summary').upsert({
       summary_id: summaryId,
-      date: today,
+      date,
       initial_fund: initialFund,
     }, { onConflict: 'date' })
     setSummaryExists(true)
@@ -494,7 +500,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
       const supabase = createSupabaseBrowserClient()
       const { error } = await supabase.from('daily_sales_summary').upsert({
         summary_id: summaryId,
-        date: today,
+        date,
         initial_fund: initialFund,
         cash: totalCash,
         ewallet_bank: totalOnline,
@@ -525,8 +531,8 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
       await ensureSummaryRow()
       const supabase = createSupabaseBrowserClient()
       const { data, error } = await supabase.from('expenses').insert({
-        expense_date: today,
-        date: today,
+        expense_date: date,
+        date,
         expense_name: expDesc,
         description: expDesc,
         amount: parseFloat(expAmount),
@@ -626,22 +632,69 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
     setFilterResults(null)
   }
 
-  const dateLabel = new Date(today + 'T00:00:00').toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+  // Drives the entry form off a ?date= param instead of always "today" — lets Admin/Treasury
+  // add or fix a past day's summary through the exact same full form (JOs received, cash
+  // reconciliation, expenses) rather than just the limited edit fields in HistoryRow below.
+  function goToDate(newDate: string) {
+    router.push(newDate === today ? '/sales/summary' : `/sales/summary?date=${newDate}`)
+  }
+
+  const dateLabel = new Date(date + 'T00:00:00').toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
 
   return (
     <div>
-      <div style={{ marginBottom: '1.25rem' }}>
-        <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Daily Sales Summary</h1>
-        <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{dateLabel}</p>
-        {isSunday && (
-          <p style={{ color: '#e67e22', fontSize: '0.75rem', marginTop: 4 }}>Today is a Sunday — normally closed, recorded because the shop is open.</p>
-        )}
+      <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Daily Sales Summary</h1>
+          <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{dateLabel}{!isToday && <span style={{ color: '#e67e22', fontWeight: 600 }}> — editing a past day</span>}</p>
+          {isSunday && (
+            <p style={{ color: '#e67e22', fontSize: '0.75rem', marginTop: 4 }}>{isToday ? 'Today' : 'This day'} is a Sunday — normally closed, recorded because the shop is open.</p>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {!isToday && (
+            <button onClick={() => goToDate(today)} className="pf-btn pf-btn-secondary" style={{ fontSize: '0.78rem', padding: '0.45rem 0.75rem', whiteSpace: 'nowrap' }}>
+              Back to Today
+            </button>
+          )}
+          <button onClick={() => { setHistoricalDate(date === today ? '' : date); setShowHistoricalModal(true) }} className="pf-btn" style={{ fontSize: '0.78rem', padding: '0.45rem 0.75rem', whiteSpace: 'nowrap' }}>
+            <IconPlus />Add Historical Summary
+          </button>
+        </div>
       </div>
+
+      {showHistoricalModal && (
+        <div className="pf-modal-overlay">
+          <div className="pf-modal-card pf-modal-wine" style={{ maxWidth: 400 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h2 style={{ color: '#fff', fontSize: '1.3rem', fontWeight: 700 }}>Add Historical Summary</h2>
+              <button onClick={() => setShowHistoricalModal(false)} style={{ background: 'none', border: 'none', color: '#E8B9C6', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+            </div>
+            <div className="pf-field">
+              <label className="pf-label">Date <span className="pf-req">*</span></label>
+              <input type="date" value={historicalDate} max={today} onChange={e => setHistoricalDate(e.target.value)} className="pf-input" />
+            </div>
+            <p style={{ color: '#E8B9C6', fontSize: '0.75rem', marginTop: -8, marginBottom: '1.1rem' }}>
+              Opens the full entry form for that day — job orders received, cash reconciliation, and expenses — same as today's, pre-filled with anything already on record for it.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowHistoricalModal(false)} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
+              <button
+                onClick={() => { if (historicalDate) { goToDate(historicalDate); setShowHistoricalModal(false) } }}
+                disabled={!historicalDate}
+                className="pf-btn"
+              >
+                <IconCheck />Open Day
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Summary cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: '1.25rem' }}>
         {[
-          { label: "Today's Received JOs", value: jobOrders.length, unit: 'JOs' },
+          { label: isToday ? "Today's Received JOs" : 'Received JOs', value: jobOrders.length, unit: 'JOs' },
           { label: 'Total Collections', value: formatPeso(totalCollections) },
           { label: 'Cash Collections', value: formatPeso(totalCash) },
           { label: 'Online / Non-Cash', value: formatPeso(totalOnline) },
@@ -661,11 +714,11 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
       <div style={{ background: '#FDF5EC', borderRadius: 10, marginBottom: '1.25rem', border: '1px solid #EDE0CC', overflow: 'hidden' }}>
         <button onClick={() => setShowJOTable(v => !v)} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '0.85rem 1rem', display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left' }}>
           <span style={{ color: '#7A1828', fontSize: '0.75rem' }}>{showJOTable ? '▼' : '▶'}</span>
-          <div style={{ color: '#666', fontWeight: 700, fontSize: '0.8rem', flex: 1 }}>Job Orders Received Today ({jobOrders.length})</div>
+          <div style={{ color: '#666', fontWeight: 700, fontSize: '0.8rem', flex: 1 }}>Job Orders Received{isToday ? ' Today' : ''} ({jobOrders.length})</div>
         </button>
         {showJOTable && (
           jobOrders.length === 0 ? (
-            <div style={{ padding: '0 1rem 1rem', color: '#aaa', fontSize: '0.8rem' }}>No job orders received today.</div>
+            <div style={{ padding: '0 1rem 1rem', color: '#aaa', fontSize: '0.8rem' }}>No job orders received{isToday ? ' today' : ' on this day'}.</div>
           ) : (
             <div style={{ overflowX: 'auto', padding: '0 1rem 1rem', borderTop: '1px dashed #EDE0CC' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem', minWidth: 640, marginTop: '0.85rem' }}>
@@ -828,7 +881,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
         )}
 
         {expenses.length === 0 ? (
-          <div style={{ color: '#aaa', fontSize: '0.8rem' }}>No expenses recorded today.</div>
+          <div style={{ color: '#aaa', fontSize: '0.8rem' }}>No expenses recorded{isToday ? ' today' : ' for this day'}.</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {expenses.map(e => (
