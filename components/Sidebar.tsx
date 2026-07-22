@@ -12,24 +12,45 @@ interface NavItem {
   href: string
   roles: UserRole[]
   icon: React.ReactNode
+  // Set only on the "how a JO actually flows" group — Received → Active → Production →
+  // Dispatch → Sales Summary — pinned to the top of the sidebar in that order with a
+  // numbered icon instead of the usual glyph, so the everyday workflow reads top-to-bottom
+  // as a sequence rather than an alphabetical/arbitrary list.
+  step?: number
 }
 
 const I = (p: React.SVGProps<SVGSVGElement>) => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} {...p} />
 )
 
+const StepIcon = ({ n }: { n: number }) => (
+  <span style={{
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    width: 16, height: 16, borderRadius: '50%', border: '1.5px solid currentColor',
+    fontSize: '0.62rem', fontWeight: 700, lineHeight: 1, flexShrink: 0,
+  }}>{n}</span>
+)
+
 const NAV_ITEMS: NavItem[] = [
   {
-    label: 'Active JOs', href: '/jos/active', roles: ['Admin','GA','Treasury'],
-    icon: <I><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></I>
+    label: "Today's Received JOs", href: '/jos/today', roles: ['Admin','GA','Treasury'],
+    icon: <StepIcon n={1} />, step: 1,
   },
   {
-    label: "Today's Received JOs", href: '/jos/today', roles: ['Admin','GA','Treasury'],
-    icon: <I><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></I>
+    label: 'Active JOs', href: '/jos/active', roles: ['Admin','GA','Treasury'],
+    icon: <StepIcon n={2} />, step: 2,
+  },
+  {
+    label: "Fabricator's Production", href: '/production', roles: ['Admin','GA','Treasury','Fabricator'],
+    icon: <StepIcon n={3} />, step: 3,
+  },
+  {
+    label: 'Ready for Dispatch', href: '/jos/dispatch', roles: ['Admin','GA','Treasury','Fabricator'],
+    icon: <StepIcon n={4} />, step: 4,
   },
   {
     label: 'Daily Sales Summary', href: '/sales/summary', roles: ['Admin','Treasury'],
-    icon: <I><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></I>
+    icon: <StepIcon n={5} />, step: 5,
   },
   {
     label: 'Pending Approval', href: '/jos/pending-approval', roles: ['Admin'],
@@ -62,14 +83,6 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: 'Clients', href: '/clients', roles: ['Admin','GA','Treasury'],
     icon: <I><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></I>
-  },
-  {
-    label: "Fabricator's Production", href: '/production', roles: ['Admin','GA','Treasury','Fabricator'],
-    icon: <I><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M20 12h2M2 12h2M17.66 17.66l-1.41-1.41M6.34 17.66l1.41-1.41"/></I>
-  },
-  {
-    label: 'Ready for Dispatch', href: '/jos/dispatch', roles: ['Admin','GA','Treasury','Fabricator'],
-    icon: <I><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></I>
   },
   {
     label: 'Daily Job Order Record', href: '/jos/daily-record', roles: ['Admin','GA','Treasury','Fabricator'],
@@ -154,11 +167,15 @@ export default function Sidebar({ role, name }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const items = NAV_ITEMS.filter(i => i.roles.includes(role))
+  // The step-numbered workflow group (Received → Active → Production → Dispatch → Sales
+  // Summary) always leads the sidebar, in that fixed order, above everything else.
+  const workflowItems = items.filter(i => i.step != null).sort((a, b) => a.step! - b.step!)
+  const nonWorkflowItems = items.filter(i => i.step == null)
   // Admin-only links (Pending Approval, Sales Reports, etc.) are scattered through
   // NAV_ITEMS in whatever order they were added — group them below a divider instead,
   // so an Admin's sidebar reads as "everyday tools" then "admin-only tools".
-  const regularItems = items.filter(i => !(i.roles.length === 1 && i.roles[0] === 'Admin'))
-  const adminOnlyItems = items.filter(i => i.roles.length === 1 && i.roles[0] === 'Admin')
+  const regularItems = nonWorkflowItems.filter(i => !(i.roles.length === 1 && i.roles[0] === 'Admin'))
+  const adminOnlyItems = nonWorkflowItems.filter(i => i.roles.length === 1 && i.roles[0] === 'Admin')
   // Pick the longest matching href so sibling routes sharing a prefix (e.g. /purchases
   // and /purchases/deliveries) don't both light up when only one is actually active.
   const activeHref = items.reduce<string | null>((best, item) => {
@@ -289,6 +306,10 @@ export default function Sidebar({ role, name }: Props) {
 
         {/* Nav */}
         <nav style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0' }}>
+          {workflowItems.map(item => renderNavItem(item, activeHref, pendingCount, pendingProofCount))}
+          {workflowItems.length > 0 && (
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', margin: '0.5rem 1rem' }} />
+          )}
           {regularItems.map(item => renderNavItem(item, activeHref, pendingCount, pendingProofCount))}
           {adminOnlyItems.length > 0 && (
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', margin: '0.5rem 1rem' }} />
