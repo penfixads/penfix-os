@@ -132,7 +132,7 @@ export default function DispatchClient({ items, currentUser }: Props) {
 
                 {dispatchBlocked && (
                   <div style={{ marginTop: '0.65rem', background: 'rgba(231,76,60,0.1)', border: '1px solid #e74c3c', borderRadius: 8, padding: '0.4rem 0.65rem', color: '#c0392b', fontSize: '0.72rem' }}>
-                    🔒 Balance due — collect full payment (or mark client for billing) before dispatching.
+                    🔒 {!isFabricator && hasBalance ? `Balance due: ${formatPeso(jo?.balance_due)} — collect full payment` : 'Collect full payment'} (or mark client for billing) before dispatching.
                   </div>
                 )}
                 <div style={{ marginTop: '0.75rem', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
