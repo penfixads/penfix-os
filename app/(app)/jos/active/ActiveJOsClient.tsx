@@ -7,6 +7,7 @@ import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
 import type { AppUser } from '@/lib/user'
 import EditJOModal from '@/components/EditJOModal'
 import JOReceiptModal from '@/components/JOReceiptModal'
+import JOThumb from '@/components/JOThumb'
 import Pagination from '@/components/Pagination'
 import JOItemForm from '../today/JOItemForm'
 
@@ -215,7 +216,9 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
             return (
               <div key={jo.job_order_id} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.85rem 1rem', border: `1px solid ${isOverdue ? '#c0392b' : '#EDE0CC'}`, borderLeft: isOverdue ? '4px solid #e74c3c' : '1px solid #EDE0CC' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flex: 1 }}>
+                    <JOThumb items={items} />
+                    <div style={{ flex: 1 }}>
                     <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.9rem' }}>{clientName}</div>
                     <div style={{ color: '#999', fontSize: '0.72rem', marginTop: 1 }}>{jo.job_order_id} · {items.length} item(s) · by {jo.received_by || '—'}</div>
                     <div style={{ color: '#777', fontSize: '0.73rem', marginTop: 2 }}>
@@ -250,6 +253,7 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
                         )
                       })}
                       {visibleItems.length > 4 && <span style={{ color: '#aaa', fontSize: '0.65rem' }}>+{visibleItems.length - 4} more</span>}
+                    </div>
                     </div>
                   </div>
 

@@ -17,7 +17,7 @@ export default async function ActiveJOsPage() {
       .select(`
         *,
         clients(client_name, company_name, contact_number),
-        job_order_items(item_id, job_status, computed_line_total, date_time_needed, subcategories(subcategory_name))
+        job_order_items(item_id, job_status, computed_line_total, date_time_needed, item_preview_thumb, subcategories(subcategory_name))
       `)
       .neq('job_status', 'Cancelled')
       .neq('job_status', 'Done')

@@ -15,7 +15,7 @@ export default async function TodayJOsPage({ searchParams }: { searchParams: { c
   const [{ data: jobOrders }, { data: clients }, { data: categories }, { data: subcategories }, { data: ledger }] = await Promise.all([
     supabase
       .from('job_orders')
-      .select(`*, clients(client_name, company_name), job_order_items(item_id, job_status, computed_line_total)`)
+      .select(`*, clients(client_name, company_name), job_order_items(item_id, job_status, computed_line_total, item_preview_thumb)`)
       .gte('date_time_received', startUTC)
       .lte('date_time_received', endUTC)
       .order('date_time_received', { ascending: false }),

@@ -9,6 +9,7 @@ import JOItemForm from './JOItemForm'
 import NewJOModal from '@/components/NewJOModal'
 import EditJOModal from '@/components/EditJOModal'
 import JOReceiptModal from '@/components/JOReceiptModal'
+import JOThumb from '@/components/JOThumb'
 import { IconPlus } from '@/components/icons'
 import Pagination from '@/components/Pagination'
 
@@ -114,18 +115,21 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients, categor
             return (
               <div key={jo.job_order_id} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #EDE0CC' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.9rem' }}>{clientName}</div>
-                    <div style={{ color: '#777', fontSize: '0.75rem', marginTop: 2 }}>
-                      {jo.job_order_id} · {jo.job_order_items?.length || 0} item(s)
-                    </div>
-                    {deadline && (
-                      <div style={{ color: '#999', fontSize: '0.73rem' }}>
-                        Deadline: {new Date(deadline).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <JOThumb items={jo.job_order_items} />
+                    <div>
+                      <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.9rem' }}>{clientName}</div>
+                      <div style={{ color: '#777', fontSize: '0.75rem', marginTop: 2 }}>
+                        {jo.job_order_id} · {jo.job_order_items?.length || 0} item(s)
                       </div>
-                    )}
-                    <div style={{ color: '#2ecc71', fontSize: '0.72rem', marginTop: 2 }}>
-                      Earned Rewards: {formatPeso(jo.rewards_balance || 0)}
+                      {deadline && (
+                        <div style={{ color: '#999', fontSize: '0.73rem' }}>
+                          Deadline: {new Date(deadline).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      )}
+                      <div style={{ color: '#2ecc71', fontSize: '0.72rem', marginTop: 2 }}>
+                        Earned Rewards: {formatPeso(jo.rewards_balance || 0)}
+                      </div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
