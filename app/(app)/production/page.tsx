@@ -15,7 +15,7 @@ export default async function ProductionPage() {
     .select(`
       *,
       job_orders(
-        job_order_id, payment_status, override_status, client_id, is_for_billing,
+        job_order_id, payment_status, balance_due, override_status, client_id, is_for_billing,
         received_by, source_channel,
         clients(client_name, company_name, contact_number)
       ),

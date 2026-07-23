@@ -30,8 +30,10 @@ export async function syncJobOrderDoneStatus(supabase: any, joId: string) {
     return
   }
 
-  const isSettled = !!jo.is_fully_paid || !!jo.is_for_billing
-  if (!isSettled) return
+  // Billing clients no longer get a free pass here either — canMarkItemDone already requires
+  // full payment for every item regardless of is_for_billing, so by the time every sibling is
+  // terminal the JO is settled the same way for everyone.
+  if (!jo.is_fully_paid) return
 
   await supabase.from('job_orders').update({ job_status: 'Done' }).eq('job_order_id', joId)
 

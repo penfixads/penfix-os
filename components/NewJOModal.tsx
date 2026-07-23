@@ -128,9 +128,9 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
   const cashbackDiscount = payments.reduce((s, p) => s + (p.cashback || 0), 0)
   const balanceDue = grandTotal - totalPaid - cashbackDiscount
   const paymentStatus = (() => {
+    if (totalPaid + cashbackDiscount >= grandTotal) return 'Fully Paid'
     if (isForBilling) return 'For Billing'
     if (totalPaid === 0 && cashbackDiscount === 0) return 'Pending Payment'
-    if (totalPaid + cashbackDiscount >= grandTotal) return 'Fully Paid'
     if ((totalPaid + cashbackDiscount) >= grandTotal * 0.5) return 'Downpayment Received'
     return 'Below 50% Downpayment'
   })()

@@ -2,6 +2,8 @@
 // Pangilinan / Alma Manaloto duplicates (merged 2026-07-11) came from: staff typing a
 // slightly different spelling instead of finding the client's existing record.
 
+import { normalizeText as normalizeName, textSimilarity as nameSimilarity } from './text-similarity'
+
 export interface ClientCandidate {
   client_id: string
   client_name: string | null
@@ -16,41 +18,12 @@ export interface ClientMatch {
   reason: 'exact' | 'contact' | 'subset' | 'similar'
 }
 
-function normalizeName(s: string): string {
-  return (s || '').toLowerCase().trim().replace(/\s+/g, ' ')
-}
-
 function normalizeContact(s: string | null | undefined): string {
   return (s || '').toLowerCase().trim().replace(/[\s()-]/g, '')
 }
 
 function wordSet(s: string): Set<string> {
   return new Set(normalizeName(s).split(' ').filter(Boolean))
-}
-
-function levenshtein(a: string, b: string): number {
-  const m = a.length, n = b.length
-  if (m === 0) return n
-  if (n === 0) return m
-  const prev = Array.from({ length: n + 1 }, (_, j) => j)
-  for (let i = 1; i <= m; i++) {
-    let prevDiag = prev[0]
-    prev[0] = i
-    for (let j = 1; j <= n; j++) {
-      const tmp = prev[j]
-      prev[j] = a[i - 1] === b[j - 1]
-        ? prevDiag
-        : 1 + Math.min(prevDiag, prev[j], prev[j - 1])
-      prevDiag = tmp
-    }
-  }
-  return prev[n]
-}
-
-function nameSimilarity(a: string, b: string): number {
-  const maxLen = Math.max(a.length, b.length)
-  if (maxLen === 0) return 1
-  return 1 - levenshtein(a, b) / maxLen
 }
 
 const SIMILARITY_THRESHOLD = 0.8

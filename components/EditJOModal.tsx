@@ -135,7 +135,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
     // Same terminal-step signal as ProductionClient.tsx — completedStatus === targetStatus
     // only happens when confirming the checklist's last (terminal) step.
     if (completedStatus === targetStatus && !canMarkDone) {
-      alert('This job order still has a balance due. Fully collect payment (or mark the client for billing) before marking this item done.')
+      alert('This job order still has a balance due. Fully collect payment before marking this item done.')
       setPendingChange(null)
       return
     }
@@ -179,9 +179,9 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   const cashback = editPayments.reduce((s, p) => s + (p.cashback || 0), 0)
   const balance = grandTotal - totalPaid - cashback
   const paymentStatus = (() => {
+    if (totalPaid + cashback >= grandTotal) return 'Fully Paid'
     if (editIsForBilling) return 'For Billing'
     if (totalPaid === 0 && cashback === 0) return 'Pending Payment'
-    if (totalPaid + cashback >= grandTotal) return 'Fully Paid'
     if ((totalPaid + cashback) >= grandTotal * 0.5) return 'Downpayment Received'
     return 'Below 50% Downpayment'
   })()
@@ -192,7 +192,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   const productionAllowed = canPushToProduction({ is_for_billing: editIsForBilling, payment_status: paymentStatus, override_status: jo.override_status })
   // Same live-values reasoning as productionAllowed above, but for the stricter "can this item
   // be marked done" rule — full payment (or billing), not just 50% down.
-  const canMarkDone = canMarkItemDone({ is_for_billing: editIsForBilling, payment_status: paymentStatus })
+  const canMarkDone = canMarkItemDone({ balance_due: balance })
 
   async function handlePayProofFile(file: File | null) {
     if (!file) return

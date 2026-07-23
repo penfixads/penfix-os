@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso, generateDeliveryId, getPhilippineDateStr, nextMonthFirst } from '@/lib/jo-helpers'
+import { findLikelyDuplicateDeliveries, type RecordMatch, type DeliveryCandidate } from '@/lib/record-dedupe'
 import type { AppUser } from '@/lib/user'
 import { IconPlus, IconCirclePlus, IconEdit, IconCheck, IconX } from '@/components/icons'
 import Pagination from '@/components/Pagination'
+import DuplicateRecordPrompt from '@/components/DuplicateRecordPrompt'
 
 const PAGE_SIZE = 10
 
@@ -27,6 +29,7 @@ export default function SupplierDeliveriesClient({ deliveries: initialDeliveries
   const [error, setError] = useState('')
   const [deleteError, setDeleteError] = useState('')
   const [page, setPage] = useState(1)
+  const [duplicateMatches, setDuplicateMatches] = useState<RecordMatch<DeliveryCandidate>[] | null>(null)
 
   const [deliveryDate, setDeliveryDate] = useState(getPhilippineDateStr())
   const [supplierName, setSupplierName] = useState('')
@@ -84,11 +87,15 @@ export default function SupplierDeliveriesClient({ deliveries: initialDeliveries
     if (!billingOverridden) setBillingMonth(nextMonthFirst(value))
   }
 
-  async function handleSave() {
+  async function handleSave(skipDuplicateCheck?: boolean) {
     if (!supplierName.trim()) { setError('Please enter a supplier name.'); return }
     if (!specs.trim()) { setError('Please enter item specs.'); return }
     if (!unitPrice || parseFloat(unitPrice) <= 0) { setError('Please enter a valid unit price.'); return }
     if (!deliveryDate) { setError('Please set the delivery date.'); return }
+    if (!editing && !skipDuplicateCheck) {
+      const matches = findLikelyDuplicateDeliveries({ deliveryDate, supplierName, specs }, deliveries)
+      if (matches.length > 0) { setDuplicateMatches(matches); return }
+    }
     setSaving(true)
     setError('')
     try {

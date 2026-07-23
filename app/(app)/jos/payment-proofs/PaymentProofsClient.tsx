@@ -55,9 +55,9 @@ const STATUS_BADGE: Record<Proof['status'], { bg: string; color: string }> = {
 // payment, and pulling EditJOModal in directly would drag along its unrelated item-editing
 // (categories/subcategories) machinery just to record one payment.
 function derivePaymentStatus(isForBilling: boolean, totalPaid: number, grandTotal: number): string {
+  if (totalPaid >= grandTotal) return 'Fully Paid'
   if (isForBilling) return 'For Billing'
   if (totalPaid === 0) return 'Pending Payment'
-  if (totalPaid >= grandTotal) return 'Fully Paid'
   if (totalPaid >= grandTotal * 0.5) return 'Downpayment Received'
   return 'Below 50% Downpayment'
 }

@@ -176,7 +176,7 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
     // step (see JOItemForm.tsx's onRequestAdvance call — there's no nextStep past it), so this
     // is the "marking the item done" case, distinct from the 50%-downpayment gate above.
     if (completedStatus === targetStatus && !canMarkItemDone(liveItem?.job_orders)) {
-      alert('This job order still has a balance due. Fully collect payment (or mark the client for billing) before marking this item done.')
+      alert('This job order still has a balance due. Fully collect payment before marking this item done.')
       setPendingChange(null)
       return
     }
@@ -465,7 +465,7 @@ export default function ProductionClient({ items: initialItems, sopSteps, staff,
               blocked: !canPushToProduction(liveItem.job_orders),
               blockedReason: 'Needs 50% downpayment (or Admin-approved override) before status can move past Received.',
               terminalBlocked: !canMarkItemDone(liveItem.job_orders),
-              terminalBlockedReason: 'Needs full payment (or client marked for billing) before this item can be marked done.',
+              terminalBlockedReason: 'Needs full payment before this item can be marked done.',
               onRequestAdvance: (completedStatus, targetStatus) => requestStatusChange(liveItem.item_id, liveItem.job_orders?.job_order_id, completedStatus, targetStatus),
               onToggleProponent: toggleProponent,
               onConfirmAdvance: confirmStatusChange,

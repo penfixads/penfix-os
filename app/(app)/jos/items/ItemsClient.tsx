@@ -26,12 +26,12 @@ async function recalcJobOrderTotals(supabase: ReturnType<typeof createSupabaseBr
   const grandTotal = (siblingItems || []).reduce((s: number, i: any) => s + (i.computed_line_total || 0), 0) - (jo.discount || 0)
   const totalPaid = jo.total_amount_paid || 0
   const cashback = jo.cashback_discount || 0
-  const paymentStatus = jo.is_for_billing
+  const paymentStatus = totalPaid + cashback >= grandTotal
+    ? 'Fully Paid'
+    : jo.is_for_billing
     ? 'For Billing'
     : totalPaid === 0 && cashback === 0
     ? 'Pending Payment'
-    : totalPaid + cashback >= grandTotal
-    ? 'Fully Paid'
     : totalPaid + cashback >= grandTotal * 0.5
     ? 'Downpayment Received'
     : 'Below 50% Downpayment'

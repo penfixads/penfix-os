@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso, generatePurchaseId, getPhilippineDateStr } from '@/lib/jo-helpers'
+import { findLikelyDuplicatePurchases, type RecordMatch, type PurchaseCandidate } from '@/lib/record-dedupe'
 import type { AppUser } from '@/lib/user'
 import { IconCirclePlus, IconEdit, IconCheck, IconX } from '@/components/icons'
 import Pagination from '@/components/Pagination'
+import DuplicateRecordPrompt from '@/components/DuplicateRecordPrompt'
 
 const PAGE_SIZE = 10
 
@@ -27,6 +29,7 @@ export default function PurchasesClient({ purchases: initialPurchases, currentUs
   const [error, setError] = useState('')
   const [deleteError, setDeleteError] = useState('')
   const [page, setPage] = useState(1)
+  const [duplicateMatches, setDuplicateMatches] = useState<RecordMatch<PurchaseCandidate>[] | null>(null)
 
   const [purchaseDate, setPurchaseDate] = useState(getPhilippineDateStr())
   const [supplierName, setSupplierName] = useState('')
@@ -74,11 +77,15 @@ export default function PurchasesClient({ purchases: initialPurchases, currentUs
     setShowForm(true)
   }
 
-  async function handleSave() {
+  async function handleSave(skipDuplicateCheck?: boolean) {
     if (!supplierName.trim()) { setError('Please enter a supplier name.'); return }
     if (!specs.trim()) { setError('Please enter item specs.'); return }
     if (!amount || parseFloat(amount) <= 0) { setError('Please enter a valid amount.'); return }
     if (!purchaseDate) { setError('Please set the purchase date.'); return }
+    if (!editing && !skipDuplicateCheck) {
+      const matches = findLikelyDuplicatePurchases({ purchaseDate, supplierName, specs }, purchases)
+      if (matches.length > 0) { setDuplicateMatches(matches); return }
+    }
     setSaving(true)
     setError('')
     try {
@@ -260,12 +267,34 @@ export default function PurchasesClient({ purchases: initialPurchases, currentUs
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={() => setShowForm(false)} className="pf-btn pf-btn-secondary"><IconX />Cancel</button>
-              <button onClick={handleSave} disabled={saving} className="pf-btn">
+              <button onClick={() => handleSave()} disabled={saving} className="pf-btn">
                 <IconCheck />{saving ? 'Saving…' : editing ? 'Save Changes' : 'Add Purchase'}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {duplicateMatches && (
+        <DuplicateRecordPrompt
+          title="Possible Duplicate Purchase"
+          message={`This looks like a purchase from "${supplierName}" already logged for this date. Is it the same one?`}
+          matches={duplicateMatches}
+          getKey={r => r.purchase_id}
+          renderMatch={r => (
+            <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.88rem' }}>
+              {r.supplier_name} — {r.specs}
+              <span style={{ color: '#E8B9C6', fontWeight: 400 }}> · {formatPeso(r.amount || 0)}</span>
+            </div>
+          )}
+          onUseExisting={(record) => {
+            setDuplicateMatches(null)
+            const full = purchases.find(p => p.purchase_id === record.purchase_id)
+            if (full) openEdit(full)
+          }}
+          onSaveAnyway={() => { setDuplicateMatches(null); handleSave(true) }}
+          onCancel={() => setDuplicateMatches(null)}
+        />
       )}
     </div>
   )

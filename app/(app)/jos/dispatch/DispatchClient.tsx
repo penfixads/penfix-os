@@ -42,7 +42,7 @@ export default function DispatchClient({ items, currentUser }: Props) {
     // in case `items` went stale (e.g. someone else just reverted a payment in another tab).
     const item = items.find(i => i.item_id === itemId)
     if (!canMarkItemDone(item?.job_orders)) {
-      alert('This job order still has a balance due. Fully collect payment (or mark the client for billing) before dispatching this item.')
+      alert('This job order still has a balance due. Fully collect payment before dispatching this item.')
       return
     }
     setMarking(itemId)
@@ -132,7 +132,7 @@ export default function DispatchClient({ items, currentUser }: Props) {
 
                 {dispatchBlocked && (
                   <div style={{ marginTop: '0.65rem', background: 'rgba(231,76,60,0.1)', border: '1px solid #e74c3c', borderRadius: 8, padding: '0.4rem 0.65rem', color: '#c0392b', fontSize: '0.72rem' }}>
-                    🔒 {!isFabricator && hasBalance ? `Balance due: ${formatPeso(jo?.balance_due)} — collect full payment` : 'Collect full payment'} (or mark client for billing) before dispatching.
+                    🔒 {!isFabricator && hasBalance ? `Balance due: ${formatPeso(jo?.balance_due)} — collect full payment` : 'Collect full payment'} before dispatching.
                   </div>
                 )}
                 <div style={{ marginTop: '0.75rem', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -141,7 +141,7 @@ export default function DispatchClient({ items, currentUser }: Props) {
                       key={mode}
                       onClick={() => markDispatched(item.item_id, mode)}
                       disabled={!!isMarking || dispatchBlocked}
-                      title={dispatchBlocked ? 'Balance due — cannot dispatch until fully paid or marked for billing.' : undefined}
+                      title={dispatchBlocked ? 'Balance due — cannot dispatch until fully paid.' : undefined}
                       style={{ background: '#1a1a2a', border: '1px solid #27ae60', color: '#2ecc71', fontSize: '0.73rem', padding: '0.4rem 0.8rem', borderRadius: 6, cursor: (isMarking || dispatchBlocked) ? 'not-allowed' : 'pointer', fontWeight: 600, opacity: dispatchBlocked ? 0.45 : 1 }}
                     >
                       {isMarking ? '…' : `✓ ${mode}`}
