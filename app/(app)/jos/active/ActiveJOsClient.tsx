@@ -220,12 +220,12 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
             // and Dispatch already hide them from their queues, so the card only shows work
             // still in flight. (They stay fully visible in All Job Order Items.)
             const visibleItems = items.filter((i: any) => i.job_status !== 'Cancelled' && i.job_status !== 'Unclaimed')
-            const receivedToday = getPhilippineDateStr(new Date(jo.date_time_received)) === getPhilippineDateStr()
             const nearestDeadline = getNearestDeadline(jo)
             const isOverdue = nearestDeadline && new Date(nearestDeadline) < new Date()
             const statusColor = STATUS_COLORS[jo.payment_status] || '#555'
             const ageMs = Date.now() - new Date(jo.date_time_received).getTime()
             const ageHours = ageMs / (1000 * 60 * 60)
+            const ageDays = ageHours / 24
             const ageColor = ageHours > 48 ? '#e74c3c' : ageHours > 24 ? '#f39c12' : '#999'
 
             return (
@@ -251,17 +251,19 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
                     )}
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
                       {visibleItems.slice(0, 4).map((item: any) => {
-                        const canMarkUnclaimed = item.job_status !== 'Unclaimed' && item.job_status !== 'Cancelled' && !receivedToday
+                        // Suggest abandonment only once an item's been sitting a full month —
+                        // before that it's just a normal in-flight item, not worth flagging.
+                        const suggestAbandon = item.job_status !== 'Unclaimed' && item.job_status !== 'Cancelled' && ageDays >= 30
                         return (
                           <span key={item.item_id} style={{ background: '#f0f0f0', color: '#999', fontSize: '0.65rem', padding: '0.15rem 0.5rem', borderRadius: 10, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                             {item.subcategories?.subcategory_name || item.item_id} · {item.job_status} · {formatPeso(item.computed_line_total || 0)}
-                            {canMarkUnclaimed && (
+                            {suggestAbandon && (
                               <button
-                                title="Mark unclaimed — client never came back for this item"
+                                title="30+ days old — client hasn't come back to claim/pay for this item"
                                 onClick={() => markUnclaimed(item.item_id, jo.job_order_id, item.subcategories?.subcategory_name || item.item_id)}
-                                style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', padding: 0, fontSize: '0.7rem', lineHeight: 1, fontWeight: 700 }}
+                                style={{ background: '#e74c3c', border: 'none', color: '#fff', cursor: 'pointer', padding: '0.1rem 0.45rem', fontSize: '0.62rem', lineHeight: 1.5, fontWeight: 700, borderRadius: 8 }}
                               >
-                                ✕
+                                Mark Abandoned
                               </button>
                             )}
                           </span>
