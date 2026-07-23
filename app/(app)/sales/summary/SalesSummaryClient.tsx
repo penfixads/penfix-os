@@ -135,7 +135,15 @@ function HistoryRow({ row, currentUser }: { row: any; currentUser: AppUser }) {
   const [savingExp, setSavingExp] = useState(false)
   const [expError, setExpError] = useState('')
 
-  const expectedCashOnHand = saved.expected_cash_on_hand || 0
+  // Recomputed live from this row's actual payments/expenses once expanded, instead of
+  // trusting the stored expected_cash_on_hand column — migrated historical days can have a
+  // stale stored value that no longer matches the real job order/payment records underneath.
+  // Falls back to the stored figure until the row is expanded and its payments/expenses load.
+  const liveCashTotal = rowPayments ? rowPayments.filter(p => p.payment_method === 'Cash').reduce((s, p) => s + (p.amount || 0), 0) : null
+  const liveExpensesTotal = rowExpenses ? rowExpenses.reduce((s, e) => s + (e.amount || 0), 0) : null
+  const expectedCashOnHand = liveCashTotal !== null && liveExpensesTotal !== null
+    ? (saved.initial_fund || 0) + liveCashTotal - liveExpensesTotal
+    : (saved.expected_cash_on_hand || 0)
   const cashOnHandNum = parseFloat(cashOnHand) || 0
   const remittedCashNum = parseFloat(remittedCash) || 0
   const excessDeficit = cashOnHandNum - expectedCashOnHand
@@ -304,6 +312,12 @@ function HistoryRow({ row, currentUser }: { row: any; currentUser: AppUser }) {
             <div>
               <label className="pf-label" style={{ color: '#999' }}>Remitted Cash</label>
               <input type="number" value={remittedCash} disabled={saved.is_locked} onChange={e => setRemittedCash(e.target.value)} className="pf-input" />
+            </div>
+            <div>
+              <label className="pf-label" style={{ color: '#999' }}>Expected Cash On Hand</label>
+              <div className="money" style={{ fontWeight: 700, padding: '0.4rem 0' }}>
+                {liveCashTotal !== null && liveExpensesTotal !== null ? formatPeso(expectedCashOnHand) : '…'}
+              </div>
             </div>
             <div>
               <label className="pf-label" style={{ color: '#999' }}>Excess/Deficit</label>
