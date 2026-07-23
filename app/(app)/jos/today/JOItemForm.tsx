@@ -183,6 +183,8 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
   const [installationFee, setInstallationFee] = useState(editingItem?.installation_fee != null && editingItem.installation_fee > 0 ? String(editingItem.installation_fee) : '')
   const [needsSeaming, setNeedsSeaming] = useState((editingItem?.seaming_fee || 0) > 0)
   const [seamingFee, setSeamingFee] = useState(editingItem?.seaming_fee != null && editingItem.seaming_fee > 0 ? String(editingItem.seaming_fee) : '')
+  const [needsLaminate, setNeedsLaminate] = useState((editingItem?.laminate_fee || 0) > 0)
+  const [laminateFee, setLaminateFee] = useState(editingItem?.laminate_fee != null && editingItem.laminate_fee > 0 ? String(editingItem.laminate_fee) : '')
   const [layoutPreview, setLayoutPreview] = useState(editingItem?.item_preview || '')
   const [layoutThumb, setLayoutThumb] = useState(editingItem?.item_preview_thumb || '')
   const [layoutBytes, setLayoutBytes] = useState<number | null>(null)
@@ -207,7 +209,7 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
     if (!keepSelection) setSubcategoryId('')
     supabase
       .from('subcategories')
-      .select('subcategory_id, subcategory_name, category_id, pricing_model, base_price')
+      .select('subcategory_id, subcategory_name, category_id, pricing_model, base_price, unit')
       .eq('category_id', categoryId)
       .eq('active', true)
       .order('subcategory_name')
@@ -221,6 +223,11 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
   const selectedSub = filteredSubs.find(s => s.subcategory_id === subcategoryId)
   const effectivePricing = pricingModel || selectedSub?.pricing_model || ''
   const effectivePrice = parseFloat(basePrice) || selectedSub?.base_price || 0
+  // The subcategory's base_price is scaled per its own unit (e.g. ₱12/sqin vs ₱20/sqft) —
+  // width/height/depth must be entered in that same linear unit or the computed line total
+  // is off by orders of magnitude. Falls back to ft when a subcategory has no unit set.
+  const rawUnit = (selectedSub?.unit || '').toLowerCase()
+  const dimUnit = rawUnit.startsWith('sq') ? rawUnit.slice(2) || 'ft' : (rawUnit || 'ft')
   // Production Services (e.g. laser cutting, plotting done on materials the client already
   // brought/owns) has nothing to preview at intake — there's no layout or purchased item yet.
   const isProductionServices = categoryId === 'CAT_FPS'
@@ -240,7 +247,8 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
   const effectiveDeliveryFee = needsDelivery ? (parseFloat(deliveryFee) || 0) : 0
   const effectiveInstallationFee = needsInstallation ? (parseFloat(installationFee) || 0) : 0
   const effectiveSeamingFee = needsSeaming ? (parseFloat(seamingFee) || 0) : 0
-  const lineTotal = baseLineTotal + effectiveLayoutFee + effectiveDeliveryFee + effectiveInstallationFee + effectiveSeamingFee
+  const effectiveLaminateFee = needsLaminate ? (parseFloat(laminateFee) || 0) : 0
+  const lineTotal = baseLineTotal + effectiveLayoutFee + effectiveDeliveryFee + effectiveInstallationFee + effectiveSeamingFee + effectiveLaminateFee
 
   const needsDims = ['area','dimension','area_cube','per_lettersqft'].includes(effectivePricing)
   const needsDepth = effectivePricing === 'area_cube'
@@ -308,6 +316,7 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
       delivery_fee: effectiveDeliveryFee,
       installation_fee: effectiveInstallationFee,
       seaming_fee: effectiveSeamingFee,
+      laminate_fee: effectiveLaminateFee,
       computed_line_total: lineTotal,
       item_preview: layoutPreview,
       item_preview_thumb: layoutThumb,
@@ -431,17 +440,17 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
             {needsDims && (
               <div className={needsDepth ? 'pf-grid-3' : 'pf-grid-2'} style={{ marginBottom: '0.85rem' }}>
                 <div>
-                  <label className="pf-label">Width</label>
-                  <input type="number" value={width} disabled={readOnly} onChange={e => setWidth(e.target.value)} placeholder="ft" className="pf-input" />
+                  <label className="pf-label">Width ({dimUnit})</label>
+                  <input type="number" value={width} disabled={readOnly} onChange={e => setWidth(e.target.value)} placeholder={dimUnit} className="pf-input" />
                 </div>
                 <div>
-                  <label className="pf-label">Height</label>
-                  <input type="number" value={height} disabled={readOnly} onChange={e => setHeight(e.target.value)} placeholder="ft" className="pf-input" />
+                  <label className="pf-label">Height ({dimUnit})</label>
+                  <input type="number" value={height} disabled={readOnly} onChange={e => setHeight(e.target.value)} placeholder={dimUnit} className="pf-input" />
                 </div>
                 {needsDepth && (
                   <div>
-                    <label className="pf-label">Depth</label>
-                    <input type="number" value={depth} disabled={readOnly} onChange={e => setDepth(e.target.value)} placeholder="ft" className="pf-input" />
+                    <label className="pf-label">Depth ({dimUnit})</label>
+                    <input type="number" value={depth} disabled={readOnly} onChange={e => setDepth(e.target.value)} placeholder={dimUnit} className="pf-input" />
                   </div>
                 )}
               </div>
@@ -526,6 +535,31 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
                 <div style={{ marginTop: 6 }}>
                   <label className="pf-label">Seaming Fee (₱)</label>
                   <input type="number" value={seamingFee} disabled={readOnly} onChange={e => setSeamingFee(e.target.value)} min="0" placeholder="0.00" className="pf-input" />
+                </div>
+              )}
+            </div>
+
+            <div className="pf-field">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: readOnly ? 'default' : 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={needsLaminate}
+                  disabled={readOnly}
+                  onChange={e => {
+                    setNeedsLaminate(e.target.checked)
+                    if (e.target.checked && !laminateFee) {
+                      const w = parseFloat(width) || 0
+                      const h = parseFloat(height) || 0
+                      if (w && h) setLaminateFee(String(w * h * 20))
+                    }
+                  }}
+                />
+                <span className="pf-label" style={{ marginBottom: 0 }}>Needs laminate for this item? (₱20/sqft)</span>
+              </label>
+              {needsLaminate && canSeeLineTotal && (
+                <div style={{ marginTop: 6 }}>
+                  <label className="pf-label">Laminate Fee (₱)</label>
+                  <input type="number" value={laminateFee} disabled={readOnly} onChange={e => setLaminateFee(e.target.value)} min="0" placeholder="0.00" className="pf-input" />
                 </div>
               )}
             </div>

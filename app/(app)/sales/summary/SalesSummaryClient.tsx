@@ -814,7 +814,7 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
       {Object.keys(byMethod).length > 0 && (
         <div style={{ background: '#FDF5EC', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem', border: '1px solid #EDE0CC' }}>
           <div style={{ color: '#666', fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.75rem' }}>Collections by Method</div>
-          {PAY_METHODS.filter(m => byMethod[m]).map(method => (
+          {[...PAY_METHODS.filter(m => byMethod[m]), ...Object.keys(byMethod).filter(m => !PAY_METHODS.includes(m))].map(method => (
             <div key={method} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: '0.82rem' }}>
               <span style={{ color: '#ccc' }}>{method}</span>
               <span style={{ color: '#1a1a1a', fontWeight: 600 }}>{formatPeso(byMethod[method])}</span>

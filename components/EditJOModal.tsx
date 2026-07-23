@@ -45,6 +45,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   const [showPayForm, setShowPayForm] = useState(false)
   const [payAmount, setPayAmount] = useState('')
   const [payMethod, setPayMethod] = useState('Cash')
+  const [payMethodOther, setPayMethodOther] = useState('')
   const [payCashback, setPayCashback] = useState(0)
   const [payDate, setPayDate] = useState(getPhilippineDateStr())
   const [payProofImage, setPayProofImage] = useState('')
@@ -210,9 +211,13 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   function addPayment() {
     const amt = parseFloat(payAmount) || 0
     if (amt <= 0) return
+    const method = payMethod === 'Others' ? payMethodOther.trim() : payMethod
+    if (payMethod === 'Others' && !method) return
     if (PROOF_UPLOAD_METHODS.includes(payMethod) && !payProofImage) { setPayProofError(`Please attach proof of the ${payMethod} payment.`); return }
-    setEditPayments(prev => [...prev, { amount: amt, method: payMethod, cashback: payCashback, payment_date: payDate, proof_image: PROOF_UPLOAD_METHODS.includes(payMethod) ? payProofImage : undefined }])
+    setEditPayments(prev => [...prev, { amount: amt, method, cashback: payCashback, payment_date: payDate, proof_image: PROOF_UPLOAD_METHODS.includes(payMethod) ? payProofImage : undefined }])
     setPayAmount('')
+    setPayMethod('Cash')
+    setPayMethodOther('')
     setPayCashback(0)
     setPayDate(getPhilippineDateStr())
     setPayProofImage('')
@@ -274,6 +279,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
           delivery_fee: item.delivery_fee,
           installation_fee: item.installation_fee,
           seaming_fee: item.seaming_fee,
+          laminate_fee: item.laminate_fee,
           computed_line_total: item.computed_line_total,
           item_preview: item.item_preview,
           item_preview_thumb: item.item_preview_thumb,
@@ -545,12 +551,18 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                       <div style={{ flex: 1 }}>
                         <label className="pf-label">Method</label>
                         <select value={payMethod} onChange={e => setPayMethod(e.target.value)} className="pf-select">
-                          {['Cash','G-Cash','Maya','Bank Transfer via BPI Acct.','Bank Transfer via BDO Acct.','Cheque'].map(m => (
+                          {['Cash','G-Cash','Maya','Bank Transfer via BPI Acct.','Bank Transfer via BDO Acct.','Cheque','Others'].map(m => (
                             <option key={m} value={m}>{m}</option>
                           ))}
                         </select>
                       </div>
                     </div>
+                    {payMethod === 'Others' && (
+                      <div>
+                        <label className="pf-label">Specify Method</label>
+                        <input type="text" value={payMethodOther} onChange={e => setPayMethodOther(e.target.value)} placeholder="e.g. PayMaya Padala, Barter" className="pf-input" />
+                      </div>
+                    )}
                     {PROOF_UPLOAD_METHODS.includes(payMethod) && (
                       <div>
                         <label className="pf-label">Proof of Payment ({payMethod === 'Cheque' ? 'Photo of Cheque' : 'Screenshot'})</label>

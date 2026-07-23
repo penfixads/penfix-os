@@ -52,6 +52,7 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
 
   const [payAmount, setPayAmount] = useState('')
   const [payMethod, setPayMethod] = useState('Cash')
+  const [payMethodOther, setPayMethodOther] = useState('')
   const [payCashback, setPayCashback] = useState(0)
   const [payDate, setPayDate] = useState(getPhilippineDateStr())
 
@@ -321,8 +322,12 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
   function addPayment() {
     const amt = parseFloat(payAmount) || 0
     if (amt <= 0) return
-    setPayments(prev => [...prev, { amount: amt, method: payMethod, cashback: payCashback, payment_date: payDate }])
+    const method = payMethod === 'Others' ? payMethodOther.trim() : payMethod
+    if (payMethod === 'Others' && !method) return
+    setPayments(prev => [...prev, { amount: amt, method, cashback: payCashback, payment_date: payDate }])
     setPayAmount('')
+    setPayMethod('Cash')
+    setPayMethodOther('')
     setPayCashback(0)
     setPayDate(getPhilippineDateStr())
     setShowPaymentForm(false)
@@ -519,12 +524,18 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
                   <div style={{ flex: 1 }}>
                     <label className="pf-label">Method</label>
                     <select value={payMethod} onChange={e => setPayMethod(e.target.value)} className="pf-select">
-                      {['Cash','G-Cash','Maya','Bank Transfer via BPI Acct.','Bank Transfer via BDO Acct.','Cheque'].map(m => (
+                      {['Cash','G-Cash','Maya','Bank Transfer via BPI Acct.','Bank Transfer via BDO Acct.','Cheque','Others'].map(m => (
                         <option key={m} value={m}>{m}</option>
                       ))}
                     </select>
                   </div>
                 </div>
+                {payMethod === 'Others' && (
+                  <div>
+                    <label className="pf-label">Specify Method</label>
+                    <input type="text" value={payMethodOther} onChange={e => setPayMethodOther(e.target.value)} placeholder="e.g. PayMaya Padala, Barter" className="pf-input" />
+                  </div>
+                )}
                 <div>
                   <label className="pf-label">Date Paid</label>
                   <input type="date" value={payDate} max={getPhilippineDateStr()} onChange={e => setPayDate(e.target.value)} className="pf-input" />

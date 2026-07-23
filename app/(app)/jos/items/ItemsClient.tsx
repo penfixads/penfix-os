@@ -99,6 +99,7 @@ export default function ItemsClient({ items: initialItems, categories, subcatego
       delivery_fee: updated.delivery_fee,
       installation_fee: updated.installation_fee,
       seaming_fee: updated.seaming_fee,
+      laminate_fee: updated.laminate_fee,
       computed_line_total: updated.computed_line_total,
       item_preview: updated.item_preview,
       item_preview_thumb: updated.item_preview_thumb,

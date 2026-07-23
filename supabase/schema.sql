@@ -142,10 +142,7 @@ create table if not exists payments (
   client_id text references clients(client_id),
   grand_total numeric(10,2),
   amount numeric(10,2) not null,
-  payment_method text check (payment_method in (
-    'Cash','G-Cash','Maya','Bank Transfer via BPI Acct.',
-    'Bank Transfer via BDO Acct.','Cheque'
-  )),
+  payment_method text,
   payment_date date default current_date,
   recorded_by text,
   remarks text,

@@ -7,7 +7,7 @@ const ITEMS_SELECT = `
   item_id, job_order_id, category_id, subcategory_id, quantity, computed_line_total, job_status, priority,
   date_time_needed, date_time_received, production_specs, notes,
   pricing_model, base_price, width, height, depth, no_of_mins, letter_count, discount,
-  layout_fee, delivery_fee, installation_fee, seaming_fee, item_preview, item_preview_thumb,
+  layout_fee, delivery_fee, installation_fee, seaming_fee, laminate_fee, item_preview, item_preview_thumb,
   subcategories(subcategory_name, category_id, categories(category_name)),
   job_orders(received_by, clients(client_name, company_name)),
   job_order_item_status_log(status_name, changed_by_name, changed_by_role, created_at)

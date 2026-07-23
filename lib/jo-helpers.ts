@@ -201,18 +201,21 @@ export function buildItemCostBreakdown(item: {
   delivery_fee?: number | null
   installation_fee?: number | null
   seaming_fee?: number | null
+  laminate_fee?: number | null
 } | null | undefined): { label: string; amount: number }[] {
   if (!item) return []
   const layoutFee = item.layout_fee || 0
   const deliveryFee = item.delivery_fee || 0
   const installationFee = item.installation_fee || 0
   const seamingFee = item.seaming_fee || 0
-  const basePrice = (item.computed_line_total || 0) - layoutFee - deliveryFee - installationFee - seamingFee
+  const laminateFee = item.laminate_fee || 0
+  const basePrice = (item.computed_line_total || 0) - layoutFee - deliveryFee - installationFee - seamingFee - laminateFee
   const rows = [{ label: 'Item Price', amount: basePrice }]
   if (layoutFee > 0) rows.push({ label: 'Layout & Design Fee', amount: layoutFee })
   if (deliveryFee > 0) rows.push({ label: 'Delivery Fee', amount: deliveryFee })
   if (installationFee > 0) rows.push({ label: 'Installation Fee', amount: installationFee })
   if (seamingFee > 0) rows.push({ label: 'Seaming Fee', amount: seamingFee })
+  if (laminateFee > 0) rows.push({ label: 'Laminate Fee', amount: laminateFee })
   return rows
 }
 
