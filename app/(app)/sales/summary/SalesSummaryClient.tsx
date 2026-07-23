@@ -306,6 +306,10 @@ function HistoryRow({ row, currentUser }: { row: any; currentUser: AppUser }) {
         <div style={{ padding: '0 1rem 1rem', borderTop: '1px dashed #EDE0CC' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, margin: '0.85rem 0' }}>
             <div>
+              <label className="pf-label" style={{ color: '#999' }}>Initial Fund</label>
+              <div className="money" style={{ fontWeight: 700, padding: '0.4rem 0' }}>{formatPeso(saved.initial_fund || 0)}</div>
+            </div>
+            <div>
               <label className="pf-label" style={{ color: '#999' }}>Expected Cash On Hand</label>
               <div className="money" style={{ fontWeight: 700, padding: '0.4rem 0' }}>
                 {liveCashTotal !== null && liveExpensesTotal !== null ? formatPeso(expectedCashOnHand) : '…'}
