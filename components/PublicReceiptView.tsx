@@ -23,7 +23,6 @@ interface Item {
   delivery_fee?: number | null
   installation_fee?: number | null
   seaming_fee?: number | null
-  laminate_fee?: number | null
 }
 
 interface StatusLog {

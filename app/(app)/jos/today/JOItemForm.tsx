@@ -183,8 +183,6 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
   const [installationFee, setInstallationFee] = useState(editingItem?.installation_fee != null && editingItem.installation_fee > 0 ? String(editingItem.installation_fee) : '')
   const [needsSeaming, setNeedsSeaming] = useState((editingItem?.seaming_fee || 0) > 0)
   const [seamingFee, setSeamingFee] = useState(editingItem?.seaming_fee != null && editingItem.seaming_fee > 0 ? String(editingItem.seaming_fee) : '')
-  const [needsLaminate, setNeedsLaminate] = useState((editingItem?.laminate_fee || 0) > 0)
-  const [laminateFee, setLaminateFee] = useState(editingItem?.laminate_fee != null && editingItem.laminate_fee > 0 ? String(editingItem.laminate_fee) : '')
   const [layoutPreview, setLayoutPreview] = useState(editingItem?.item_preview || '')
   const [layoutThumb, setLayoutThumb] = useState(editingItem?.item_preview_thumb || '')
   const [layoutBytes, setLayoutBytes] = useState<number | null>(null)
@@ -247,8 +245,7 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
   const effectiveDeliveryFee = needsDelivery ? (parseFloat(deliveryFee) || 0) : 0
   const effectiveInstallationFee = needsInstallation ? (parseFloat(installationFee) || 0) : 0
   const effectiveSeamingFee = needsSeaming ? (parseFloat(seamingFee) || 0) : 0
-  const effectiveLaminateFee = needsLaminate ? (parseFloat(laminateFee) || 0) : 0
-  const lineTotal = baseLineTotal + effectiveLayoutFee + effectiveDeliveryFee + effectiveInstallationFee + effectiveSeamingFee + effectiveLaminateFee
+  const lineTotal = baseLineTotal + effectiveLayoutFee + effectiveDeliveryFee + effectiveInstallationFee + effectiveSeamingFee
 
   const needsDims = ['area','dimension','area_cube','per_lettersqft'].includes(effectivePricing)
   const needsDepth = effectivePricing === 'area_cube'
@@ -316,7 +313,6 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
       delivery_fee: effectiveDeliveryFee,
       installation_fee: effectiveInstallationFee,
       seaming_fee: effectiveSeamingFee,
-      laminate_fee: effectiveLaminateFee,
       computed_line_total: lineTotal,
       item_preview: layoutPreview,
       item_preview_thumb: layoutThumb,
@@ -535,31 +531,6 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
                 <div style={{ marginTop: 6 }}>
                   <label className="pf-label">Seaming Fee (₱)</label>
                   <input type="number" value={seamingFee} disabled={readOnly} onChange={e => setSeamingFee(e.target.value)} min="0" placeholder="0.00" className="pf-input" />
-                </div>
-              )}
-            </div>
-
-            <div className="pf-field">
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: readOnly ? 'default' : 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={needsLaminate}
-                  disabled={readOnly}
-                  onChange={e => {
-                    setNeedsLaminate(e.target.checked)
-                    if (e.target.checked && !laminateFee) {
-                      const w = parseFloat(width) || 0
-                      const h = parseFloat(height) || 0
-                      if (w && h) setLaminateFee(String(w * h * 20))
-                    }
-                  }}
-                />
-                <span className="pf-label" style={{ marginBottom: 0 }}>Needs laminate for this item? (₱20/sqft)</span>
-              </label>
-              {needsLaminate && canSeeLineTotal && (
-                <div style={{ marginTop: 6 }}>
-                  <label className="pf-label">Laminate Fee (₱)</label>
-                  <input type="number" value={laminateFee} disabled={readOnly} onChange={e => setLaminateFee(e.target.value)} min="0" placeholder="0.00" className="pf-input" />
                 </div>
               )}
             </div>
