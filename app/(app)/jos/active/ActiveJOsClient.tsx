@@ -43,6 +43,7 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
   const [addingItemToJO, setAddingItemToJO] = useState<string | null>(null)
   const [receiptJOId, setReceiptJOId] = useState<string | null>(null)
   const [page, setPage] = useState(1)
+  const [deletingJO, setDeletingJO] = useState<string | null>(null)
 
   const filtered = jobOrders.filter(jo => {
     const client = jo.clients?.client_name || jo.clients?.company_name || ''
@@ -102,6 +103,20 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
       }
     }))
     setAddingItemToJO(null)
+  }
+
+  async function handleDelete(jo: any) {
+    const clientName = jo.clients?.client_name || jo.clients?.company_name || jo.client_id
+    if (!confirm(`Delete ${jo.job_order_id} (${clientName}, ${formatPeso(jo.grand_total || 0)})? This also deletes its items and payment records. This cannot be undone.`)) return
+    setDeletingJO(jo.job_order_id)
+    try {
+      const supabase = createSupabaseBrowserClient()
+      const { error } = await supabase.from('job_orders').delete().eq('job_order_id', jo.job_order_id)
+      if (error) { alert(error.message || 'Failed to delete job order.'); return }
+      setJobOrders(prev => prev.filter(j => j.job_order_id !== jo.job_order_id))
+    } finally {
+      setDeletingJO(null)
+    }
   }
 
   function copyTrackLink(publicToken: string) {
@@ -275,6 +290,10 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
                       <button title="Generate job order receipt to send for client approval" onClick={() => setReceiptJOId(jo.job_order_id)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e44ad', padding: 2, display: 'flex', alignItems: 'center' }}>
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+                      </button>
+                      <button title="Delete JO" onClick={() => handleDelete(jo)} disabled={deletingJO === jo.job_order_id}
+                        style={{ background: 'none', border: 'none', cursor: deletingJO === jo.job_order_id ? 'not-allowed' : 'pointer', color: '#c0392b', padding: 2, display: 'flex', alignItems: 'center', opacity: deletingJO === jo.job_order_id ? 0.5 : 1 }}>
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                       </button>
                     </div>
 
