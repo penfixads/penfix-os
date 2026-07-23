@@ -53,13 +53,7 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
     const matchFrom = !dateFrom || d >= dateFrom
     const matchTo = !dateTo || d <= dateTo
     return matchSearch && matchStatus && matchFrom && matchTo
-  }).sort((a, b) => {
-    // Soonest Date Needed first; JOs with no date needed on any item sink to the bottom.
-    const da = getNearestDeadline(a)
-    const db = getNearestDeadline(b)
-    if (!da || !db) return (da ? -1 : 0) - (db ? -1 : 0)
-    return new Date(da).getTime() - new Date(db).getTime()
-  })
+  }).sort((a, b) => new Date(b.date_time_received).getTime() - new Date(a.date_time_received).getTime())
 
   const currentPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)))
   const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
