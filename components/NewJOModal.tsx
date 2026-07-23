@@ -258,7 +258,7 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
       // Insert payments
       for (let i = 0; i < payments.length; i++) {
         const pay = payments[i]
-        const payId = generatePaymentId(joId, i + 1)
+        const payId = generatePaymentId(joId)
         const { error: payErr } = await supabase.from('payments').insert({
           payment_id: payId,
           job_order_id: joId,

@@ -93,11 +93,7 @@ export default function PaymentProofsClient({ initialProofs, currentUser, status
       const supabase = createSupabaseBrowserClient()
       const joId = proof.job_order_id
 
-      const { count: existingPayCount } = await supabase
-        .from('payments')
-        .select('payment_id', { count: 'exact', head: true })
-        .eq('job_order_id', joId)
-      const paymentId = generatePaymentId(joId, (existingPayCount || 0) + 1)
+      const paymentId = generatePaymentId(joId)
 
       const totalPaid = (jo.total_amount_paid || 0) + amount
       const paymentStatus = derivePaymentStatus(jo.is_for_billing, totalPaid, jo.grand_total || 0)

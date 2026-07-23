@@ -293,9 +293,8 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
       }
 
       const newPays = editPayments.filter(p => !p._existing)
-      const existingPayCount = editPayments.filter(p => p._existing).length
       for (let i = 0; i < newPays.length; i++) {
-        const paymentId = generatePaymentId(joId, existingPayCount + i + 1)
+        const paymentId = generatePaymentId(joId)
         const { error } = await supabase.from('payments').insert({
           payment_id: paymentId,
           job_order_id: joId,

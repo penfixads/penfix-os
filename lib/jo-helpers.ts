@@ -23,8 +23,13 @@ export function generateClientId(): string {
   return `C${mm}${dd}${yy}-${rand}`
 }
 
-export function generatePaymentId(jobOrderId: string, seq: number): string {
-  return `${jobOrderId}-PAY-${seq}`
+// Not sequence-numbered (was `${jobOrderId}-PAY-${seq}`) — that collided with
+// payments_pkey whenever a JO's payment history had a gap (a payment deleted, or
+// two staff editing the same JO around the same time), since seq was derived from
+// how many payments happened to be loaded locally rather than the true DB state.
+export function generatePaymentId(jobOrderId: string): string {
+  const rand = Math.floor(Math.random() * 900000) + 100000
+  return `${jobOrderId}-PAY-${Date.now()}-${rand}`
 }
 
 export function generateDeliveryId(): string {
