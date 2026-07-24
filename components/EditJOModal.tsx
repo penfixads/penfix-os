@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { generateItemId, generatePaymentId, formatPeso, getEffectiveSteps, getPhilippineDateStr, JO_SOURCE_CHANNELS, canPushToProduction, canMarkItemDone } from '@/lib/jo-helpers'
 import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
@@ -38,6 +38,10 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   const [editSourceChannel, setEditSourceChannel] = useState(jo.source_channel || '')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  // Guards handleSave against firing twice before `disabled={saving}` re-renders (e.g. a fast
+  // double-click) — state updates aren't visible synchronously, but a ref is, so this catches
+  // the race that `saving` alone misses and prevents a duplicate-payment_id insert attempt.
+  const savingRef = useRef(false)
   const [error, setError] = useState('')
   const [removedItemIds, setRemovedItemIds] = useState<string[]>([])
   const [removedPaymentIds, setRemovedPaymentIds] = useState<string[]>([])
@@ -227,6 +231,8 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
 
   async function handleSave() {
     if (needsOverride && !overrideReason) { setError('Please provide a reason for the override.'); return }
+    if (savingRef.current) return
+    savingRef.current = true
     setSaving(true)
     setError('')
     try {
@@ -380,6 +386,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
       setError(e.message || 'Failed to save changes.')
     } finally {
       setSaving(false)
+      savingRef.current = false
     }
   }
 
