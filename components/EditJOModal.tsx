@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { generateItemId, generatePaymentId, formatPeso, getEffectiveSteps, getPhilippineDateStr, JO_SOURCE_CHANNELS, canPushToProduction, canMarkItemDone } from '@/lib/jo-helpers'
 import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
-import { compressImageToDataUrl } from '@/lib/image-compress'
+import { compressImageToStorage } from '@/lib/image-compress'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
 import JOReceiptModal from '@/components/JOReceiptModal'
@@ -66,6 +66,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   const [selectedProponents, setSelectedProponents] = useState<string[]>([])
   const [showReceipt, setShowReceipt] = useState(false)
   const [showBillingStatement, setShowBillingStatement] = useState(false)
+  const [markingUnclaimed, setMarkingUnclaimed] = useState(false)
 
   const client = jo.clients
 
@@ -178,6 +179,41 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
     setEditingItem(null)
   }
 
+  // Closes out a JO the client never came back to claim/pay for, in one action instead of
+  // marking each item Unclaimed individually — same one-way outcome and 30-day threshold as
+  // the per-item "Mark Abandoned" button on Active JOs/Dispatch (see ActiveJOsClient.tsx /
+  // DispatchClient.tsx), just scoped to every unfinished item on this JO at once.
+  async function markJOUnclaimed() {
+    const targets = editItems.filter(i => i._existing && i.job_status !== 'Done' && i.job_status !== 'Cancelled' && i.job_status !== 'Unclaimed')
+    if (targets.length === 0) return
+    if (!confirm(`Mark this entire job order as Unclaimed? The client never came back to claim/pay for it. This will close out ${targets.length} unfinished item(s).`)) return
+    setMarkingUnclaimed(true)
+    try {
+      const supabase = createSupabaseBrowserClient()
+      for (const item of targets) {
+        const { error: itemErr } = await supabase.from('job_order_items').update({ job_status: 'Unclaimed' }).eq('item_id', item.item_id)
+        if (itemErr) throw itemErr
+        await supabase.from('job_order_item_status_log').insert({
+          item_id: item.item_id,
+          job_order_id: jo.job_order_id,
+          status_name: 'Unclaimed',
+          changed_by_email: currentUser.email,
+          changed_by_name: currentUser.name,
+        })
+      }
+      await syncJobOrderDoneStatus(supabase, jo.job_order_id)
+      const targetIds = new Set(targets.map(t => t.item_id))
+      const updatedItems = editItems.map(i => targetIds.has(i.item_id) ? { ...i, job_status: 'Unclaimed' } : i)
+      setEditItems(updatedItems)
+      onSave(jo.job_order_id, { job_status: 'Unclaimed', job_order_items: updatedItems })
+      onClose()
+    } catch (e: any) {
+      setError(e.message || 'Failed to mark job order as unclaimed.')
+    } finally {
+      setMarkingUnclaimed(false)
+    }
+  }
+
   const grandTotal = editItems.reduce((s, i) => s + (i.computed_line_total || 0), 0) - editDiscount
   const totalPaid = editPayments.reduce((s, p) => s + (p.amount || 0), 0)
   const cashback = editPayments.reduce((s, p) => s + (p.cashback || 0), 0)
@@ -203,8 +239,9 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
     setPayProofError('')
     setPayProofCompressing(true)
     try {
-      const { dataUrl } = await compressImageToDataUrl(file, MAX_PROOF_BYTES, MAX_PROOF_DIM)
-      setPayProofImage(dataUrl)
+      const supabase = createSupabaseBrowserClient()
+      const { url } = await compressImageToStorage(supabase, file, 'jo-images', `payment-proofs/${crypto.randomUUID()}.jpg`, MAX_PROOF_BYTES, MAX_PROOF_DIM)
+      setPayProofImage(url)
     } catch (e: any) {
       setPayProofError(e.message || 'Failed to process image.')
     } finally {
@@ -417,6 +454,25 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
           <div style={{ color: '#E8B9C6', textAlign: 'center', padding: '2rem' }}>Loading…</div>
         ) : (
           <>
+            {(() => {
+              const ageDays = jo.date_time_received ? (Date.now() - new Date(jo.date_time_received).getTime()) / (1000 * 60 * 60 * 24) : 0
+              const unclaimedTargets = editItems.filter(i => i._existing && i.job_status !== 'Done' && i.job_status !== 'Cancelled' && i.job_status !== 'Unclaimed')
+              const suggestJOUnclaimed = ageDays >= 30 && unclaimedTargets.length > 0
+              if (!suggestJOUnclaimed) return null
+              return (
+                <div style={{ background: 'rgba(231,76,60,0.15)', border: '1px solid #e74c3c', borderRadius: 8, padding: '0.6rem 0.75rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <span style={{ color: '#f5b7b1', fontSize: '0.78rem' }}>
+                    {Math.floor(ageDays)}+ days since received — client hasn&apos;t come back to claim/pay.
+                  </span>
+                  <button type="button" onClick={markJOUnclaimed} disabled={markingUnclaimed}
+                    title="Client hasn't come back to claim/pay for this job order"
+                    style={{ background: '#e74c3c', border: 'none', color: '#fff', fontSize: '0.75rem', padding: '0.4rem 0.8rem', borderRadius: 6, cursor: markingUnclaimed ? 'not-allowed' : 'pointer', fontWeight: 600, opacity: markingUnclaimed ? 0.6 : 1, whiteSpace: 'nowrap' }}>
+                    {markingUnclaimed ? 'Marking…' : 'Mark JO Unclaimed'}
+                  </button>
+                </div>
+              )
+            })()}
+
             <div className="pf-field">
               <label className="pf-label">Client</label>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

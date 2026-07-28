@@ -44,6 +44,7 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
   const [receiptJOId, setReceiptJOId] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [deletingJO, setDeletingJO] = useState<string | null>(null)
+  const [markingJOUnclaimed, setMarkingJOUnclaimed] = useState<string | null>(null)
 
   const filtered = jobOrders.filter(jo => {
     const client = jo.clients?.client_name || jo.clients?.company_name || ''
@@ -64,6 +65,13 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
   const totalBalance = filtered.reduce((s, j) => s + (j.balance_due || 0), 0)
 
   function handleEditSave(joId: string, updates: any) {
+    // Whole-JO Unclaimed (EditJOModal's "Mark JO Unclaimed") drops the card immediately,
+    // same as the per-item Mark Abandoned flow below once every item goes terminal — Active
+    // JOs only ever shows non-terminal job orders, so there's nothing left here to merge into.
+    if (updates.job_status === 'Unclaimed') {
+      setJobOrders(prev => prev.filter(j => j.job_order_id !== joId))
+      return
+    }
     setJobOrders(prev => prev.map(j => j.job_order_id !== joId ? j : { ...j, ...updates }))
   }
 
@@ -151,6 +159,36 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
     })
   }
 
+  // Whole-JO version of markUnclaimed above — marks every still-open item on the JO Unclaimed
+  // in one action instead of one at a time, then drops the card (every item is now terminal,
+  // so it always qualifies for the same "whole JO rolled up" removal markUnclaimed does).
+  // Available directly from the card so staff don't have to open Edit JO first.
+  async function markJOUnclaimed(jo: any) {
+    const targets = (jo.job_order_items || []).filter((i: any) => i.job_status !== 'Done' && i.job_status !== 'Cancelled' && i.job_status !== 'Unclaimed')
+    if (targets.length === 0) return
+    if (!confirm(`Mark this entire job order as Unclaimed? The client never came back to claim/pay for it. This will close out ${targets.length} unfinished item(s).`)) return
+    setMarkingJOUnclaimed(jo.job_order_id)
+    try {
+      const supabase = createSupabaseBrowserClient()
+      for (const item of targets) {
+        const { error } = await supabase.from('job_order_items').update({ job_status: 'Unclaimed' }).eq('item_id', item.item_id)
+        if (error) { alert(error.message || 'Failed to mark item as unclaimed.'); return }
+        await supabase.from('job_order_item_status_log').insert({
+          item_id: item.item_id,
+          job_order_id: jo.job_order_id,
+          status_name: 'Unclaimed',
+          changed_by_email: currentUser.email,
+          changed_by_name: currentUser.name,
+          changed_by_role: currentUser.role,
+        })
+      }
+      await syncJobOrderDoneStatus(supabase, jo.job_order_id)
+      setJobOrders(prev => prev.filter(j => j.job_order_id !== jo.job_order_id))
+    } finally {
+      setMarkingJOUnclaimed(null)
+    }
+  }
+
   return (
     <div>
       <div style={{ marginBottom: '1.25rem' }}>
@@ -221,6 +259,10 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
             const ageHours = ageMs / (1000 * 60 * 60)
             const ageDays = ageHours / 24
             const ageColor = ageHours > 48 ? '#e74c3c' : ageHours > 24 ? '#f39c12' : '#999'
+            // Same 30-day-old threshold as the per-item Mark Abandoned buttons below — surfaced
+            // here too so staff can close out a whole abandoned JO without opening Edit JO first.
+            const unclaimedTargets = items.filter((i: any) => i.job_status !== 'Done' && i.job_status !== 'Cancelled' && i.job_status !== 'Unclaimed')
+            const suggestJOUnclaimed = ageDays >= 30 && unclaimedTargets.length > 0
 
             return (
               <div key={jo.job_order_id} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.85rem 1rem', border: `1px solid ${isOverdue ? '#c0392b' : '#EDE0CC'}`, borderLeft: isOverdue ? '4px solid #e74c3c' : '1px solid #EDE0CC' }}>
@@ -279,6 +321,13 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#27ae60', padding: 2, display: 'flex', alignItems: 'center' }}>
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                       </button>
+                      {suggestJOUnclaimed && (
+                        <button title="30+ days old — client hasn't come back to claim/pay for this job order. Mark JO Unclaimed."
+                          onClick={() => markJOUnclaimed(jo)} disabled={markingJOUnclaimed === jo.job_order_id}
+                          style={{ background: 'none', border: 'none', cursor: markingJOUnclaimed === jo.job_order_id ? 'not-allowed' : 'pointer', color: '#e74c3c', padding: 2, display: 'flex', alignItems: 'center', opacity: markingJOUnclaimed === jo.job_order_id ? 0.5 : 1 }}>
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="8" x2="23" y2="8"/></svg>
+                        </button>
+                      )}
                       <button title="Send tracking link to be pasted on social media platform" onClick={() => copyTrackLink(jo.public_token)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2980b9', padding: 2, display: 'flex', alignItems: 'center' }}>
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
