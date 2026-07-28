@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { computeLineTotal, formatPeso, toLocalDateTimeInput, type StatusStep } from '@/lib/jo-helpers'
-import { compressImageToDataUrl, MAX_THUMB_BYTES, MAX_THUMB_DIM } from '@/lib/image-compress'
+import { compressImageToStorage, MAX_THUMB_BYTES, MAX_THUMB_DIM } from '@/lib/image-compress'
 import { IconPlus, IconCheck, IconX } from '@/components/icons'
 import type { AppUser } from '@/lib/user'
 
@@ -257,11 +257,13 @@ export default function JOItemForm({ categories, editingItem, clientName, onSave
     setLayoutError('')
     setCompressing(true)
     try {
-      const [{ dataUrl, bytes }, { dataUrl: thumbUrl }] = await Promise.all([
-        compressImageToDataUrl(file),
-        compressImageToDataUrl(file, MAX_THUMB_BYTES, MAX_THUMB_DIM),
+      const supabase = createSupabaseBrowserClient()
+      const key = crypto.randomUUID()
+      const [{ url, bytes }, { url: thumbUrl }] = await Promise.all([
+        compressImageToStorage(supabase, file, 'jo-images', `items/${key}-preview.jpg`),
+        compressImageToStorage(supabase, file, 'jo-images', `items/${key}-thumb.jpg`, MAX_THUMB_BYTES, MAX_THUMB_DIM),
       ])
-      setLayoutPreview(dataUrl)
+      setLayoutPreview(url)
       setLayoutThumb(thumbUrl)
       setLayoutBytes(bytes)
     } catch (e: any) {

@@ -64,6 +64,35 @@ export default function DispatchClient({ items, currentUser }: Props) {
     }
   }
 
+  // Item is finished and sitting here waiting, but the client never came back to claim/pay/
+  // schedule delivery for it. Same one-way "Unclaimed" outcome as Active JOs' Mark Abandoned
+  // (see ActiveJOsClient.tsx), just reachable from the dispatch queue too since a ready item
+  // can sit here just as long as an in-production one can sit there.
+  async function markAbandoned(itemId: string, itemLabel: string) {
+    if (!confirm(`Mark "${itemLabel}" as Unclaimed? The client never came back to claim/pay for it.`)) return
+    const item = items.find(i => i.item_id === itemId)
+    setMarking(itemId)
+    try {
+      const supabase = createSupabaseBrowserClient()
+      const { error: markErr } = await supabase.from('job_order_items').update({ job_status: 'Unclaimed' }).eq('item_id', itemId)
+      if (markErr) { alert(markErr.message || 'Failed to mark item as unclaimed.'); return }
+      await supabase.from('job_order_item_status_log').insert({
+        item_id: itemId,
+        job_order_id: item?.job_orders?.job_order_id,
+        status_name: 'Unclaimed',
+        changed_by_email: currentUser.email,
+        changed_by_name: currentUser.name,
+        changed_by_role: currentUser.role,
+      })
+      if (item?.job_orders?.job_order_id) {
+        await syncJobOrderDoneStatus(supabase, item.job_orders.job_order_id)
+      }
+      router.refresh()
+    } finally {
+      setMarking(null)
+    }
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: 8 }}>
@@ -91,6 +120,10 @@ export default function DispatchClient({ items, currentUser }: Props) {
             const hasBalance = (jo?.balance_due || 0) > 0
             const isMarking = marking === item.item_id
             const dispatchBlocked = !canMarkItemDone(jo)
+            // Same 30-day threshold as Active JOs — before that it's just a normal item
+            // waiting its turn, not worth flagging as abandoned.
+            const ageDays = item.date_time_received ? (Date.now() - new Date(item.date_time_received).getTime()) / (1000 * 60 * 60 * 24) : 0
+            const suggestAbandon = ageDays >= 30
 
             return (
               <div key={item.item_id} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #EDE0CC' }}>
@@ -147,6 +180,16 @@ export default function DispatchClient({ items, currentUser }: Props) {
                       {isMarking ? '…' : `✓ ${mode}`}
                     </button>
                   ))}
+                  {suggestAbandon && (
+                    <button
+                      onClick={() => markAbandoned(item.item_id, item.subcategories?.subcategory_name || item.item_id)}
+                      disabled={!!isMarking}
+                      title="30+ days old — client hasn't come back to claim/pay for this item"
+                      style={{ background: '#e74c3c', border: 'none', color: '#fff', fontSize: '0.73rem', padding: '0.4rem 0.8rem', borderRadius: 6, cursor: isMarking ? 'not-allowed' : 'pointer', fontWeight: 600, opacity: isMarking ? 0.5 : 1 }}
+                    >
+                      Mark Abandoned
+                    </button>
+                  )}
                 </div>
               </div>
             )

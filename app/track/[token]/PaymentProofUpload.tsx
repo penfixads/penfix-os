@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { compressImageToDataUrl } from '@/lib/image-compress'
+import { compressImageToStorage } from '@/lib/image-compress'
 import { formatPeso } from '@/lib/jo-helpers'
 import { IconSend, IconCheck } from '@/components/icons'
 
@@ -33,8 +33,9 @@ export default function PaymentProofUpload({ jobOrderId, balanceDue }: Props) {
     setError('')
     setCompressing(true)
     try {
-      const { dataUrl } = await compressImageToDataUrl(file, MAX_PROOF_BYTES, MAX_PROOF_DIM)
-      setPreview(dataUrl)
+      const supabase = createSupabaseBrowserClient()
+      const { url } = await compressImageToStorage(supabase, file, 'jo-images', `payment-proofs/${crypto.randomUUID()}.jpg`, MAX_PROOF_BYTES, MAX_PROOF_DIM)
+      setPreview(url)
     } catch (e: any) {
       setError(e.message || 'Failed to process image.')
     } finally {

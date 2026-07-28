@@ -85,6 +85,9 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
   // If the modal closes (Cancel, saved, etc.) while a request is still pending, don't leave
   // an orphaned row an Admin might approve later for a form that no longer exists.
   const pendingRequestRef = useRef<string | null>(null)
+  // Guards handleSave against firing twice before `disabled={saving}` re-renders (e.g. a fast
+  // double-click) — state updates aren't visible synchronously, but a ref is.
+  const savingRef = useRef(false)
   useEffect(() => { pendingRequestRef.current = unlockRequestStatus === 'pending' ? unlockRequestId : null })
   useEffect(() => () => {
     if (pendingRequestRef.current) {
@@ -193,6 +196,8 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
     if (!sourceChannel) { setError('Please select how this client reached us.'); return }
     if (items.length === 0) { setError('Add at least one job order item.'); return }
     if (needsOverride && !overrideReason) { setError('Please provide a reason for the override.'); return }
+    if (savingRef.current) return
+    savingRef.current = true
     setSaving(true)
     setError('')
     try {
@@ -316,6 +321,7 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
       setError(e.message || 'Failed to save job order.')
     } finally {
       setSaving(false)
+      savingRef.current = false
     }
   }
 

@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+
 export const MAX_LAYOUT_BYTES = 20 * 1024
 // Item cards on the public tracker only ever show this at 56x56 CSS px — a separate, much
 // smaller thumbnail keeps that page light instead of shipping the full ~20KB preview just to
@@ -46,4 +48,27 @@ export async function compressImageToDataUrl(file: File, maxBytes = MAX_LAYOUT_B
     }
   }
   return { dataUrl, bytes }
+}
+
+// Same compression as compressImageToDataUrl, but uploads the result to Supabase Storage
+// and returns a public URL instead of embedding the bytes inline — used for job order item
+// previews/thumbnails and payment-proof screenshots, which used to live as base64 text in
+// the DB itself (see migration 047_image_storage.sql for why that changed).
+export async function compressImageToStorage(
+  supabase: SupabaseClient,
+  file: File,
+  bucket: string,
+  path: string,
+  maxBytes = MAX_LAYOUT_BYTES,
+  startDim = 1200
+): Promise<{ url: string; bytes: number }> {
+  const { dataUrl, bytes } = await compressImageToDataUrl(file, maxBytes, startDim)
+  const blob = await (await fetch(dataUrl)).blob()
+  const { error } = await supabase.storage.from(bucket).upload(path, blob, {
+    contentType: 'image/jpeg',
+    upsert: false,
+  })
+  if (error) throw error
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path)
+  return { url: data.publicUrl, bytes }
 }
