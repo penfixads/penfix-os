@@ -286,9 +286,9 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
           { label: 'Total Sales', value: formatPeso(grandSales) },
           { label: 'Total Collections', value: formatPeso(grandCollections) },
           { label: 'Total Expenses', value: formatPeso(grandExpenses), warn: true },
-          { label: 'Net Profit', value: formatPeso(grandNetProfit), profit: grandNetProfit >= 0 },
+          { label: 'Gross Profit', value: formatPeso(grandNetProfit), profit: grandNetProfit >= 0 },
           { label: 'Overhead', value: formatPeso(grandOverhead), warn: true },
-          { label: 'Profit', value: formatPeso(grandProfit), profit: grandProfit >= 0 },
+          { label: 'Net Profit', value: formatPeso(grandProfit), profit: grandProfit >= 0 },
         ].map(c => (
           <div key={c.label} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.75rem', border: '1px solid #EDE0CC' }}>
             <div style={{ color: '#aaa', fontSize: '0.68rem' }}>{c.label}</div>
@@ -423,11 +423,11 @@ export default function SalesReportsClient({ payments, jobOrders, expenses, purc
                   <span style={{ color: netCash >= 0 ? '#2ecc71' : '#e74c3c', fontWeight: 700, fontSize: '0.78rem' }}>{formatPeso(netCash)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#777', fontSize: '0.72rem' }}>Net Profit</span>
+                  <span style={{ color: '#777', fontSize: '0.72rem' }}>Gross Profit</span>
                   <span style={{ color: netProfit >= 0 ? '#2ecc71' : '#e74c3c', fontWeight: 700, fontSize: '0.78rem' }}>{formatPeso(netProfit)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#777', fontSize: '0.72rem', fontWeight: 700 }}>Profit</span>
+                  <span style={{ color: '#777', fontSize: '0.72rem', fontWeight: 700 }}>Net Profit</span>
                   <span style={{ color: profit >= 0 ? '#2ecc71' : '#e74c3c', fontWeight: 700, fontSize: '0.85rem' }}>{formatPeso(profit)}</span>
                 </div>
               </div>
