@@ -249,6 +249,16 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
     }
   }
 
+  // Same clipboard-paste convenience as the Item Preview field (JOItemForm.tsx) and the
+  // client-facing tracker (PaymentProofUpload.tsx) — lets staff paste a screenshot (Win+Shift+S)
+  // straight in instead of saving it to a file first and browsing for it.
+  function handlePayProofPaste(e: React.ClipboardEvent) {
+    const item = Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'))
+    if (!item) return
+    e.preventDefault()
+    handlePayProofFile(item.getAsFile())
+  }
+
   function addPayment() {
     const amt = parseFloat(payAmount) || 0
     if (amt <= 0) return
@@ -628,15 +638,21 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                       <div>
                         <label className="pf-label">Proof of Payment ({payMethod === 'Cheque' ? 'Photo of Cheque' : 'Screenshot'})</label>
                         {payProofImage ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div onPaste={handlePayProofPaste} tabIndex={0} style={{ display: 'flex', alignItems: 'center', gap: 8, outline: 'none' }}>
                             <img src={payProofImage} alt="Payment proof" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 6, border: '1px solid #EDE0CC' }} />
-                            <label style={{ color: '#5C001F', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>
-                              Replace image
-                              <input type="file" accept="image/*" onChange={e => handlePayProofFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
-                            </label>
+                            <div>
+                              <label style={{ color: '#5C001F', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>
+                                Replace image
+                                <input type="file" accept="image/*" onChange={e => handlePayProofFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
+                              </label>
+                              <div style={{ color: '#999', fontSize: '0.68rem', marginTop: 2 }}>...or click here and paste (Ctrl+V) to replace</div>
+                            </div>
                           </div>
                         ) : (
-                          <input type="file" accept="image/*" onChange={e => handlePayProofFile(e.target.files?.[0] || null)} className="pf-input" style={{ padding: '0.4rem' }} />
+                          <div onPaste={handlePayProofPaste} tabIndex={0} style={{ border: '1.5px dashed rgba(0,0,0,0.2)', borderRadius: 8, padding: '0.5rem 0.65rem', outline: 'none' }}>
+                            <input type="file" accept="image/*" onChange={e => handlePayProofFile(e.target.files?.[0] || null)} className="pf-input" style={{ padding: '0.4rem', border: 'none' }} />
+                            <div style={{ color: '#999', fontSize: '0.68rem', marginTop: 4 }}>...or click here and paste (Ctrl+V) a screenshot</div>
+                          </div>
                         )}
                         {payProofCompressing && <div style={{ color: '#999', fontSize: '0.72rem', marginTop: 4 }}>Processing image…</div>}
                         {payProofError && <div style={{ color: '#c0392b', fontSize: '0.72rem', marginTop: 4 }}>{payProofError}</div>}
