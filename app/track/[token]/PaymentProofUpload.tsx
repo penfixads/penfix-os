@@ -114,12 +114,15 @@ export default function PaymentProofUpload({ jobOrderId, balanceDue }: Props) {
       <div style={{ marginBottom: '0.85rem' }}>
         <label style={{ display: 'block', color: '#777', fontSize: '0.72rem', marginBottom: 4 }}>{method === 'Cheque' ? 'Cheque Photo' : 'Payment Screenshot'}</label>
         {preview ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div onPaste={handlePaste} tabIndex={0} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', outline: 'none' }}>
             <img src={preview} alt="Payment proof" style={{ width: 72, height: 72, objectFit: 'contain', borderRadius: 8, border: '1px solid #EDE0CC', background: '#fff' }} />
-            <label style={{ color: '#7A1828', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>
-              Replace image
-              <input type="file" accept="image/*" onChange={e => handleFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
-            </label>
+            <div>
+              <label style={{ color: '#7A1828', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>
+                Replace image
+                <input type="file" accept="image/*" onChange={e => handleFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
+              </label>
+              <div style={{ color: '#aaa', fontSize: '0.68rem', marginTop: 2 }}>...or click here and paste (Ctrl+V) to replace</div>
+            </div>
           </div>
         ) : (
           <div onPaste={handlePaste} tabIndex={0} style={{ border: '1.5px dashed #EDE0CC', borderRadius: 8, padding: '0.6rem 0.75rem', outline: 'none' }}>
