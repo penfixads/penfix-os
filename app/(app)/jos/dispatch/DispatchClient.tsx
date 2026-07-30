@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso, canMarkItemDone } from '@/lib/jo-helpers'
@@ -23,6 +23,21 @@ export default function DispatchClient({ items, currentUser }: Props) {
   const [marking, setMarking] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+
+  // A payment or status change made from another tab/page (e.g. collecting payment on Active
+  // JOs) doesn't push into this already-open page — re-fetch whenever this tab regains focus
+  // so balance/lock state here doesn't go stale until someone hard-refreshes.
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') router.refresh()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
+  }, [router])
 
   const filtered = items.filter(item => {
     const c = item.job_orders?.clients
