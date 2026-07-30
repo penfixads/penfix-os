@@ -3,14 +3,17 @@ import { getCurrentUser } from '@/lib/user'
 import { redirect } from 'next/navigation'
 import ItemsClient from './ItemsClient'
 
+// job_order_item_status_log is deliberately NOT joined here — it's only ever shown when a
+// staff member expands a specific item's history, but this query runs for every one of the
+// 2,455+ items on every visit, so eagerly joining it multiplied a page load's data transfer by
+// every status change ever logged. ItemsClient fetches it lazily per-item on expand instead.
 const ITEMS_SELECT = `
   item_id, job_order_id, category_id, subcategory_id, quantity, computed_line_total, job_status, priority,
   date_time_needed, date_time_received, production_specs, notes,
   pricing_model, base_price, width, height, depth, no_of_mins, letter_count, discount,
   layout_fee, delivery_fee, installation_fee, seaming_fee, item_preview, item_preview_thumb,
   subcategories(subcategory_name, category_id, categories(category_name)),
-  job_orders(received_by, clients(client_name, company_name)),
-  job_order_item_status_log(status_name, changed_by_name, changed_by_role, created_at)
+  job_orders(received_by, clients(client_name, company_name))
 `
 
 // PostgREST silently truncates any response at its own server-side default (1000 rows) no

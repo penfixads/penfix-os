@@ -3,6 +3,10 @@ import { getCurrentUser } from '@/lib/user'
 import { redirect } from 'next/navigation'
 import AllJOsClient from './AllJOsClient'
 
+// job_order_item_status_log is deliberately NOT joined here — same reasoning as
+// app/(app)/jos/items/page.tsx: it's only shown once a staff member expands a specific JO's
+// items, but this query runs for the entire archive (1200+ JOs and growing) on every visit.
+// AllJOsClient fetches it lazily per-JO on expand instead.
 const JOB_ORDERS_SELECT = `
   job_order_id, client_id, date_time_received, received_by, payment_status, source_channel, public_token,
   grand_total, total_amount_paid, balance_due, discount, is_for_billing, request_override, override_status,
@@ -10,8 +14,7 @@ const JOB_ORDERS_SELECT = `
   clients(client_name, company_name, contact_number),
   job_order_items(
     item_id, job_status, quantity,
-    subcategories(subcategory_name),
-    job_order_item_status_log(status_name, changed_by_name, changed_by_role, created_at)
+    subcategories(subcategory_name)
   )
 `
 

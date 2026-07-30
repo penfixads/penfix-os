@@ -25,7 +25,7 @@ export default function SubcategorySopsClient({ subcategories, categories, sopSt
   const [stepName, setStepName] = useState('')
   const [stepDesc, setStepDesc] = useState('')
   const [stepTerminal, setStepTerminal] = useState(false)
-  const [stepVisible, setStepVisible] = useState(false)
+  const [stepVisible, setStepVisible] = useState(true)
   const [stepProductionStart, setStepProductionStart] = useState(false)
   const [saving, setSaving] = useState(false)
   const [stepError, setStepError] = useState('')
@@ -53,7 +53,7 @@ export default function SubcategorySopsClient({ subcategories, categories, sopSt
 
   function openAddStep() {
     setEditingStep(null)
-    setStepName(''); setStepDesc(''); setStepTerminal(false); setStepVisible(false); setStepProductionStart(false)
+    setStepName(''); setStepDesc(''); setStepTerminal(false); setStepVisible(true); setStepProductionStart(false)
     setStepError('')
     setShowStepForm(true)
   }
