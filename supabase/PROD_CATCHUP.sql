@@ -266,3 +266,36 @@ select
 from job_order_items i
 left join subcategories s on s.subcategory_id = i.subcategory_id;
 grant select on public_client_billing_items to anon;
+
+-- ============================================================
+-- Re-audited 2026-07-29 after a staff member hit "new row violates row-level
+-- security policy" uploading an Item Preview image in production. Checked
+-- both projects' Storage APIs directly: staging has the 'jo-images' bucket
+-- (confirmed the policies actually work via live test uploads); production's
+-- bucket list came back empty — migration 047 was never run there at all.
+-- ============================================================
+
+-- ============================================================
+-- 9) IMAGE STORAGE BUCKET (migration 047)
+--    Job order item previews/thumbnails and payment-proof screenshots live
+--    in Supabase Storage, not as base64 text columns. Without this, every
+--    upload on New JO / Add Item / Edit Job Order / the public tracker fails.
+-- ============================================================
+insert into storage.buckets (id, name, public)
+values ('jo-images', 'jo-images', true)
+on conflict (id) do nothing;
+
+drop policy if exists "authenticated_insert_jo_images_items" on storage.objects;
+create policy "authenticated_insert_jo_images_items" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'jo-images' and (storage.foldername(name))[1] = 'items');
+
+drop policy if exists "anon_insert_jo_images_proofs" on storage.objects;
+create policy "anon_insert_jo_images_proofs" on storage.objects
+  for insert to anon
+  with check (bucket_id = 'jo-images' and (storage.foldername(name))[1] = 'payment-proofs');
+
+drop policy if exists "authenticated_insert_jo_images_proofs" on storage.objects;
+create policy "authenticated_insert_jo_images_proofs" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'jo-images' and (storage.foldername(name))[1] = 'payment-proofs');
