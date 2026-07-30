@@ -24,7 +24,32 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, categories, 
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
-  const toggleExpand = (joId: string) => setExpanded(prev => ({ ...prev, [joId]: !prev[joId] }))
+  // Status history is fetched lazily per JO on first expand, not joined into the initial
+  // list query — see the comment on JOB_ORDERS_SELECT in page.tsx for why.
+  const [logsByItem, setLogsByItem] = useState<Record<string, any[]>>({})
+  const [loadingLogsFor, setLoadingLogsFor] = useState<string | null>(null)
+  async function toggleExpand(jo: any) {
+    const joId = jo.job_order_id
+    const willOpen = !expanded[joId]
+    setExpanded(prev => ({ ...prev, [joId]: willOpen }))
+    if (!willOpen) return
+    const itemIds = (jo.job_order_items || []).map((i: any) => i.item_id)
+    const missing = itemIds.filter((id: string) => !logsByItem[id])
+    if (missing.length === 0) return
+    setLoadingLogsFor(joId)
+    const supabase = createSupabaseBrowserClient()
+    const { data } = await supabase
+      .from('job_order_item_status_log')
+      .select('item_id, status_name, changed_by_name, changed_by_email, changed_by_role, created_at')
+      .in('item_id', missing)
+    setLogsByItem(prev => {
+      const next = { ...prev }
+      for (const id of missing) next[id] = []
+      for (const row of data || []) next[row.item_id] = [...(next[row.item_id] || []), row]
+      return next
+    })
+    setLoadingLogsFor(null)
+  }
   const [page, setPage] = useState(1)
   // Temporary: lets Admin/Treasury correct historical-import records (wrong subcategory,
   // received_by, etc.) directly from the archive view instead of only Active JOs.
@@ -139,7 +164,7 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, categories, 
             return (
               <div key={jo.job_order_id} style={{ background: '#FDF5EC', borderRadius: 10, border: '1px solid #EDE0CC', overflow: 'hidden' }}>
                 <div style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                  <button onClick={() => toggleExpand(jo.job_order_id)} title="Show who did what, per SOP step"
+                  <button onClick={() => toggleExpand(jo)} title="Show who did what, per SOP step"
                     style={{ background: 'none', border: 'none', color: '#7A1828', cursor: 'pointer', fontSize: '0.75rem', padding: 2, flexShrink: 0 }}>
                     {isOpen ? '▼' : '▶'}
                   </button>
@@ -204,7 +229,7 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, categories, 
                     {items.length === 0 ? (
                       <div style={{ color: '#aaa', fontSize: '0.8rem' }}>No items on this job order.</div>
                     ) : items.map((item: any) => {
-                      const log = [...(item.job_order_item_status_log || [])].sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+                      const log = [...(logsByItem[item.item_id] || [])].sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
                       return (
                         <div key={item.item_id}>
                           <div style={{ color: '#1a1a1a', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -220,7 +245,9 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, categories, 
                               </button>
                             )}
                           </div>
-                          {log.length === 0 ? (
+                          {loadingLogsFor === jo.job_order_id ? (
+                            <div style={{ color: '#aaa', fontSize: '0.75rem', marginTop: 2, marginLeft: 4 }}>Loading history…</div>
+                          ) : log.length === 0 ? (
                             <div style={{ color: '#aaa', fontSize: '0.75rem', marginTop: 2, marginLeft: 4 }}>No step history recorded yet.</div>
                           ) : (
                             <div style={{ marginTop: 4, marginLeft: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>

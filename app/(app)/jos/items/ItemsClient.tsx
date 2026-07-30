@@ -68,7 +68,24 @@ export default function ItemsClient({ items: initialItems, categories, subcatego
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
-  const toggleExpand = (itemId: string) => setExpanded(prev => ({ ...prev, [itemId]: !prev[itemId] }))
+  // Status history is fetched lazily per item on first expand, not joined into the initial
+  // list query — see the comment on ITEMS_SELECT in page.tsx for why.
+  const [logsByItem, setLogsByItem] = useState<Record<string, any[]>>({})
+  const [loadingLog, setLoadingLog] = useState<string | null>(null)
+  async function toggleExpand(itemId: string) {
+    const willOpen = !expanded[itemId]
+    setExpanded(prev => ({ ...prev, [itemId]: willOpen }))
+    if (willOpen && !logsByItem[itemId]) {
+      setLoadingLog(itemId)
+      const supabase = createSupabaseBrowserClient()
+      const { data } = await supabase
+        .from('job_order_item_status_log')
+        .select('status_name, changed_by_name, changed_by_email, changed_by_role, created_at')
+        .eq('item_id', itemId)
+      setLogsByItem(prev => ({ ...prev, [itemId]: data || [] }))
+      setLoadingLog(null)
+    }
+  }
   const [page, setPage] = useState(1)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   // Temporary: lets Admin/GA/Treasury correct historical-import item records (wrong
@@ -259,7 +276,7 @@ export default function ItemsClient({ items: initialItems, categories, subcatego
             const priorityColor = PRIORITY_COLORS[item.priority] || '#999'
 
             const isOpen = !!expanded[item.item_id]
-            const log = [...(item.job_order_item_status_log || [])].sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+            const log = [...(logsByItem[item.item_id] || [])].sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
 
             return (
               <div key={item.item_id} style={{ background: '#FDF5EC', borderRadius: 10, border: '1px solid #EDE0CC', overflow: 'hidden' }}>
@@ -304,7 +321,9 @@ export default function ItemsClient({ items: initialItems, categories, subcatego
 
                 {isOpen && (
                   <div style={{ borderTop: '1px solid #EDE0CC', padding: '0.6rem 1rem' }}>
-                    {log.length === 0 ? (
+                    {loadingLog === item.item_id ? (
+                      <div style={{ color: '#aaa', fontSize: '0.75rem' }}>Loading history…</div>
+                    ) : log.length === 0 ? (
                       <div style={{ color: '#aaa', fontSize: '0.75rem' }}>No step history recorded yet.</div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
