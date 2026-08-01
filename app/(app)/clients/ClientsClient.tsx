@@ -6,10 +6,11 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { formatPeso, generateClientId } from '@/lib/jo-helpers'
 import { findLikelyDuplicateClients, type ClientMatch } from '@/lib/client-dedupe'
 import type { AppUser } from '@/lib/user'
-import { IconUserPlus, IconEdit, IconCheck, IconX } from '@/components/icons'
+import { IconUserPlus, IconEdit, IconCheck, IconX, IconMerge } from '@/components/icons'
 import Pagination from '@/components/Pagination'
 import ClientQrButton from '@/components/ClientQrButton'
 import DuplicateClientPrompt from '@/components/DuplicateClientPrompt'
+import MergeClientsModal from '@/components/MergeClientsModal'
 import { setClientPassword } from './actions'
 
 const PAGE_SIZE = 10
@@ -42,6 +43,35 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
   const [newPassword, setNewPassword] = useState('')
   const [settingPassword, setSettingPassword] = useState(false)
   const [passwordMsg, setPasswordMsg] = useState<{ text: string; ok: boolean } | null>(null)
+  const [mergeSelection, setMergeSelection] = useState<string[]>([])
+  const [showMerge, setShowMerge] = useState(false)
+
+  function toggleMergeSelection(clientId: string) {
+    setMergeSelection(prev => {
+      if (prev.includes(clientId)) return prev.filter(id => id !== clientId)
+      if (prev.length >= 2) return [prev[1], clientId]
+      return [...prev, clientId]
+    })
+  }
+
+  function handleMerged(targetId: string, sourceId: string, resolved: Record<string, string | boolean | null>) {
+    setClients(prev => prev.map(c => {
+      if (c.client_id === targetId) {
+        const target = prev.find(x => x.client_id === targetId)
+        const source = prev.find(x => x.client_id === sourceId)
+        return {
+          ...c,
+          ...resolved,
+          job_orders: [...(target?.job_orders || []), ...(source?.job_orders || [])],
+          rewards_balance: (target?.rewards_balance || 0) + (source?.rewards_balance || 0),
+        }
+      }
+      if (c.client_id === sourceId) return { ...c, job_orders: [], rewards_balance: 0 }
+      return c
+    }))
+    setMergeSelection([])
+    setShowMerge(false)
+  }
 
   function openAdd() {
     setEditing(null); setClientType('Individual'); setClientName(''); setCompanyName('')
@@ -151,9 +181,16 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
           <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>Clients</h1>
           <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{filtered.length} of {clients.length} clients</p>
         </div>
-        <button onClick={openAdd} className="pf-btn">
-          <IconUserPlus />New Client
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {currentUser.role === 'Admin' && mergeSelection.length === 2 && (
+            <button onClick={() => setShowMerge(true)} className="pf-btn" style={{ background: '#8E2C48' }}>
+              <IconMerge />Merge Selected (2)
+            </button>
+          )}
+          <button onClick={openAdd} className="pf-btn">
+            <IconUserPlus />New Client
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -174,7 +211,16 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
           const totalSales = (c.job_orders || []).reduce((s: number, j: any) => s + (j.grand_total || 0), 0)
           const totalJOs = c.job_orders?.length || 0
           return (
-            <div key={c.client_id} style={{ background: '#FDF5EC', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid #EDE0CC', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+            <div key={c.client_id} style={{ background: mergeSelection.includes(c.client_id) ? '#F3E4D8' : '#FDF5EC', borderRadius: 10, padding: '0.85rem 1rem', border: mergeSelection.includes(c.client_id) ? '1px solid #8E2C48' : '1px solid #EDE0CC', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+              {currentUser.role === 'Admin' && (
+                <input
+                  type="checkbox"
+                  checked={mergeSelection.includes(c.client_id)}
+                  onChange={() => toggleMergeSelection(c.client_id)}
+                  title="Select to merge with another client"
+                  style={{ accentColor: '#8E2C48', width: 16, height: 16, flexShrink: 0 }}
+                />
+              )}
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.88rem' }}>{c.client_name || c.company_name}</span>
@@ -340,6 +386,15 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
           }}
           onSaveAnyway={() => { setDuplicateMatches(null); handleSave(true) }}
           onCancel={() => setDuplicateMatches(null)}
+        />
+      )}
+
+      {showMerge && mergeSelection.length === 2 && (
+        <MergeClientsModal
+          clientA={clients.find(c => c.client_id === mergeSelection[0])!}
+          clientB={clients.find(c => c.client_id === mergeSelection[1])!}
+          onClose={() => setShowMerge(false)}
+          onMerged={handleMerged}
         />
       )}
     </div>
