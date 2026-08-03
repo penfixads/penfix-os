@@ -17,6 +17,9 @@ interface NavItem {
   // numbered icon instead of the usual glyph, so the everyday workflow reads top-to-bottom
   // as a sequence rather than an alphabetical/arbitrary list.
   step?: number
+  // Pins an item above the workflow group entirely — for the company-wide overview
+  // (Dashboard) rather than a step in the JO lifecycle.
+  top?: boolean
 }
 
 const I = (p: React.SVGProps<SVGSVGElement>) => (
@@ -32,6 +35,10 @@ const StepIcon = ({ n }: { n: number }) => (
 )
 
 const NAV_ITEMS: NavItem[] = [
+  {
+    label: 'Dashboard', href: '/dashboard', roles: ['Admin'], top: true,
+    icon: <I><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></I>,
+  },
   {
     label: "Today's Received JOs", href: '/jos/today', roles: ['Admin','GA','Treasury'],
     icon: <StepIcon n={1} />, step: 1,
@@ -167,10 +174,11 @@ export default function Sidebar({ role, name }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const items = NAV_ITEMS.filter(i => i.roles.includes(role))
+  const topItems = items.filter(i => i.top)
   // The step-numbered workflow group (Received → Active → Production → Dispatch → Sales
   // Summary) always leads the sidebar, in that fixed order, above everything else.
-  const workflowItems = items.filter(i => i.step != null).sort((a, b) => a.step! - b.step!)
-  const nonWorkflowItems = items.filter(i => i.step == null)
+  const workflowItems = items.filter(i => !i.top && i.step != null).sort((a, b) => a.step! - b.step!)
+  const nonWorkflowItems = items.filter(i => !i.top && i.step == null)
   // Admin-only links (Pending Approval, Sales Reports, etc.) are scattered through
   // NAV_ITEMS in whatever order they were added — group them below a divider instead,
   // so an Admin's sidebar reads as "everyday tools" then "admin-only tools".
@@ -306,6 +314,10 @@ export default function Sidebar({ role, name }: Props) {
 
         {/* Nav */}
         <nav style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0' }}>
+          {topItems.map(item => renderNavItem(item, activeHref, pendingCount, pendingProofCount))}
+          {topItems.length > 0 && (
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', margin: '0.5rem 1rem' }} />
+          )}
           {workflowItems.map(item => renderNavItem(item, activeHref, pendingCount, pendingProofCount))}
           {workflowItems.length > 0 && (
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', margin: '0.5rem 1rem' }} />
