@@ -34,6 +34,7 @@ export default async function DashboardPage() {
     { data: recentPayments },
     { data: yesterdayJOs },
     { data: yesterdayExpenses },
+    { data: yesterdayPayments },
     { data: monthExpenses },
     { data: monthPurchases },
     { data: monthSupplierDeliveries },
@@ -85,6 +86,9 @@ export default async function DashboardPage() {
       .lte('date_time_received', yesterdayEndUTC),
     // Yesterday's expenses — same source as the Daily Sales Summary's Total Expenses.
     supabase.from('expenses').select('amount').eq('expense_date', yesterday),
+    // Yesterday's collection — actual cash collected (payments.amount), distinct from sales
+    // (JO grand_total), same "collections" definition Sales Reports uses.
+    supabase.from('payments').select('amount').eq('payment_date', yesterday),
     // Month-to-date expenses — same three buckets Sales Reports folds into "Total Expenses"
     // (daily petty-cash expenses, same-day purchases, and supplier deliveries billed this month).
     supabase.from('expenses').select('amount').gte('expense_date', monthStartStr).lt('expense_date', nextMonthStartStr),
@@ -113,6 +117,7 @@ export default async function DashboardPage() {
 
   const yesterdaySales = (yesterdayJOs || []).reduce((sum, jo) => sum + (jo.grand_total || 0), 0)
   const yesterdayExpensesTotal = (yesterdayExpenses || []).reduce((sum, e) => sum + (e.amount || 0), 0)
+  const yesterdayCollection = (yesterdayPayments || []).reduce((sum, p) => sum + (p.amount || 0), 0)
 
   return (
     <DashboardClient
@@ -126,6 +131,7 @@ export default async function DashboardPage() {
       netSalesMTD={netSalesMTD}
       yesterdaySales={yesterdaySales}
       yesterdayExpenses={yesterdayExpensesTotal}
+      yesterdayCollection={yesterdayCollection}
       statusLog={statusLog || []}
       recentJOs={recentJOs || []}
       recentPayments={recentPayments || []}

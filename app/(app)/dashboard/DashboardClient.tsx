@@ -30,6 +30,7 @@ interface Props {
   netSalesMTD: number
   yesterdaySales: number
   yesterdayExpenses: number
+  yesterdayCollection: number
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   statusLog: any[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -81,7 +82,7 @@ function StatCard({ label, value, sub, href, valueColor }: { label: string; valu
 
 export default function DashboardClient({
   userName, today, todayJOCount, activeJOs, sopBySubcategory,
-  grossSalesMTD, expensesMTD, netSalesMTD, yesterdaySales, yesterdayExpenses,
+  grossSalesMTD, expensesMTD, netSalesMTD, yesterdaySales, yesterdayExpenses, yesterdayCollection,
   statusLog, recentJOs, recentPayments,
 }: Props) {
   const firstName = userName.split(' ')[0]
@@ -179,6 +180,7 @@ export default function DashboardClient({
       {/* Finance snapshot */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
         <StatCard label="Yesterday's Sales" value={formatPeso(yesterdaySales)} href="/sales/summary" />
+        <StatCard label="Yesterday's Collection" value={formatPeso(yesterdayCollection)} href="/sales/summary" />
         <StatCard label="Yesterday's Expenses" value={formatPeso(yesterdayExpenses)} href="/sales/summary" valueColor="#e74c3c" />
         <StatCard label="Gross Sales (MTD)" value={formatPeso(grossSalesMTD)} href="/sales/reports" />
         <StatCard label="Expenses (MTD)" value={formatPeso(expensesMTD)} href="/sales/reports" valueColor="#e74c3c" />
