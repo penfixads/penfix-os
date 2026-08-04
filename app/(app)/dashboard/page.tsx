@@ -16,6 +16,14 @@ export default async function DashboardPage() {
   const { startUTC: todayStartUTC, endUTC: todayEndUTC } = getPhilippineDayBoundsUTC(today)
   const monthStartStr = `${today.slice(0, 7)}-01`
   const { startUTC: monthStartUTC } = getPhilippineDayBoundsUTC(monthStartStr)
+  // Noon avoids any DST/boundary edge case, same trick getPhilippineDayOfWeek uses.
+  const yesterdayDate = new Date(`${today}T12:00:00+08:00`)
+  yesterdayDate.setUTCDate(yesterdayDate.getUTCDate() - 1)
+  const yesterday = getPhilippineDateStr(yesterdayDate)
+  const { startUTC: yesterdayStartUTC, endUTC: yesterdayEndUTC } = getPhilippineDayBoundsUTC(yesterday)
+  const nextMonthDate = new Date(`${monthStartStr}T12:00:00+08:00`)
+  nextMonthDate.setUTCMonth(nextMonthDate.getUTCMonth() + 1)
+  const nextMonthStartStr = getPhilippineDateStr(nextMonthDate)
 
   const [
     { count: todayJOCount },
@@ -24,6 +32,11 @@ export default async function DashboardPage() {
     { data: statusLog },
     { data: recentJOs },
     { data: recentPayments },
+    { data: yesterdayJOs },
+    { data: yesterdayExpenses },
+    { data: monthExpenses },
+    { data: monthPurchases },
+    { data: monthSupplierDeliveries },
   ] = await Promise.all([
     supabase
       .from('job_orders')
@@ -63,6 +76,20 @@ export default async function DashboardPage() {
       .select('payment_id, amount, payment_method, created_at, job_orders(job_order_id, clients(client_name, company_name))')
       .order('created_at', { ascending: false })
       .limit(8),
+    // Yesterday's sales — same Cancelled-excluded definition as MTD, keyed off date_time_received.
+    supabase
+      .from('job_orders')
+      .select('grand_total')
+      .neq('job_status', 'Cancelled')
+      .gte('date_time_received', yesterdayStartUTC)
+      .lte('date_time_received', yesterdayEndUTC),
+    // Yesterday's expenses — same source as the Daily Sales Summary's Total Expenses.
+    supabase.from('expenses').select('amount').eq('expense_date', yesterday),
+    // Month-to-date expenses — same three buckets Sales Reports folds into "Total Expenses"
+    // (daily petty-cash expenses, same-day purchases, and supplier deliveries billed this month).
+    supabase.from('expenses').select('amount').gte('expense_date', monthStartStr).lt('expense_date', nextMonthStartStr),
+    supabase.from('purchases').select('total_amount').gte('purchase_date', monthStartStr).lt('purchase_date', nextMonthStartStr),
+    supabase.from('supplier_deliveries').select('total_amount').gte('billing_month', monthStartStr).lt('billing_month', nextMonthStartStr),
   ])
 
   const subcategoryIds = Array.from(
@@ -78,7 +105,14 @@ export default async function DashboardPage() {
     sopBySubcategory[s.subcategory_id].push(s)
   }
 
-  const totalSalesMTD = (monthJOs || []).reduce((sum, jo) => sum + (jo.grand_total || 0), 0)
+  const grossSalesMTD = (monthJOs || []).reduce((sum, jo) => sum + (jo.grand_total || 0), 0)
+  const expensesMTD = (monthExpenses || []).reduce((sum, e) => sum + (e.amount || 0), 0)
+    + (monthPurchases || []).reduce((sum, p) => sum + (p.total_amount || 0), 0)
+    + (monthSupplierDeliveries || []).reduce((sum, sd) => sum + (sd.total_amount || 0), 0)
+  const netSalesMTD = grossSalesMTD - expensesMTD
+
+  const yesterdaySales = (yesterdayJOs || []).reduce((sum, jo) => sum + (jo.grand_total || 0), 0)
+  const yesterdayExpensesTotal = (yesterdayExpenses || []).reduce((sum, e) => sum + (e.amount || 0), 0)
 
   return (
     <DashboardClient
@@ -87,7 +121,11 @@ export default async function DashboardPage() {
       todayJOCount={todayJOCount || 0}
       activeJOs={activeJOs || []}
       sopBySubcategory={sopBySubcategory}
-      totalSalesMTD={totalSalesMTD}
+      grossSalesMTD={grossSalesMTD}
+      expensesMTD={expensesMTD}
+      netSalesMTD={netSalesMTD}
+      yesterdaySales={yesterdaySales}
+      yesterdayExpenses={yesterdayExpensesTotal}
       statusLog={statusLog || []}
       recentJOs={recentJOs || []}
       recentPayments={recentPayments || []}

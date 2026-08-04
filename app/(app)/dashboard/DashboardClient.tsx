@@ -25,7 +25,11 @@ interface Props {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   activeJOs: any[]
   sopBySubcategory: Record<string, StatusStep[]>
-  totalSalesMTD: number
+  grossSalesMTD: number
+  expensesMTD: number
+  netSalesMTD: number
+  yesterdaySales: number
+  yesterdayExpenses: number
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   statusLog: any[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -62,21 +66,23 @@ function clientLabel(c: Client): string {
   return c.company_name || c.client_name
 }
 
-function StatCard({ label, value, sub, href }: { label: string; value: string; sub?: string; href: string }) {
+function StatCard({ label, value, sub, href, valueColor }: { label: string; value: string; sub?: string; href: string; valueColor?: string }) {
   return (
     <Link href={href} style={{
       background: '#FDF5EC', borderRadius: 12, padding: '1rem 1.25rem', border: '1px solid #EDE0CC',
       textDecoration: 'none', display: 'block', transition: 'box-shadow 0.15s',
     }}>
       <div style={{ color: '#999', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{label}</div>
-      <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '1.7rem', marginTop: 4 }}>{value}</div>
+      <div style={{ color: valueColor || '#1a1a1a', fontWeight: 700, fontSize: '1.7rem', marginTop: 4 }}>{value}</div>
       <div style={{ color: '#7A1828', fontSize: '0.75rem', fontWeight: 600, marginTop: 6 }}>{sub || 'View all →'}</div>
     </Link>
   )
 }
 
 export default function DashboardClient({
-  userName, today, todayJOCount, activeJOs, sopBySubcategory, totalSalesMTD, statusLog, recentJOs, recentPayments,
+  userName, today, todayJOCount, activeJOs, sopBySubcategory,
+  grossSalesMTD, expensesMTD, netSalesMTD, yesterdaySales, yesterdayExpenses,
+  statusLog, recentJOs, recentPayments,
 }: Props) {
   const firstName = userName.split(' ')[0]
   const hour = new Date().getUTCHours() + 8 // Manila is UTC+8
@@ -164,11 +170,19 @@ export default function DashboardClient({
       </div>
 
       {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
         <StatCard label="Today's Job Orders" value={String(todayJOCount)} href="/jos/today" />
         <StatCard label="Active Job Orders" value={String(activeJOs.length)} href="/jos/active" />
         <StatCard label="Ready for Dispatch" value={String(bucketCounts.dispatch)} href="/jos/dispatch" />
-        <StatCard label="Total Sales (MTD)" value={formatPeso(totalSalesMTD)} href="/sales/reports" />
+      </div>
+
+      {/* Finance snapshot */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+        <StatCard label="Yesterday's Sales" value={formatPeso(yesterdaySales)} href="/sales/summary" />
+        <StatCard label="Yesterday's Expenses" value={formatPeso(yesterdayExpenses)} href="/sales/summary" valueColor="#e74c3c" />
+        <StatCard label="Gross Sales (MTD)" value={formatPeso(grossSalesMTD)} href="/sales/reports" />
+        <StatCard label="Expenses (MTD)" value={formatPeso(expensesMTD)} href="/sales/reports" valueColor="#e74c3c" />
+        <StatCard label="Net Sales (MTD)" value={formatPeso(netSalesMTD)} href="/sales/reports" valueColor={netSalesMTD >= 0 ? '#2ecc71' : '#e74c3c'} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) minmax(320px, 1.4fr)', gap: '1rem' }}>
