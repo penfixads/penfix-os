@@ -6,6 +6,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import type { UserRole } from '@/lib/user'
+import { DOWNPAYMENT_GATE_ENABLED } from '@/lib/jo-helpers'
 
 interface NavItem {
   label: string
@@ -207,7 +208,11 @@ export default function Sidebar({ role, name }: Props) {
         supabase.from('clients').select('*', { count: 'exact', head: true }).eq('credit_line_request_status', 'Pending'),
         supabase.from('historical_unlock_requests').select('*', { count: 'exact', head: true }).eq('status', 'Pending'),
       ])
-      setPendingCount((joCount || 0) + (creditCount || 0) + (unlockCount || 0))
+      // While the downpayment gate is off (pilot mode) an override request isn't holding
+      // anything up, so it shouldn't light the badge — approving it would be a no-op. Any
+      // leftovers from before the switch are still listed on the Pending Approval page for
+      // whoever wants to clear them, they just don't nag from here.
+      setPendingCount((DOWNPAYMENT_GATE_ENABLED ? (joCount || 0) : 0) + (creditCount || 0) + (unlockCount || 0))
     }
 
     loadPendingCount()

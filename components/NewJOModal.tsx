@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { generateJobOrderId, generateItemId, generateClientId, generatePaymentId, formatPeso, getNextJOSequence, buildFeedbackUrl, getPhilippineDateStr, toLocalDateTimeInput, JO_SOURCE_CHANNELS } from '@/lib/jo-helpers'
+import { generateJobOrderId, generateItemId, generateClientId, generatePaymentId, formatPeso, getNextJOSequence, buildFeedbackUrl, getPhilippineDateStr, toLocalDateTimeInput, JO_SOURCE_CHANNELS, DOWNPAYMENT_GATE_ENABLED, BELOW_DOWNPAYMENT_OVERRIDE_STATUS } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
 import AddClientModal from '@/app/(app)/jos/today/AddClientModal'
@@ -228,7 +228,7 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
           cashback_discount: cashbackDiscount,
           received_by: currentUser.name,
           request_override: overrideReason || null,
-          override_status: needsOverride ? 'Pending' : null,
+          override_status: needsOverride ? BELOW_DOWNPAYMENT_OVERRIDE_STATUS : null,
           is_for_billing: isForBilling,
           is_fully_paid: paymentStatus === 'Fully Paid',
           date_override_authorized_by: unlockedByName,
@@ -583,7 +583,11 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
           <div className="pf-field">
             <label className="pf-label" style={{ color: '#f1c40f' }}>Reason for override (below 50%) <span className="pf-req">*</span></label>
             <textarea value={overrideReason} onChange={e => setOverrideReason(e.target.value)} rows={3} placeholder="Please provide a reason..." className="pf-textarea" />
-            <div style={{ color: '#e74c3c', fontSize: '0.72rem', marginTop: 4 }}>This will be sent to the manager for approval before production can start.</div>
+            <div style={{ color: DOWNPAYMENT_GATE_ENABLED ? '#e74c3c' : '#7f8c8d', fontSize: '0.72rem', marginTop: 4 }}>
+              {DOWNPAYMENT_GATE_ENABLED
+                ? 'This will be sent to the manager for approval before production can start.'
+                : 'Recorded on the job order for the manager. Production can start right away while we’re pilot testing.'}
+            </div>
           </div>
         )}
 

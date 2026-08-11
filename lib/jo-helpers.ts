@@ -129,6 +129,22 @@ export function formatAge(dateStr: string): string {
   return `${minutes}m`
 }
 
+// PILOT MODE (turned off 2026-08-11): while we're pilot testing we're not enforcing the 50%
+// downpayment rule, because every below-50% JO was landing in the Admin's approval queue and
+// clearing that queue by hand had become the bottleneck. Staff are STILL required to type a
+// reason why the client can't pay the downpayment (it's saved to job_orders.request_override),
+// the reason just no longer holds the job — the JO is stamped 'Approved' on save and production
+// can start right away. Flip this back to true once downpayments are established with the
+// regular clients: that alone restores the old behaviour everywhere (this file's
+// canPushToProduction, plus NewJOModal.tsx / EditJOModal.tsx which stamp the override status).
+// JOs auto-approved while this was false stay approved — re-gating only affects new saves.
+export const DOWNPAYMENT_GATE_ENABLED = false
+
+// What to stamp on job_orders.override_status when a JO is below the 50% threshold: 'Pending'
+// parks it in the Admin's Pending Approval queue, 'Approved' lets it straight through while
+// still keeping the typed reason on the record.
+export const BELOW_DOWNPAYMENT_OVERRIDE_STATUS = DOWNPAYMENT_GATE_ENABLED ? 'Pending' : 'Approved'
+
 // A JO can't advance past "Received" — not just the fabricator-flagged production step,
 // ANY step, including GA-owned ones like layout/design — until either it's settled enough
 // (50%+ down, fully paid, or billing) or Admin has approved the override request. Shared by
@@ -136,6 +152,10 @@ export function formatAge(dateStr: string): string {
 // enforce the exact same rule instead of two independently-maintained copies drifting apart.
 export function canPushToProduction(jo: { is_for_billing?: boolean | null; payment_status?: string | null; override_status?: string | null } | null | undefined): boolean {
   if (!jo) return false
+  // Pilot mode — nothing is gated on the downpayment. Checked before the payment rules (rather
+  // than only auto-approving new saves) so JOs already sitting at 'Pending' from before the
+  // switch stop being blocked too, instead of needing one last round of manual approvals.
+  if (!DOWNPAYMENT_GATE_ENABLED) return true
   if (jo.is_for_billing) return true
   if (jo.payment_status === 'Fully Paid' || jo.payment_status === 'Downpayment Received') return true
   if (jo.override_status === 'Approved') return true

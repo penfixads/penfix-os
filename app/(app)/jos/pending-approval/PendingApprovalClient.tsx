@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { formatPeso } from '@/lib/jo-helpers'
+import { formatPeso, DOWNPAYMENT_GATE_ENABLED } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import Pagination from '@/components/Pagination'
 
@@ -194,6 +194,13 @@ export default function PendingApprovalClient({ jobOrders: initialJOs, creditReq
         creditRequests.length === 0 && unlockRequests.length === 0 && <div style={{ color: '#aaa', textAlign: 'center', marginTop: '3rem', fontSize: '0.9rem' }}>No pending approvals. ✓</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          {/* Anything still listed here was requested before the gate was switched off — it's
+              already free to go into production, so approving it is housekeeping, not a block. */}
+          {!DOWNPAYMENT_GATE_ENABLED && (
+            <div style={{ background: '#FFF8E1', border: '1px solid #F0E0B0', borderRadius: 10, padding: '0.7rem 0.85rem', color: '#7A6420', fontSize: '0.76rem', lineHeight: 1.45 }}>
+              Downpayment approval is paused for pilot testing. These job orders can already move into production without your approval — clearing them here is optional, and new below-50% job orders won’t show up in this list.
+            </div>
+          )}
           {joPageItems.map(jo => {
             const clientName = jo.clients?.client_name || jo.clients?.company_name || jo.client_id
             const items = jo.job_order_items || []

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { generateItemId, generatePaymentId, formatPeso, getEffectiveSteps, getPhilippineDateStr, JO_SOURCE_CHANNELS, canPushToProduction, canMarkItemDone } from '@/lib/jo-helpers'
+import { generateItemId, generatePaymentId, formatPeso, getEffectiveSteps, getPhilippineDateStr, JO_SOURCE_CHANNELS, canPushToProduction, canMarkItemDone, DOWNPAYMENT_GATE_ENABLED, BELOW_DOWNPAYMENT_OVERRIDE_STATUS } from '@/lib/jo-helpers'
 import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
 import { compressImageToStorage } from '@/lib/image-compress'
 import type { AppUser } from '@/lib/user'
@@ -392,7 +392,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
         is_for_billing: editIsForBilling,
         is_fully_paid: paymentStatus === 'Fully Paid',
         request_override: overrideReason || null,
-        override_status: needsOverride ? 'Pending' : null,
+        override_status: needsOverride ? BELOW_DOWNPAYMENT_OVERRIDE_STATUS : null,
         source_channel: editSourceChannel || null,
       }).eq('job_order_id', joId)
       if (joUpdateErr) throw joUpdateErr
@@ -418,7 +418,7 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
         payment_status: paymentStatus,
         is_for_billing: editIsForBilling,
         request_override: overrideReason || null,
-        override_status: needsOverride ? 'Pending' : null,
+        override_status: needsOverride ? BELOW_DOWNPAYMENT_OVERRIDE_STATUS : null,
         source_channel: editSourceChannel || null,
         job_order_items: editItems.map(i => ({
           item_id: i.item_id || (i._tempId ? newItemIdByTempId[i._tempId] : undefined),
@@ -712,7 +712,11 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
               <div className="pf-field">
                 <label className="pf-label" style={{ color: '#f1c40f' }}>Reason for override (below 50%) <span className="pf-req">*</span></label>
                 <textarea value={overrideReason} onChange={e => setOverrideReason(e.target.value)} rows={3} placeholder="Please provide a reason..." className="pf-textarea" />
-                <div style={{ color: '#e74c3c', fontSize: '0.72rem', marginTop: 4 }}>This will be sent to the manager for approval before production can start.</div>
+                <div style={{ color: DOWNPAYMENT_GATE_ENABLED ? '#e74c3c' : '#7f8c8d', fontSize: '0.72rem', marginTop: 4 }}>
+                  {DOWNPAYMENT_GATE_ENABLED
+                    ? 'This will be sent to the manager for approval before production can start.'
+                    : 'Recorded on the job order for the manager. Production can start right away while we’re pilot testing.'}
+                </div>
               </div>
             )}
 
