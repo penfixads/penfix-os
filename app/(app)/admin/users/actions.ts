@@ -111,7 +111,25 @@ export async function updateUserInfo(oldEmail: string, formData: {
   return { success: true }
 }
 
-export async function deleteUser(email: string): Promise<ActionResult> {
+// Tables that reference users(user_email) without `on delete cascade`, so a row in
+// any of them makes the users delete fail on a foreign-key violation. They are also
+// exactly the records we don't want to lose: attendance and payroll history.
+// (employee_face_descriptors is deliberately absent — it cascades, and a face
+// template is disposable.) Not every Penfix Supabase project has the payroll tables
+// yet, so a missing table is treated as "nothing blocking" rather than an error.
+const BLOCKING_HISTORY: { table: string; column: string; label: (n: number) => string }[] = [
+  { table: 'attendance_logs', column: 'user_email', label: n => `${n} attendance record${n === 1 ? '' : 's'}` },
+  { table: 'payslips', column: 'user_email', label: n => `${n} payslip${n === 1 ? '' : 's'}` },
+  { table: 'payroll_profiles', column: 'user_email', label: () => 'a payroll profile' },
+  { table: 'payroll_loan_ledger', column: 'user_email', label: n => `${n} loan/cash-advance ledger entr${n === 1 ? 'y' : 'ies'}` },
+  { table: 'payroll_day_resolutions', column: 'resolved_by', label: n => `${n} attendance day resolution${n === 1 ? '' : 's'}` },
+]
+
+// blockedByHistory lets the UI offer "deactivate instead" rather than just
+// reporting a dead end — it's the only way to retire someone who has records.
+type DeleteResult = { success: true } | { success: false; message: string; blockedByHistory?: boolean }
+
+export async function deleteUser(email: string): Promise<DeleteResult> {
   const admin = createSupabaseAdminClient()
   const current = await getCurrentUser()
   if (!current || current.role !== 'Admin') return { success: false, message: 'Unauthorized' }
@@ -123,15 +141,36 @@ export async function deleteUser(email: string): Promise<ActionResult> {
     if ((count ?? 0) <= 1) return { success: false, message: 'Cannot delete the last remaining Admin.' }
   }
 
-  const { data: authUsers } = await admin.auth.admin.listUsers()
-  const authUser = authUsers?.users.find(u => u.email === email)
-  if (authUser) await admin.auth.admin.deleteUser(authUser.id)
+  const blockers: string[] = []
+  for (const { table, column, label } of BLOCKING_HISTORY) {
+    const { count, error } = await admin.from(table).select('*', { count: 'exact', head: true }).eq(column, email)
+    if (error) continue  // table not present in this project — nothing to block on
+    if ((count ?? 0) > 0) blockers.push(label(count!))
+  }
+  if (blockers.length > 0) {
+    return {
+      success: false,
+      blockedByHistory: true,
+      message: `${email} has ${blockers.join(', ')} on record. Deleting the account would erase that `
+        + `attendance and payroll history, so the database blocks it.`,
+    }
+  }
+
+  // Delete the profile row FIRST. It is the only step that can fail on a foreign key,
+  // and doing it before the irreversible auth deletion means an unforeseen reference
+  // (a table not listed above) aborts the whole thing with nothing destroyed. The old
+  // order deleted auth first, so a failure here left the person unable to log in while
+  // still showing up in this list.
+  const { error } = await admin.from('users').delete().eq('user_email', email)
+  if (error) return { success: false, message: error.message }
 
   // Deleting the identity also revokes its Tools access
   await admin.from('tool_users').delete().eq('user_email', email)
 
-  const { error } = await admin.from('users').delete().eq('user_email', email)
-  if (error) return { success: false, message: error.message }
+  const { data: authUsers } = await admin.auth.admin.listUsers()
+  const authUser = authUsers?.users.find(u => u.email === email)
+  if (authUser) await admin.auth.admin.deleteUser(authUser.id)
+
   return { success: true }
 }
 

@@ -84,8 +84,18 @@ export default function UsersClient({ users: initialUsers }: Props) {
   const [editToolsRole, setEditToolsRole] = useState('')
   const [editError, setEditError] = useState('')
   const [page, setPage] = useState(1)
-  const currentPage = Math.min(page, Math.max(1, Math.ceil(users.length / PAGE_SIZE)))
-  const pageItems = users.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
+  // People who have attendance or payroll history can't be deleted — the database
+  // won't drop a users row those records point at, and we don't want to lose them
+  // (see deleteUser in ./actions). Deactivating is the real "remove this person"
+  // action, so deactivated accounts drop out of this list instead of lingering as
+  // undeletable rows. They're one click away via the toggle below.
+  const [showArchived, setShowArchived] = useState(false)
+  const archivedCount = users.filter(u => !u.is_active).length
+  const visibleUsers = showArchived ? users : users.filter(u => u.is_active)
+
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(visibleUsers.length / PAGE_SIZE)))
+  const pageItems = visibleUsers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   // New user form
   const [name, setName] = useState('')
@@ -116,7 +126,7 @@ export default function UsersClient({ users: initialUsers }: Props) {
       setError(result.message)
     } else {
       setUsers(prev => [...prev, { user_email: email, name, role, is_active: true, tools_role: toolsRole || null }])
-      setPage(prev => Math.ceil((users.length + 1) / PAGE_SIZE))
+      setPage(() => Math.ceil((visibleUsers.length + 1) / PAGE_SIZE))
       setSuccess(`User ${name} created successfully.`)
       resetForm()
       setShowForm(false)
@@ -189,11 +199,30 @@ export default function UsersClient({ users: initialUsers }: Props) {
     if (!confirm(`Delete user ${u.name} (${u.user_email})? This cannot be undone.`)) return
     setActingOn(u.user_email)
     const result = await deleteUser(u.user_email)
-    if (!result.success) {
-      alert(result.message)
-    } else {
+    if (result.success) {
       setUsers(prev => prev.filter(x => x.user_email !== u.user_email))
       setSuccess(`User ${u.name} deleted.`)
+      setActingOn(null)
+      return
+    }
+
+    // Anyone with attendance or payroll records can never be deleted — offer the
+    // action that actually retires them, instead of leaving the admin to click a
+    // button that can't succeed.
+    if (result.blockedByHistory && confirm(
+      `${result.message}\n\nDeactivate ${u.name} instead? They'll be unable to log in anywhere and will `
+      + `drop off this list, while their records stay intact. You can undo this at any time via `
+      + `"Show deactivated".`
+    )) {
+      const deactivated = await toggleUserActive(u.user_email, false)
+      if (!deactivated.success) {
+        alert(deactivated.message)
+      } else {
+        setUsers(prev => prev.map(x => x.user_email === u.user_email ? { ...x, is_active: false } : x))
+        setSuccess(`${u.name} deactivated and removed from the active list. Their records are unchanged.`)
+      }
+    } else if (!result.blockedByHistory) {
+      alert(result.message)
     }
     setActingOn(null)
   }
@@ -218,7 +247,19 @@ export default function UsersClient({ users: initialUsers }: Props) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
           <h1 style={{ color: '#7A1828', fontSize: '1.4rem', fontWeight: 700 }}>User Management</h1>
-          <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>{users.length} registered user(s)</p>
+          <p style={{ color: '#777', fontSize: '0.8rem', marginTop: 2 }}>
+            {visibleUsers.length} active user(s)
+            {archivedCount > 0 && (
+              <>
+                {' · '}
+                <button
+                  onClick={() => { setShowArchived(v => !v); setPage(1) }}
+                  style={{ background: 'none', border: 'none', padding: 0, color: '#7A1828', fontSize: '0.8rem', fontWeight: 700, textDecoration: 'underline', cursor: 'pointer' }}>
+                  {showArchived ? 'Hide' : 'Show'} {archivedCount} deactivated
+                </button>
+              </>
+            )}
+          </p>
         </div>
         <button onClick={() => { resetForm(); setShowForm(true) }} className="pf-btn">
           <IconUserPlus />New User
@@ -310,7 +351,7 @@ export default function UsersClient({ users: initialUsers }: Props) {
         </table>
       </div>
 
-      <Pagination page={currentPage} totalItems={users.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+      <Pagination page={currentPage} totalItems={visibleUsers.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       {maxScrollX > 0 && (
         <input
