@@ -570,6 +570,12 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
   const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0)
   const totalSales = jobOrders.reduce((s, j) => s + (j.grand_total || 0), 0)
 
+  // Job orders received this day that still have a balance due — same "Collectibles" concept
+  // as HistoryRow below, just computed straight from the jobOrders prop instead of a separate
+  // fetch, since this view already has the full list for whichever date is selected.
+  const unpaidJobOrders = jobOrders.filter(j => (j.balance_due || 0) > 0)
+  const totalCollectible = unpaidJobOrders.reduce((s, j) => s + (j.balance_due || 0), 0)
+
   // Initial Fund inherits the most recent prior day's Next Day Fund — not necessarily
   // "yesterday", since Sundays/holidays are skipped irregularly.
   const inheritedFund = summary?.initial_fund ?? (previousSummary?.next_day_fund ?? 0)
@@ -923,6 +929,67 @@ export default function SalesSummaryClient({ payments, expenses: initExpenses, j
           ))}
         </div>
       )}
+
+      {/* Non-cash collections, broken out by JO/client per transaction — Collections by Method
+          above only totals per method; this is the same detail HistoryRow shows for past days. */}
+      {Object.keys(byMethod).filter(m => m !== 'Cash').length > 0 && (
+        <div style={{ background: '#FDF5EC', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem', border: '1px solid #EDE0CC' }}>
+          <div style={{ color: '#666', fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.75rem' }}>Non-Cash Collections</div>
+          {[...PAY_METHODS.filter(m => m !== 'Cash' && byMethod[m]), ...Object.keys(byMethod).filter(m => m !== 'Cash' && !PAY_METHODS.includes(m))].map(method => (
+            <div key={method} style={{ marginBottom: 8 }}>
+              <div style={{ color: '#999', fontSize: '0.72rem', marginBottom: 2 }}>{method}</div>
+              {payments.filter(p => p.payment_method === method).map(p => {
+                const clientName = p.job_orders?.clients?.client_name || p.job_orders?.clients?.company_name || p.job_order_id
+                return (
+                  <div key={p.payment_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', padding: '0.25rem 0' }}>
+                    <div>
+                      <span style={{ color: '#1a1a1a' }}>{p.job_order_id}</span>
+                      <span style={{ color: '#1a1a1a', marginLeft: 8 }}>{clientName}</span>
+                    </div>
+                    <span style={{ color: '#1a1a1a', fontWeight: 600 }}>{formatPeso(p.amount)}</span>
+                  </div>
+                )
+              })}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', padding: '0.2rem 0', borderTop: '1px solid #e5e5e5', marginTop: 2 }}>
+                <span style={{ color: '#999' }}>{method} Subtotal</span>
+                <span style={{ color: '#1a1a1a', fontWeight: 700 }}>{formatPeso(byMethod[method])}</span>
+              </div>
+            </div>
+          ))}
+          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, fontWeight: 700, fontSize: '0.82rem' }}>
+            <span style={{ color: '#666' }}>Non-Cash Payments Total</span>
+            <span style={{ color: '#1a1a1a' }}>{formatPeso(totalOnline)}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Collectibles — job orders received this day that still have a balance due. */}
+      <div style={{ background: '#FDF5EC', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem', border: '1px solid #EDE0CC' }}>
+        <div style={{ color: '#666', fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.75rem' }}>Collectibles — Unpaid Job Orders ({unpaidJobOrders.length})</div>
+        {unpaidJobOrders.length === 0 ? (
+          <div style={{ color: '#aaa', fontSize: '0.8rem' }}>Every job order received{isToday ? ' today' : ' this day'} is fully paid.</div>
+        ) : (
+          <>
+            {unpaidJobOrders.map(j => {
+              const clientName = j.clients?.client_name || j.clients?.company_name || j.job_order_id
+              return (
+                <div key={j.job_order_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', padding: '0.35rem 0', borderBottom: '1px solid #e5e5e5' }}>
+                  <div>
+                    <span style={{ color: '#1a1a1a' }}>{j.job_order_id}</span>
+                    <span style={{ color: '#1a1a1a', marginLeft: 8 }}>{clientName}</span>
+                    <span style={{ color: '#999', marginLeft: 8 }}>{j.payment_status}</span>
+                  </div>
+                  <span style={{ color: '#e74c3c', fontWeight: 700 }}>{formatPeso(j.balance_due)}</span>
+                </div>
+              )
+            })}
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 6, fontWeight: 700, fontSize: '0.82rem' }}>
+              <span style={{ color: '#666' }}>Total Collectible</span>
+              <span style={{ color: '#e74c3c' }}>{formatPeso(totalCollectible)}</span>
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Payment log */}
       {payments.length > 0 && (
