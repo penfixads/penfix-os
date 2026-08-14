@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { formatPeso, getPhilippineDayOfWeek } from '@/lib/jo-helpers'
+import { formatPeso, getPhilippineDayOfWeek, getPhilippineDayBoundsUTC } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import { IconPlus, IconX, IconCheck, IconEdit } from '@/components/icons'
 import Pagination from '@/components/Pagination'
@@ -122,6 +122,7 @@ function HistoryRow({ row, currentUser }: { row: any; currentUser: AppUser }) {
   const [expanded, setExpanded] = useState(false)
   const [rowExpenses, setRowExpenses] = useState<any[] | null>(null)
   const [rowPayments, setRowPayments] = useState<any[] | null>(null)
+  const [rowJobOrders, setRowJobOrders] = useState<any[] | null>(null)
   const [cashOnHand, setCashOnHand] = useState(row.cash_on_hand != null ? String(row.cash_on_hand) : '')
   const [remittedCash, setRemittedCash] = useState(row.remitted_cash != null ? String(row.remitted_cash) : '')
   const [remark, setRemark] = useState(row.remark || '')
@@ -141,6 +142,18 @@ function HistoryRow({ row, currentUser }: { row: any; currentUser: AppUser }) {
   // Falls back to the stored figure until the row is expanded and its payments/expenses load.
   const liveCashTotal = rowPayments ? rowPayments.filter(p => p.payment_method === 'Cash').reduce((s, p) => s + (p.amount || 0), 0) : null
   const liveExpensesTotal = rowExpenses ? rowExpenses.reduce((s, e) => s + (e.amount || 0), 0) : null
+  // Non-cash methods (G-Cash, Maya, bank transfer, cheque, ...) grouped the same way the
+  // "today" view's Collections by Method card does, so a past day can be broken down the
+  // same way without waiting for it to become "today" again.
+  const rowByMethod: Record<string, number> = {}
+  if (rowPayments) {
+    for (const p of rowPayments) rowByMethod[p.payment_method] = (rowByMethod[p.payment_method] || 0) + (p.amount || 0)
+  }
+  // Job orders received this day that still have a balance due — the flip side of "Paid Job
+  // Orders" below, which only shows payments actually collected on this date and can miss
+  // orders received today but not yet (fully) paid.
+  const unpaidJobOrders = rowJobOrders ? rowJobOrders.filter(j => (j.balance_due || 0) > 0) : null
+  const totalCollectible = unpaidJobOrders ? unpaidJobOrders.reduce((s, j) => s + (j.balance_due || 0), 0) : 0
   const expectedCashOnHand = liveCashTotal !== null && liveExpensesTotal !== null
     ? (saved.initial_fund || 0) + liveCashTotal - liveExpensesTotal
     : (saved.expected_cash_on_hand || 0)
@@ -165,6 +178,17 @@ function HistoryRow({ row, currentUser }: { row: any; currentUser: AppUser }) {
         .eq('payment_date', row.date)
         .order('created_at', { ascending: false })
       setRowPayments(data || [])
+    }
+    if (next && rowJobOrders === null) {
+      const supabase = createSupabaseBrowserClient()
+      const { startUTC, endUTC } = getPhilippineDayBoundsUTC(row.date)
+      const { data } = await supabase
+        .from('job_orders')
+        .select(`job_order_id, grand_total, balance_due, payment_status, clients(client_name, company_name)`)
+        .gte('date_time_received', startUTC)
+        .lte('date_time_received', endUTC)
+        .order('date_time_received', { ascending: false })
+      setRowJobOrders(data || [])
     }
   }
 
@@ -365,6 +389,65 @@ function HistoryRow({ row, currentUser }: { row: any; currentUser: AppUser }) {
                   <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 6, fontWeight: 700, fontSize: '0.78rem' }}>
                     <span style={{ color: '#666' }}>Cash Payments Total</span>
                     <span style={{ color: '#1a1a1a' }}>{formatPeso(rowPayments.filter(p => p.payment_method === 'Cash').reduce((s, p) => s + (p.amount || 0), 0))}</span>
+                  </div>
+                  {Object.keys(rowByMethod).filter(m => m !== 'Cash').length > 0 && (
+                    <div style={{ marginTop: 10 }}>
+                      <div style={{ color: '#666', fontWeight: 700, fontSize: '0.75rem', marginBottom: 4 }}>Non-Cash Collections</div>
+                      {[...PAY_METHODS.filter(m => m !== 'Cash' && rowByMethod[m]), ...Object.keys(rowByMethod).filter(m => m !== 'Cash' && !PAY_METHODS.includes(m))].map(method => (
+                        <div key={method} style={{ marginBottom: 6 }}>
+                          <div style={{ color: '#999', fontSize: '0.7rem', marginTop: 4 }}>{method}</div>
+                          {rowPayments.filter(p => p.payment_method === method).map(p => {
+                            const clientName = p.job_orders?.clients?.client_name || p.job_orders?.clients?.company_name || p.job_order_id
+                            return (
+                              <div key={p.payment_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', padding: '0.2rem 0' }}>
+                                <div>
+                                  <span style={{ color: '#1a1a1a' }}>{p.job_order_id}</span>
+                                  <span style={{ color: '#1a1a1a', marginLeft: 8 }}>{clientName}</span>
+                                </div>
+                                <span style={{ color: '#1a1a1a', fontWeight: 600 }}>{formatPeso(p.amount)}</span>
+                              </div>
+                            )
+                          })}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', padding: '0.15rem 0', borderTop: '1px solid #e5e5e5', marginTop: 2 }}>
+                            <span style={{ color: '#999' }}>{method} Subtotal</span>
+                            <span style={{ color: '#1a1a1a', fontWeight: 700 }}>{formatPeso(rowByMethod[method])}</span>
+                          </div>
+                        </div>
+                      ))}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 4, fontWeight: 700, fontSize: '0.78rem' }}>
+                        <span style={{ color: '#666' }}>Non-Cash Payments Total</span>
+                        <span style={{ color: '#1a1a1a' }}>{formatPeso(Object.entries(rowByMethod).filter(([m]) => m !== 'Cash').reduce((s, [, v]) => s + v, 0))}</span>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {rowJobOrders !== null && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ color: '#666', fontWeight: 700, fontSize: '0.75rem', marginBottom: 6 }}>Collectibles — Unpaid Job Orders ({unpaidJobOrders?.length || 0})</div>
+              {!unpaidJobOrders || unpaidJobOrders.length === 0 ? (
+                <div style={{ color: '#aaa', fontSize: '0.75rem' }}>Every job order received this day is fully paid.</div>
+              ) : (
+                <>
+                  {unpaidJobOrders.map(j => {
+                    const clientName = j.clients?.client_name || j.clients?.company_name || j.job_order_id
+                    return (
+                      <div key={j.job_order_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', padding: '0.3rem 0', borderBottom: '1px solid #e5e5e5' }}>
+                        <div>
+                          <span style={{ color: '#1a1a1a' }}>{j.job_order_id}</span>
+                          <span style={{ color: '#1a1a1a', marginLeft: 8 }}>{clientName}</span>
+                          <span style={{ color: '#999', marginLeft: 8 }}>{j.payment_status}</span>
+                        </div>
+                        <span style={{ color: '#e74c3c', fontWeight: 700 }}>{formatPeso(j.balance_due)}</span>
+                      </div>
+                    )
+                  })}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 6, fontWeight: 700, fontSize: '0.78rem' }}>
+                    <span style={{ color: '#666' }}>Total Collectible</span>
+                    <span style={{ color: '#e74c3c' }}>{formatPeso(totalCollectible)}</span>
                   </div>
                 </>
               )}
