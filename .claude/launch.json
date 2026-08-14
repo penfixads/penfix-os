@@ -24,6 +24,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "C:\\PENFIX~1\\hr", "run", "dev", "--", "-p", "3003", "--webpack"],
       "port": 3003
+    },
+    {
+      "name": "penfix-attendance",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "C:\\PENFIX~1\\attendance", "run", "dev", "--", "-p", "3004", "--webpack"],
+      "port": 3004
     }
   ]
 }
