@@ -24,6 +24,11 @@ export default async function DashboardPage() {
   const nextMonthDate = new Date(`${monthStartStr}T12:00:00+08:00`)
   nextMonthDate.setUTCMonth(nextMonthDate.getUTCMonth() + 1)
   const nextMonthStartStr = getPhilippineDateStr(nextMonthDate)
+  // Trailing 30-day sales — used as the AR Days denominator instead of MTD sales, which
+  // would swing wildly (and spike AR Days) in the first few days of a new month.
+  const last30StartDate = new Date(`${today}T12:00:00+08:00`)
+  last30StartDate.setUTCDate(last30StartDate.getUTCDate() - 29)
+  const { startUTC: last30StartUTC } = getPhilippineDayBoundsUTC(getPhilippineDateStr(last30StartDate))
 
   const [
     { count: todayJOCount },
@@ -38,6 +43,9 @@ export default async function DashboardPage() {
     { data: monthExpenses },
     { data: monthPurchases },
     { data: monthSupplierDeliveries },
+    { data: monthPayments },
+    { data: last30JOs },
+    { data: openAR },
   ] = await Promise.all([
     supabase
       .from('job_orders')
@@ -94,6 +102,20 @@ export default async function DashboardPage() {
     supabase.from('expenses').select('amount').gte('expense_date', monthStartStr).lt('expense_date', nextMonthStartStr),
     supabase.from('purchases').select('total_amount').gte('purchase_date', monthStartStr).lt('purchase_date', nextMonthStartStr),
     supabase.from('supplier_deliveries').select('total_amount').gte('billing_month', monthStartStr).lt('billing_month', nextMonthStartStr),
+    // Month-to-date collections (cash actually received) — separate from Gross Sales, which
+    // counts JOs regardless of payment status, so Net Cash Flow (Collections − Expenses) reads
+    // differently from Net Sales (Gross Sales − Expenses) when clients carry a balance.
+    supabase.from('payments').select('amount').gte('payment_date', monthStartStr).lt('payment_date', nextMonthStartStr),
+    // Trailing 30-day sales for the AR Days denominator.
+    supabase
+      .from('job_orders')
+      .select('grand_total')
+      .neq('job_status', 'Cancelled')
+      .gte('date_time_received', last30StartUTC)
+      .lte('date_time_received', todayEndUTC),
+    // Every JO still carrying a balance, regardless of when it was received — Accounts
+    // Receivable is a point-in-time snapshot, not scoped to the current month.
+    supabase.from('job_orders').select('balance_due').neq('job_status', 'Cancelled').gt('balance_due', 0),
   ])
 
   const subcategoryIds = Array.from(
@@ -119,6 +141,16 @@ export default async function DashboardPage() {
   const yesterdayExpensesTotal = (yesterdayExpenses || []).reduce((sum, e) => sum + (e.amount || 0), 0)
   const yesterdayCollection = (yesterdayPayments || []).reduce((sum, p) => sum + (p.amount || 0), 0)
 
+  const netProfitMarginMTD = grossSalesMTD > 0 ? (netSalesMTD / grossSalesMTD) * 100 : null
+
+  const collectionsMTD = (monthPayments || []).reduce((sum, p) => sum + (p.amount || 0), 0)
+  const netCashFlowMTD = collectionsMTD - expensesMTD
+
+  const totalAR = (openAR || []).reduce((sum, jo) => sum + (jo.balance_due || 0), 0)
+  const last30Sales = (last30JOs || []).reduce((sum, jo) => sum + (jo.grand_total || 0), 0)
+  const avgDailySales30 = last30Sales / 30
+  const arDays = avgDailySales30 > 0 ? totalAR / avgDailySales30 : null
+
   return (
     <DashboardClient
       userName={user.name}
@@ -132,6 +164,10 @@ export default async function DashboardPage() {
       yesterdaySales={yesterdaySales}
       yesterdayExpenses={yesterdayExpensesTotal}
       yesterdayCollection={yesterdayCollection}
+      netProfitMarginMTD={netProfitMarginMTD}
+      netCashFlowMTD={netCashFlowMTD}
+      totalAR={totalAR}
+      arDays={arDays}
       statusLog={statusLog || []}
       recentJOs={recentJOs || []}
       recentPayments={recentPayments || []}

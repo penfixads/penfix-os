@@ -31,6 +31,10 @@ interface Props {
   yesterdaySales: number
   yesterdayExpenses: number
   yesterdayCollection: number
+  netProfitMarginMTD: number | null
+  netCashFlowMTD: number
+  totalAR: number
+  arDays: number | null
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   statusLog: any[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -83,6 +87,7 @@ function StatCard({ label, value, sub, href, valueColor }: { label: string; valu
 export default function DashboardClient({
   userName, today, todayJOCount, activeJOs, sopBySubcategory,
   grossSalesMTD, expensesMTD, netSalesMTD, yesterdaySales, yesterdayExpenses, yesterdayCollection,
+  netProfitMarginMTD, netCashFlowMTD, totalAR, arDays,
   statusLog, recentJOs, recentPayments,
 }: Props) {
   const firstName = userName.split(' ')[0]
@@ -185,6 +190,30 @@ export default function DashboardClient({
         <StatCard label="Gross Sales (MTD)" value={formatPeso(grossSalesMTD)} href="/sales/reports" />
         <StatCard label="Expenses (MTD)" value={formatPeso(expensesMTD)} href="/sales/reports" valueColor="#e74c3c" />
         <StatCard label="Net Sales (MTD)" value={formatPeso(netSalesMTD)} href="/sales/reports" valueColor={netSalesMTD >= 0 ? '#2ecc71' : '#e74c3c'} />
+      </div>
+
+      {/* KPIs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+        <StatCard
+          label="Net Profit Margin (MTD)"
+          value={netProfitMarginMTD === null ? '—' : `${netProfitMarginMTD.toFixed(1)}%`}
+          sub="Net Sales ÷ Gross Sales"
+          href="/sales/reports"
+          valueColor={netProfitMarginMTD === null ? undefined : netProfitMarginMTD >= 0 ? '#2ecc71' : '#e74c3c'}
+        />
+        <StatCard
+          label="Net Cash Flow (MTD)"
+          value={formatPeso(netCashFlowMTD)}
+          sub="Collections − Expenses"
+          href="/sales/reports"
+          valueColor={netCashFlowMTD >= 0 ? '#2ecc71' : '#e74c3c'}
+        />
+        <StatCard
+          label="Accounts Receivable Days"
+          value={arDays === null ? '—' : `${Math.round(arDays)} days`}
+          sub={`${formatPeso(totalAR)} outstanding`}
+          href="/jos/all"
+        />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) minmax(320px, 1.4fr)', gap: '1rem' }}>
