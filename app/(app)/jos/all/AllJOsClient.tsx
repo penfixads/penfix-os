@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import { useState } from 'react'
-import { formatPeso, buildFeedbackUrl, getPhilippineDateStr, fuzzyMatch } from '@/lib/jo-helpers'
+import { formatPeso, buildFeedbackUrl, generateFeedbackToken, getPhilippineDateStr, fuzzyMatch } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import Pagination from '@/components/Pagination'
@@ -104,12 +104,29 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, categories, 
     setJobOrders(prev => prev.map(j => j.job_order_id === joId ? { ...j, feedback_requested_at: new Date().toISOString() } : j))
   }
 
-  async function copyFeedbackLink(joId: string, clientName: string) {
-    const url = buildFeedbackUrl(window.location.origin, joId, clientName)
-    navigator.clipboard.writeText(url)
+  // Reuses jo.feedback_token if one's already on the row instead of minting a new one every
+  // click — a link already sent to the client shouldn't go dead just because it's copied again.
+  async function copyFeedbackLink(jo: any) {
+    const joId = jo.job_order_id
     const supabase = createSupabaseBrowserClient()
-    await supabase.from('job_orders').update({ feedback_requested_at: new Date().toISOString() }).eq('job_order_id', joId)
-    markFeedbackRequested(joId)
+    const updates: Record<string, string> = {}
+    if (!jo.feedback_token) updates.feedback_token = generateFeedbackToken()
+    if (!jo.feedback_requested_at) updates.feedback_requested_at = new Date().toISOString()
+
+    let token = jo.feedback_token
+    if (Object.keys(updates).length > 0) {
+      const { data, error } = await supabase
+        .from('job_orders')
+        .update(updates)
+        .eq('job_order_id', joId)
+        .select('feedback_token, feedback_requested_at')
+        .single()
+      if (error) { alert(error.message || 'Failed to prepare the feedback link.'); return }
+      token = data.feedback_token
+      markFeedbackRequested(joId)
+    }
+    const url = buildFeedbackUrl(window.location.origin, token)
+    navigator.clipboard.writeText(url)
     alert('Feedback link copied — paste it into Messenger, Viber, or wherever the client prefers.')
   }
 
@@ -174,7 +191,7 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, categories, 
                       {allDone && <span style={{ background: '#1a4a1a', color: '#2ecc71', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>DONE</span>}
                       {allDone && !jo.feedback_requested_at && (
                         <button
-                          onClick={() => copyFeedbackLink(jo.job_order_id, clientName)}
+                          onClick={() => copyFeedbackLink(jo)}
                           title="Copy the feedback link to paste into Messenger, Viber, etc."
                           style={{ background: '#4a3a1a', color: '#f39c12', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700, border: 'none', cursor: 'pointer' }}
                         >
@@ -215,7 +232,7 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, categories, 
                   </button>
                   {allDone && (
                     <button
-                      onClick={() => copyFeedbackLink(jo.job_order_id, clientName)}
+                      onClick={() => copyFeedbackLink(jo)}
                       title="Send feedback link to be pasted on social media platform"
                       style={{ background: '#f0f0f0', border: '1px solid #d0d0d0', color: '#666', borderRadius: 7, padding: '0.35rem 0.6rem', cursor: 'pointer', fontSize: '0.72rem', flexShrink: 0 }}
                     >
@@ -237,7 +254,7 @@ export default function AllJOsClient({ jobOrders: initialJobOrders, categories, 
                             <span style={{ color: '#999', fontWeight: 400, marginLeft: 6 }}>· Qty {item.quantity || 1} · currently {item.job_status}</span>
                             {allDone && !jo.feedback_requested_at && (
                               <button
-                                onClick={() => copyFeedbackLink(jo.job_order_id, clientName)}
+                                onClick={() => copyFeedbackLink(jo)}
                                 title="Copy the feedback link to paste into Messenger, Viber, etc."
                                 style={{ background: 'none', border: 'none', color: '#e74c3c', fontWeight: 700, fontSize: '0.72rem', marginLeft: 8, cursor: 'pointer', padding: 0 }}
                               >

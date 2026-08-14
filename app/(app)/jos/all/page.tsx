@@ -10,7 +10,7 @@ import AllJOsClient from './AllJOsClient'
 const JOB_ORDERS_SELECT = `
   job_order_id, client_id, date_time_received, received_by, payment_status, source_channel, public_token,
   grand_total, total_amount_paid, balance_due, discount, is_for_billing, request_override, override_status,
-  job_status, feedback_requested_at,
+  job_status, feedback_requested_at, feedback_token,
   clients(client_name, company_name, contact_number),
   job_order_items(
     item_id, job_status, quantity,

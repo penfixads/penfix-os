@@ -101,7 +101,7 @@ export default async function FeedbackQueuePage({
   const rowsQuery = applySearch(
     applyBucket(
       baseQuery(`
-        job_order_id, feedback_requested_at, date_time_received, received_by, client_id,
+        job_order_id, feedback_requested_at, feedback_token, date_time_received, received_by, client_id,
         clients(client_name, company_name, contact_number),
         job_order_items(subcategories(categories(category_name)))
       `),

@@ -88,15 +88,13 @@ export function generateFeedbackToken(): string {
   return Array.from({ length: 12 }, () => Math.floor(Math.random() * 36).toString(36)).join('')
 }
 
-// `service` prefills the form's "Service Availed" field — the client shouldn't have to tell
-// us something we already have on file, and it was a required dropdown standing between them
-// and the star rating. Passed through the URL rather than looked up on the form, since the
-// form runs unauthenticated (anon key) and can't read job_orders.
-export function buildFeedbackUrl(origin: string, jobOrderId: string, clientName: string, service?: string | null): string {
-  const token = generateFeedbackToken()
-  const params = new URLSearchParams({ jo: jobOrderId, name: clientName })
-  if (service) params.set('svc', service)
-  return `${origin}/feedback/${token}?${params.toString()}`
+// The JO id, client name, and service used to be passed as URL query params since there was
+// nothing to look them up by — that made the link long and put the client's name in plain
+// text in a link forwarded through Messenger/Viber. Now the token itself (persisted on the JO
+// by the caller — see FeedbackQueueClient.copyLink) is the only thing the link carries; the
+// feedback page looks up everything else server-side via job_orders.feedback_token.
+export function buildFeedbackUrl(origin: string, token: string): string {
+  return `${origin}/feedback/${token}`
 }
 
 // The message staff paste into Messenger/Viber. A single clean link reads as legitimate —

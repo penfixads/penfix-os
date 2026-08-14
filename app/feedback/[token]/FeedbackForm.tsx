@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { useParams, useSearchParams } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import { IconSend } from '@/components/icons'
 
@@ -49,22 +48,20 @@ const CARD: React.CSSProperties = {
   padding: '2rem 1.75rem 2.5rem',
 }
 
-export default function FeedbackForm() {
-  const params = useParams()
-  const searchParams = useSearchParams()
-  const token = params.token as string
-  const jo = searchParams.get('jo') ?? ''
-  const name = searchParams.get('name') ?? ''
-  // Prefilled by buildFeedbackUrl from the JO's own category — when it matches a known
-  // service the field becomes read-only, so the client never has to answer it.
-  const prefilledService = searchParams.get('svc') ?? ''
-  const serviceIsKnown = SERVICES.includes(prefilledService)
-  // Set when the client taps one of the star links in the pasted message (buildFeedbackMessage),
-  // so they arrive with the required question already answered. Still editable here.
-  const prefilledRating = Number(searchParams.get('r'))
+interface Props {
+  token: string
+  jobOrderId: string
+  clientName: string
+  service: string | null
+}
 
-  const [service, setService] = useState(serviceIsKnown ? prefilledService : '')
-  const [rating, setRating] = useState(prefilledRating >= 1 && prefilledRating <= 5 ? prefilledRating : 0)
+export default function FeedbackForm({ token, jobOrderId: jo, clientName: name, service: prefilledService }: Props) {
+  // Looked up server-side (app/feedback/[token]/page.tsx) from the JO's own category — when it
+  // matches a known service the field becomes read-only, so the client never has to answer it.
+  const serviceIsKnown = !!prefilledService && SERVICES.includes(prefilledService)
+
+  const [service, setService] = useState(serviceIsKnown ? (prefilledService as string) : '')
+  const [rating, setRating] = useState(0)
   const [hovered, setHovered] = useState(0)
   const [bestAreas, setBestAreas] = useState<string[]>([])
   const [improveAreas, setImproveAreas] = useState<string[]>([])

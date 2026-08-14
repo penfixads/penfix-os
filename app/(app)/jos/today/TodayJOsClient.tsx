@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { generateItemId, formatPeso, buildFeedbackUrl } from '@/lib/jo-helpers'
+import { generateItemId, formatPeso, buildFeedbackUrl, generateFeedbackToken } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from './JOItemForm'
 import NewJOModal from '@/components/NewJOModal'
@@ -92,11 +92,30 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients, categor
     }
   }
 
-  async function copyFeedbackLink(joId: string, clientName: string) {
-    const url = buildFeedbackUrl(window.location.origin, joId, clientName)
-    navigator.clipboard.writeText(url)
+  // Reuses jo.feedback_token if one's already on the row (e.g. requested once before) instead
+  // of minting a new one every click — a link already sent to the client shouldn't go dead
+  // just because someone copies it again.
+  async function copyFeedbackLink(jo: any) {
     const supabase = createSupabaseBrowserClient()
-    await supabase.from('job_orders').update({ feedback_requested_at: new Date().toISOString() }).eq('job_order_id', joId)
+    const updates: Record<string, string> = {}
+    if (!jo.feedback_token) updates.feedback_token = generateFeedbackToken()
+    if (!jo.feedback_requested_at) updates.feedback_requested_at = new Date().toISOString()
+
+    let token = jo.feedback_token
+    if (Object.keys(updates).length > 0) {
+      const { data, error } = await supabase
+        .from('job_orders')
+        .update(updates)
+        .eq('job_order_id', jo.job_order_id)
+        .select('feedback_token, feedback_requested_at')
+        .single()
+      if (error) { alert(error.message || 'Failed to prepare the feedback link.'); return }
+      token = data.feedback_token
+      jo.feedback_token = data.feedback_token
+      jo.feedback_requested_at = data.feedback_requested_at
+    }
+    const url = buildFeedbackUrl(window.location.origin, token)
+    navigator.clipboard.writeText(url)
     alert('Feedback link copied — paste it into Messenger, Viber, SMS, or wherever the client prefers.')
   }
 
@@ -166,7 +185,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients, categor
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
                       </button>
                       {isDone && (
-                        <button title="Send feedback link to be pasted on social media platform" onClick={() => copyFeedbackLink(jo.job_order_id, clientName)}
+                        <button title="Send feedback link to be pasted on social media platform" onClick={() => copyFeedbackLink(jo)}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c9a84c', padding: 2, display: 'flex', alignItems: 'center' }}>
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                         </button>

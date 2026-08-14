@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { buildFeedbackUrl, buildFeedbackMessage } from '@/lib/jo-helpers'
+import { buildFeedbackUrl, buildFeedbackMessage, generateFeedbackToken } from '@/lib/jo-helpers'
 import Pagination from '@/components/Pagination'
 import { type Bucket, PAGE_SIZE, NO_RESPONSE_AFTER_DAYS, BUCKET_LABELS } from './constants'
 
@@ -29,9 +29,9 @@ function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-// The service the client bought, for prefilling the form's "Service Availed". A JO can span
-// several categories; the first is close enough for a prefill the client can't change, and
-// beats making them pick from eleven options themselves.
+// Shown as a badge on each row only — the feedback link itself no longer carries this (the
+// form resolves it server-side from job_orders.feedback_token, see app/feedback/[token]/page.tsx).
+// A JO can span several categories; the first is close enough for a badge and beats showing all.
 function primaryService(jo: any): string | null {
   for (const item of jo.job_order_items || []) {
     const sub = Array.isArray(item.subcategories) ? item.subcategories[0] : item.subcategories
@@ -86,24 +86,40 @@ export default function FeedbackQueueClient({ jobOrders, counts, bucket, page, t
   }, [router])
 
   // `withMessage` copies the full personalized Messenger/Viber text rather than the bare URL.
-  // Only the FIRST send stamps feedback_requested_at — a re-copy while chasing a
-  // client must not reset the clock, or a JO could never age into No response.
+  // The token is generated once and reused on every re-copy (persisted on the JO) — a client
+  // who still has an earlier copy of the link in their chat history shouldn't have it go dead
+  // just because staff copied it again while chasing a reply. Only the FIRST send stamps
+  // feedback_requested_at — a re-copy while chasing a client must not reset the clock, or a
+  // JO could never age into No response.
   async function copyLink(jo: any, withMessage: boolean) {
     const joId = jo.job_order_id
     const clientName = clientNameOf(jo)
     setCopying(joId)
     try {
-      const url = buildFeedbackUrl(window.location.origin, joId, clientName, primaryService(jo))
+      const supabase = createSupabaseBrowserClient()
+      const isFirstSend = !jo.feedback_requested_at
+      const updates: Record<string, string> = {}
+      if (!jo.feedback_token) updates.feedback_token = generateFeedbackToken()
+      if (isFirstSend) updates.feedback_requested_at = new Date().toISOString()
+
+      let token = jo.feedback_token
+      if (Object.keys(updates).length > 0) {
+        const { data, error } = await supabase
+          .from('job_orders')
+          .update(updates)
+          .eq('job_order_id', joId)
+          .select('feedback_token, feedback_requested_at')
+          .single()
+        if (error) { alert(error.message || 'Failed to prepare the feedback link.'); return }
+        token = data.feedback_token
+        jo.feedback_token = data.feedback_token
+        jo.feedback_requested_at = data.feedback_requested_at
+      }
+
+      const url = buildFeedbackUrl(window.location.origin, token)
       await navigator.clipboard.writeText(withMessage ? buildFeedbackMessage(url, clientName) : url)
 
-      if (!jo.feedback_requested_at) {
-        const requestedAt = new Date().toISOString()
-        const supabase = createSupabaseBrowserClient()
-        const { error } = await supabase
-          .from('job_orders')
-          .update({ feedback_requested_at: requestedAt })
-          .eq('job_order_id', joId)
-        if (error) { alert(error.message || 'Copied, but failed to record that feedback was requested.'); return }
+      if (isFirstSend) {
         // The row belongs to another bucket now; drop it here and let the counts re-derive.
         setRows(prev => prev.filter(r => r.job_order_id !== joId))
         router.refresh()
