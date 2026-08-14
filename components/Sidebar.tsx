@@ -14,7 +14,7 @@ interface NavItem {
   roles: UserRole[]
   icon: React.ReactNode
   // Set only on the "how a JO actually flows" group — Received → Active → Production →
-  // Dispatch → Sales Summary — pinned to the top of the sidebar in that order with a
+  // Dispatch → Send Feedback → Sales Summary — pinned to the top of the sidebar in that order with a
   // numbered icon instead of the usual glyph, so the everyday workflow reads top-to-bottom
   // as a sequence rather than an alphabetical/arbitrary list.
   step?: number
@@ -57,8 +57,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: <StepIcon n={4} />, step: 4,
   },
   {
-    label: 'Daily Sales Summary', href: '/sales/summary', roles: ['Admin','Treasury'],
+    label: 'Send Client Feedback', href: '/jos/feedback', roles: ['Admin','GA','Treasury'],
     icon: <StepIcon n={5} />, step: 5,
+  },
+  {
+    label: 'Daily Sales Summary', href: '/sales/summary', roles: ['Admin','Treasury'],
+    icon: <StepIcon n={6} />, step: 6,
   },
   {
     label: 'Pending Approval', href: '/jos/pending-approval', roles: ['Admin'],

@@ -88,9 +88,22 @@ export function generateFeedbackToken(): string {
   return Array.from({ length: 12 }, () => Math.floor(Math.random() * 36).toString(36)).join('')
 }
 
-export function buildFeedbackUrl(origin: string, jobOrderId: string, clientName: string): string {
+// `service` prefills the form's "Service Availed" field — the client shouldn't have to tell
+// us something we already have on file, and it was a required dropdown standing between them
+// and the star rating. Passed through the URL rather than looked up on the form, since the
+// form runs unauthenticated (anon key) and can't read job_orders.
+export function buildFeedbackUrl(origin: string, jobOrderId: string, clientName: string, service?: string | null): string {
   const token = generateFeedbackToken()
-  return `${origin}/feedback/${token}?jo=${encodeURIComponent(jobOrderId)}&name=${encodeURIComponent(clientName)}`
+  const params = new URLSearchParams({ jo: jobOrderId, name: clientName })
+  if (service) params.set('svc', service)
+  return `${origin}/feedback/${token}?${params.toString()}`
+}
+
+// The message staff paste into Messenger/Viber. A single clean link reads as legitimate —
+// five stacked star-rating links (one per `r=N`) looked like a phishing/scam message, so the
+// client rates on the form itself after opening it instead of via the link they tap.
+export function buildFeedbackMessage(feedbackUrl: string, clientName: string): string {
+  return `A brilliant day po, ${clientName}! \n\nThank you so much for trusting Penfix! 💙\n\nQuick feedback lang po—we’d love to know how we did and how we can continue to serve you better. 😊\n\nPlease tap your preferred rating using the link below. ⭐️\n\n${feedbackUrl}\n\n1-3 minutes lang po ito, promise! 😊\n\nThank you po for your time and support. We truly appreciate it! 💙`
 }
 
 // Scanning a client's QR (printed, or shown on their phone from shop.penfixads.com) should

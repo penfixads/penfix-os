@@ -55,9 +55,16 @@ export default function FeedbackForm() {
   const token = params.token as string
   const jo = searchParams.get('jo') ?? ''
   const name = searchParams.get('name') ?? ''
+  // Prefilled by buildFeedbackUrl from the JO's own category — when it matches a known
+  // service the field becomes read-only, so the client never has to answer it.
+  const prefilledService = searchParams.get('svc') ?? ''
+  const serviceIsKnown = SERVICES.includes(prefilledService)
+  // Set when the client taps one of the star links in the pasted message (buildFeedbackMessage),
+  // so they arrive with the required question already answered. Still editable here.
+  const prefilledRating = Number(searchParams.get('r'))
 
-  const [service, setService] = useState('')
-  const [rating, setRating] = useState(0)
+  const [service, setService] = useState(serviceIsKnown ? prefilledService : '')
+  const [rating, setRating] = useState(prefilledRating >= 1 && prefilledRating <= 5 ? prefilledRating : 0)
   const [hovered, setHovered] = useState(0)
   const [bestAreas, setBestAreas] = useState<string[]>([])
   const [improveAreas, setImproveAreas] = useState<string[]>([])
@@ -128,13 +135,9 @@ export default function FeedbackForm() {
             <Field label="Client Name"><input readOnly value={name} className="pf-input" /></Field>
           </div>
 
-          <Field label="Service Availed" style={{ marginBottom: '1.5rem' }}>
-            <select required value={service} onChange={e => setService(e.target.value)} className="pf-select">
-              <option value="">Select a service…</option>
-              {SERVICES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </Field>
-
+          {/* Rating first, deliberately. It's the only required answer, so nothing else should
+              stand between the client and submitting it — the service dropdown used to sit here
+              and cost responses from people who wouldn't work through it. */}
           <div style={{ marginBottom: '1.5rem' }}>
             <label className="pf-label">Overall Rating <span style={{ color: '#c00' }}>*</span></label>
             <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem' }}>
@@ -150,6 +153,19 @@ export default function FeedbackForm() {
               {rating === 1 ? 'Poor' : rating === 2 ? 'Fair' : rating === 3 ? 'Good' : rating === 4 ? 'Very Good' : rating === 5 ? 'Excellent!' : ''}
             </div>
           </div>
+
+          {/* Read-only when the link carried a recognized service — otherwise (a bare link, or a
+              category we don't list) fall back to the original required dropdown. */}
+          <Field label="Service Availed" style={{ marginBottom: '1.5rem' }}>
+            {serviceIsKnown ? (
+              <input readOnly value={service} className="pf-input" />
+            ) : (
+              <select required value={service} onChange={e => setService(e.target.value)} className="pf-select">
+                <option value="">Select a service…</option>
+                {SERVICES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            )}
+          </Field>
 
           <div style={{ marginBottom: '1.5rem' }}>
             <label className="pf-label">What did we do best? <span style={{ color: '#aaa', fontWeight: 400 }}>(optional)</span></label>

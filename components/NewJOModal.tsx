@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { generateJobOrderId, generateItemId, generateClientId, generatePaymentId, formatPeso, getNextJOSequence, buildFeedbackUrl, getPhilippineDateStr, toLocalDateTimeInput, JO_SOURCE_CHANNELS, DOWNPAYMENT_GATE_ENABLED, BELOW_DOWNPAYMENT_OVERRIDE_STATUS } from '@/lib/jo-helpers'
+import { generateJobOrderId, generateItemId, generateClientId, generatePaymentId, formatPeso, getNextJOSequence, getPhilippineDateStr, toLocalDateTimeInput, JO_SOURCE_CHANNELS, DOWNPAYMENT_GATE_ENABLED, BELOW_DOWNPAYMENT_OVERRIDE_STATUS } from '@/lib/jo-helpers'
 import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
 import AddClientModal from '@/app/(app)/jos/today/AddClientModal'
