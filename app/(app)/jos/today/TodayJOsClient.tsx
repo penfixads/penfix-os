@@ -154,7 +154,7 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients, categor
                     <div>
                       <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.9rem' }}>{clientName}</div>
                       <div style={{ color: '#777', fontSize: '0.75rem', marginTop: 2 }}>
-                        {jo.job_order_id} · {jo.job_order_items?.length || 0} item(s)
+                        {jo.job_order_id} · {jo.job_order_items?.length || 0} item(s){jo.received_by && ` · by ${jo.received_by}`}
                       </div>
                       {deadline && (
                         <div style={{ color: '#999', fontSize: '0.73rem' }}>
