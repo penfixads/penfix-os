@@ -163,6 +163,9 @@ export default function TodayJOsClient({ jobOrders: initialJOs, clients, categor
                       )}
                       <div style={{ color: '#2ecc71', fontSize: '0.72rem', marginTop: 2 }}>
                         Earned Rewards: {formatPeso(jo.rewards_balance || 0)}
+                        <span style={{ color: '#999', marginLeft: 8 }} title="Sum of grand_total across this client's completed (Done) job orders, for cross-checking rewards">
+                          · Client Lifetime Total: {formatPeso(jo.client_lifetime_total || 0)}
+                        </span>
                       </div>
                     </div>
                   </div>

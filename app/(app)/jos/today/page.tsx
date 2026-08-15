@@ -1,7 +1,7 @@
 ﻿import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { getCurrentUser } from '@/lib/user'
 import { redirect } from 'next/navigation'
-import { getPhilippineDateStr, getPhilippineDayBoundsUTC } from '@/lib/jo-helpers'
+import { getPhilippineDateStr, getPhilippineDayBoundsUTC, isLifetimeEligible } from '@/lib/jo-helpers'
 import TodayJOsClient from './TodayJOsClient'
 
 export default async function TodayJOsPage({ searchParams }: { searchParams: { client?: string } }) {
@@ -35,9 +35,22 @@ export default async function TodayJOsPage({ searchParams }: { searchParams: { c
     rewardsMap[row.client_id] += row.type === 'earned' ? row.amount : -row.amount
   }
 
+  // Lifetime total (Done + fully paid JOs only) per client, same rule as Active JOs and the
+  // Clients page -- see isLifetimeEligible in lib/jo-helpers.ts for why.
+  const todayClientIds = Array.from(new Set((jobOrders || []).map(jo => jo.client_id).filter(Boolean)))
+  const { data: lifetimeJOs } = todayClientIds.length > 0
+    ? await supabase.from('job_orders').select('client_id, grand_total, job_status, is_fully_paid').in('client_id', todayClientIds)
+    : { data: [] as any[] }
+
+  const lifetimeTotalMap: Record<string, number> = {}
+  for (const row of (lifetimeJOs || []).filter(isLifetimeEligible)) {
+    lifetimeTotalMap[row.client_id] = (lifetimeTotalMap[row.client_id] || 0) + (row.grand_total || 0)
+  }
+
   const jobOrdersWithRewards = (jobOrders || []).map(jo => ({
     ...jo,
     rewards_balance: Math.max(0, rewardsMap[jo.client_id] || 0),
+    client_lifetime_total: lifetimeTotalMap[jo.client_id] || 0,
   }))
 
   return (
