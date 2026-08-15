@@ -17,7 +17,7 @@ export default async function DispatchPage() {
     .select(`
       *,
       job_orders(
-        job_order_id, payment_status, balance_due, grand_total, is_for_billing,
+        job_order_id, payment_status, balance_due, grand_total, is_for_billing, received_by,
         clients(client_name, company_name, contact_number)
       ),
       subcategories(subcategory_name, job_flow)

@@ -159,6 +159,7 @@ export default function DispatchClient({ items, currentUser }: Props) {
                     {item.date_time_received && (
                       <div style={{ color: '#999', fontSize: '0.72rem', marginTop: 1 }}>
                         Received: {new Date(item.date_time_received).toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        {jo?.received_by && ` · by ${jo.received_by}`}
                       </div>
                     )}
                     <div style={{ color: '#999', fontSize: '0.8rem', marginTop: 3 }}>{item.subcategories?.subcategory_name}</div>
