@@ -17,7 +17,7 @@ export default async function MVPPage() {
   since.setUTCDate(since.getUTCDate() - 60)
   const sinceStr = getPhilippineDateStr(since)
 
-  const [{ data: jobOrders }, { data: payments }, { data: feedback }] = await Promise.all([
+  const [{ data: jobOrders }, { data: payments }, { data: feedback }, { data: users }] = await Promise.all([
     // JOs received in the window, grouped by received_by
     supabase
       .from('job_orders')
@@ -33,7 +33,19 @@ export default async function MVPPage() {
       .from('client_feedback')
       .select('id, rating, jo, job_orders!inner(received_by, date_time_received)')
       .gte('job_orders.date_time_received', `${sinceStr}T00:00:00`),
+    // Current roster, to filter out anyone whose account has since been removed from User
+    // Management — received_by/recorded_by are stamped from currentUser.name at the time (see
+    // components/NewJOModal.tsx), so a JO can keep an ex-employee's name attributed to it long
+    // after their account is gone. Without this, the leaderboard can surface someone no longer
+    // on staff. Kept regardless of active/inactive status -- only a fully deleted account drops
+    // off the roster, deactivated staff still show since that's a separate concern.
+    supabase.from('users').select('name'),
   ])
 
-  return <MVPClient jobOrders={jobOrders || []} payments={payments || []} feedback={feedback || []} today={today} />
+  const validNames = new Set((users || []).map(u => u.name))
+  const jobOrdersByKnownStaff = (jobOrders || []).filter(jo => validNames.has(jo.received_by))
+  const paymentsByKnownStaff = (payments || []).filter(p => validNames.has(p.recorded_by))
+  const feedbackByKnownStaff = (feedback || []).filter((f: any) => validNames.has(f.job_orders?.received_by))
+
+  return <MVPClient jobOrders={jobOrdersByKnownStaff} payments={paymentsByKnownStaff} feedback={feedbackByKnownStaff} today={today} />
 }
