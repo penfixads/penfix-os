@@ -3,12 +3,15 @@ export const dynamic = 'force-dynamic'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { getCurrentUser } from '@/lib/user'
 import { redirect } from 'next/navigation'
+import { getPhilippineDayBoundsUTC } from '@/lib/jo-helpers'
 import FeedbackQueueClient from './FeedbackQueueClient'
 import { type Bucket, PAGE_SIZE, NO_RESPONSE_AFTER_DAYS } from './constants'
 
-// Only chase feedback on recent work — a JO finished six months ago isn't worth a follow-up
-// message, and without a window this queue would grow without bound.
-const WINDOW_DAYS = 90
+// Fixed start date rather than a rolling window — the feedback-requesting practice itself
+// only started 2026-07-15, so there's no "recent work" before that worth chasing, and a
+// rolling 90-day window would have kept sliding past it. Move this forward if the shop ever
+// wants to narrow the queue to something more recent than "since the initiative began."
+const FEEDBACK_QUEUE_START_DATE = '2026-07-15'
 
 const BUCKETS: Bucket[] = ['to_send', 'awaiting', 'no_response']
 
@@ -29,7 +32,7 @@ export default async function FeedbackQueuePage({
 
   const supabase = createSupabaseServerClient()
   const now = Date.now()
-  const windowStart = new Date(now - WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString()
+  const { startUTC: windowStart } = getPhilippineDayBoundsUTC(FEEDBACK_QUEUE_START_DATE)
   const noResponseCutoff = new Date(now - NO_RESPONSE_AFTER_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
   // JOs that already came back. Feedback can only be submitted after the JO is done, so
