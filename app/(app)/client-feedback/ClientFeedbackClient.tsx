@@ -19,6 +19,12 @@ interface Props {
   // when the client responds in the next one.
   respondedIds: string[]
   trend: TrendPoint[]
+  // Current User Management roster — used only to keep the GA leaderboard below from surfacing
+  // someone whose account has since been removed (received_by is stamped from currentUser.name
+  // at JO-creation time, so it can outlive the account). Doesn't touch the review feed, overall
+  // average, or area tallies elsewhere on this page — those stay attributed to whoever actually
+  // received the JO regardless of their account status.
+  knownStaffNames: string[]
 }
 
 const MEDALS = ['🥇', '🥈', '🥉']
@@ -95,8 +101,9 @@ function fmtDateTime(iso: string): string {
 }
 
 export default function ClientFeedbackClient({
-  period, periodKey, keyOptions, feedback, periodCount, sentThisPeriod, respondedIds, trend,
+  period, periodKey, keyOptions, feedback, periodCount, sentThisPeriod, respondedIds, trend, knownStaffNames,
 }: Props) {
+  const validStaff = new Set(knownStaffNames)
   const router = useRouter()
   const responded = new Set(respondedIds)
   const label = periodLabel(periodKey, period)
@@ -135,12 +142,14 @@ export default function ClientFeedbackClient({
   }
   for (const f of feedback) {
     const receivedBy = Array.isArray(f.job_orders) ? f.job_orders[0]?.received_by : f.job_orders?.received_by
-    const s = bucket(receivedBy || 'Unassigned')
+    if (!validStaff.has(receivedBy)) continue
+    const s = bucket(receivedBy)
     s.total += f.rating || 0
     s.count += 1
   }
   for (const jo of sentThisPeriod) {
-    const s = bucket(jo.received_by || 'Unassigned')
+    if (!validStaff.has(jo.received_by)) continue
+    const s = bucket(jo.received_by)
     s.sent += 1
     if (responded.has(jo.job_order_id)) s.answered += 1
   }

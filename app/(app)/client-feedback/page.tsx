@@ -27,7 +27,7 @@ export default async function ClientFeedbackPage({
   const { startUTC, endUTC } = periodBoundsUTC(key, period)
   const trendStart = new Date(Date.now() - TREND_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
-  const [{ data: periodFeedback, count: periodCount }, { data: trendRows }, { data: respondedAll }, { data: sentThisPeriod }] =
+  const [{ data: periodFeedback, count: periodCount }, { data: trendRows }, { data: respondedAll }, { data: sentThisPeriod }, { data: users }] =
     await Promise.all([
       // The only query pulling the heavy columns (comments, the two text[] arrays), and it's
       // capped to a single week or month — so this page costs the same in year five as today.
@@ -53,9 +53,19 @@ export default async function ClientFeedbackPage({
         .eq('job_status', 'Done')
         .gte('feedback_requested_at', startUTC)
         .lt('feedback_requested_at', endUTC),
+      // Current roster, to filter the GA leaderboard the same way Daily MVP does — received_by
+      // is stamped from currentUser.name at JO-creation time, so it can keep naming someone
+      // whose account has since been removed from User Management. See app/(app)/mvp/page.tsx
+      // for the same pattern.
+      supabase.from('users').select('name'),
     ])
 
   const respondedIds = Array.from(new Set((respondedAll || []).map(r => r.jo).filter(Boolean))) as string[]
+  // Only for the GA leaderboard ranking below (see ClientFeedbackClient's gaStats) — feedback
+  // and sentThisPeriod themselves stay unfiltered, since a client's review, the overall
+  // average, and the best/improve-area tallies shouldn't disappear just because the GA who
+  // received that JO later had their account removed.
+  const knownStaffNames = Array.from(new Set((users || []).map(u => u.name)))
 
   // Periods that actually have data, newest first, so the picker never offers an empty one.
   const keysWithData = Array.from(new Set((trendRows || []).map(r => periodKeyOf(r.created_at, period)))).sort().reverse()
@@ -76,6 +86,7 @@ export default async function ClientFeedbackPage({
       sentThisPeriod={sentThisPeriod || []}
       respondedIds={respondedIds}
       trend={trend}
+      knownStaffNames={knownStaffNames}
     />
   )
 }
