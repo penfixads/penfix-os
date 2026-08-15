@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { formatPeso, generateClientId } from '@/lib/jo-helpers'
+import { formatPeso, generateClientId, isLifetimeEligible } from '@/lib/jo-helpers'
 import { findLikelyDuplicateClients, type ClientMatch } from '@/lib/client-dedupe'
 import type { AppUser } from '@/lib/user'
 import { IconUserPlus, IconEdit, IconCheck, IconX, IconMerge } from '@/components/icons'
@@ -208,7 +208,11 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
       {/* List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         {pageItems.map(c => {
-          const totalSales = (c.job_orders || []).reduce((s: number, j: any) => s + (j.grand_total || 0), 0)
+          // Same "Done + fully paid" gate as Active JOs' Client Lifetime Total (lib/jo-helpers.ts
+          // isLifetimeEligible) -- previously this summed every JO regardless of status, which
+          // overstated the total against Rewards (only earned on JOs that actually qualify) and
+          // read as a discrepancy that wasn't really there.
+          const lifetimeTotal = (c.job_orders || []).filter(isLifetimeEligible).reduce((s: number, j: any) => s + (j.grand_total || 0), 0)
           const totalJOs = c.job_orders?.length || 0
           return (
             <div key={c.client_id} style={{ background: mergeSelection.includes(c.client_id) ? '#F3E4D8' : '#FDF5EC', borderRadius: 10, padding: '0.85rem 1rem', border: mergeSelection.includes(c.client_id) ? '1px solid #8E2C48' : '1px solid #EDE0CC', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
@@ -239,7 +243,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
                   {c.whatsapp && <span title="WhatsApp"> · 📲</span>}
                 </div>
                 <div style={{ color: '#999', fontSize: '0.7rem', marginTop: 2 }}>
-                  {totalJOs} JO(s) · {formatPeso(totalSales)} total sales · Rewards: {formatPeso(c.rewards_balance || 0)}
+                  {totalJOs} JO(s) · {formatPeso(lifetimeTotal)} Lifetime Total · Rewards: {formatPeso(c.rewards_balance || 0)}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 6 }}>

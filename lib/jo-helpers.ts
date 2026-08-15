@@ -189,6 +189,20 @@ export function canMarkItemDone(jo: { balance_due?: number | null } | null | und
   return (jo.balance_due ?? Infinity) <= 0
 }
 
+// A job order counts toward a client's "lifetime total" only once it's actually completed
+// and paid for -- the same gate syncJobOrderDoneStatus uses before recording a reward (see
+// lib/jo-completion.ts). Shared so "lifetime total" means the same thing everywhere it's
+// shown (Active JOs, Clients list, ...) instead of each screen quietly using its own
+// definition -- it exists specifically so staff can eyeball it against Earned Rewards as a
+// counter-check (lifetime total × 1% should roughly track the rewards balance). Still doesn't
+// exclude billing JOs or ones received before the loyalty program's May 1 start date (see
+// REWARDS_START_DATE), both of which also don't earn rewards -- so it's a close anchor, not
+// an exact recomputation of the reward-eligible amount.
+export function isLifetimeEligible(jo: { job_status?: string | null; is_fully_paid?: boolean | null } | null | undefined): boolean {
+  if (!jo) return false
+  return jo.job_status === 'Done' && !!jo.is_fully_paid
+}
+
 export function computeLineTotal(
   pricingModel: string,
   basePrice: number,

@@ -279,6 +279,13 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
                     </div>
                     <div style={{ color: '#2ecc71', fontSize: '0.72rem', marginTop: 2 }}>
                       Earned Rewards: {formatPeso(jo.rewards_balance || 0)}
+                      {/* Lifetime total across every Done JO this client has completed (not this
+                          in-progress one) -- a quick sanity anchor for whether Earned Rewards
+                          looks right. Still doesn't filter out billing JOs or ones received
+                          before the loyalty program started, so it's a rough anchor, not exact. */}
+                      <span style={{ color: '#999', marginLeft: 8 }} title="Sum of grand_total across this client's completed (Done) job orders, for cross-checking rewards">
+                        · Client Lifetime Total: {formatPeso(jo.client_lifetime_total || 0)}
+                      </span>
                     </div>
                     {nearestDeadline && (
                       <div style={{ color: isOverdue ? '#e74c3c' : '#f39c12', fontSize: '0.72rem', marginTop: 2, fontWeight: isOverdue ? 700 : 400 }}>
