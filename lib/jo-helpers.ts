@@ -189,18 +189,25 @@ export function canMarkItemDone(jo: { balance_due?: number | null } | null | und
   return (jo.balance_due ?? Infinity) <= 0
 }
 
+// Loyalty program start — purchases before this date don't earn rewards, even if the JO
+// happens to get completed (and its rewards recorded) after this date. Also the cutoff for
+// "lifetime total" below, so that figure tracks the reward-eligible amount instead of a
+// client's full pre-program history. Shared with lib/jo-completion.ts (the actual reward
+// ledger gate) so the two dates can't drift apart.
+export const REWARDS_START_DATE = new Date('2026-05-01T00:00:00+08:00')
+
 // A job order counts toward a client's "lifetime total" only once it's actually completed
-// and paid for -- the same gate syncJobOrderDoneStatus uses before recording a reward (see
-// lib/jo-completion.ts). Shared so "lifetime total" means the same thing everywhere it's
-// shown (Active JOs, Clients list, ...) instead of each screen quietly using its own
-// definition -- it exists specifically so staff can eyeball it against Earned Rewards as a
-// counter-check (lifetime total × 1% should roughly track the rewards balance). Still doesn't
-// exclude billing JOs or ones received before the loyalty program's May 1 start date (see
-// REWARDS_START_DATE), both of which also don't earn rewards -- so it's a close anchor, not
-// an exact recomputation of the reward-eligible amount.
-export function isLifetimeEligible(jo: { job_status?: string | null; is_fully_paid?: boolean | null } | null | undefined): boolean {
+// and paid for, on/after the loyalty program's May 1 start date -- the same gates
+// syncJobOrderDoneStatus uses before recording a reward (see lib/jo-completion.ts). Shared so
+// "lifetime total" means the same thing everywhere it's shown (Active JOs, Clients list, ...)
+// instead of each screen quietly using its own definition -- it exists specifically so staff
+// can eyeball it against Earned Rewards as a counter-check (lifetime total × 1% should
+// roughly track the rewards balance). Still doesn't exclude billing JOs, which also don't earn
+// rewards -- so it's a close anchor, not an exact recomputation of the reward-eligible amount.
+export function isLifetimeEligible(jo: { job_status?: string | null; is_fully_paid?: boolean | null; date_time_received?: string | null } | null | undefined): boolean {
   if (!jo) return false
-  return jo.job_status === 'Done' && !!jo.is_fully_paid
+  if (jo.job_status !== 'Done' || !jo.is_fully_paid) return false
+  return !!jo.date_time_received && new Date(jo.date_time_received) >= REWARDS_START_DATE
 }
 
 export function computeLineTotal(

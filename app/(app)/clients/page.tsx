@@ -12,7 +12,7 @@ export default async function ClientsPage() {
   const [{ data: clients }, { data: ledger }] = await Promise.all([
     supabase
       .from('clients')
-      .select('*, job_orders(job_order_id, grand_total, payment_status, job_status, is_fully_paid)')
+      .select('*, job_orders(job_order_id, grand_total, payment_status, job_status, is_fully_paid, date_time_received)')
       .order('client_name'),
     // Compute rewards balance from ledger for each client
     supabase.from('rewards_ledger').select('client_id, type, amount'),

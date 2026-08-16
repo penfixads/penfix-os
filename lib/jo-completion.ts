@@ -1,6 +1,4 @@
-// Loyalty program start — purchases before this date don't earn rewards, even if the JO
-// happens to get completed (and its rewards recorded) after this date.
-const REWARDS_START_DATE = new Date('2026-05-01T00:00:00+08:00')
+import { REWARDS_START_DATE } from './jo-helpers'
 
 // Call after any job_order_item's job_status changes. Rolls the parent job_order up to
 // 'Done' (so it drops off Active JOs) once every item is Done/Cancelled AND the JO is

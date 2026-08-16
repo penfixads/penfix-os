@@ -208,10 +208,10 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
       {/* List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         {pageItems.map(c => {
-          // Same "Done + fully paid" gate as Active JOs' Client Lifetime Total (lib/jo-helpers.ts
-          // isLifetimeEligible) -- previously this summed every JO regardless of status, which
-          // overstated the total against Rewards (only earned on JOs that actually qualify) and
-          // read as a discrepancy that wasn't really there.
+          // Same "Done + fully paid + on/after May 1 rewards start" gate as Active JOs' Client
+          // Lifetime Total (lib/jo-helpers.ts isLifetimeEligible) -- previously this summed every
+          // JO regardless of status or date, which overstated the total against Rewards (only
+          // earned on JOs that actually qualify) and read as a discrepancy that wasn't really there.
           const lifetimeTotal = (c.job_orders || []).filter(isLifetimeEligible).reduce((s: number, j: any) => s + (j.grand_total || 0), 0)
           const totalJOs = c.job_orders?.length || 0
           return (
