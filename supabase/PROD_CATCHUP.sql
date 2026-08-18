@@ -299,3 +299,25 @@ drop policy if exists "authenticated_insert_jo_images_proofs" on storage.objects
 create policy "authenticated_insert_jo_images_proofs" on storage.objects
   for insert to authenticated
   with check (bucket_id = 'jo-images' and (storage.foldername(name))[1] = 'payment-proofs');
+
+-- ============================================================
+-- 10) PAYMENT_PROOFS FK: ON DELETE SET NULL (migration 064)
+--    Editing a job order can remove a recorded payment (EditJOModal's
+--    handleSave deletes rows in removedPaymentIds via
+--    `delete from payments where payment_id = ...`). If that payment had a
+--    proof screenshot attached, payment_proofs.linked_payment_id still
+--    pointed at it, and the FK (added with no ON DELETE behavior, i.e. NO
+--    ACTION) blocked the delete outright:
+--      update or delete on table "payments" violates foreign key constraint
+--      "payment_proofs_linked_payment_id_fkey" on table "payment_proofs"
+--    Reported 2026-08-18 — editing/saving a JO with a removed payment fails
+--    with this exact error. The proof screenshot itself should survive the
+--    payment being removed/corrected (kept for the audit trail), it just
+--    shouldn't keep blocking the delete.
+-- ============================================================
+alter table payment_proofs
+  drop constraint if exists payment_proofs_linked_payment_id_fkey;
+
+alter table payment_proofs
+  add constraint payment_proofs_linked_payment_id_fkey
+  foreign key (linked_payment_id) references payments(payment_id) on delete set null;

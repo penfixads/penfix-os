@@ -241,3 +241,23 @@ INSERT INTO subcategories (subcategory_id, subcategory_name, category_id, subcat
   ('DTP-CARDBOAR-56', 'Cardboard Tickets', 'CAT_DTP', 'Tickets on Photopaper', 'Perforated 230 GSM Tickets', NULL, NULL, NULL, 'area', 0.45, 'inch', NULL, 1, NULL, false, NULL, NULL, true, NULL, NULL, NULL, NULL, NULL, NULL),
   ('PSVC-SC05', 'Signage Installation', 'CAT_FPS', 'Installation', 'Installation of Billboards and Signages (installation only, no dismantling)', NULL, NULL, NULL, 'starts_with', 2500, 'per service', 'Received,For Production,Installation,Done,Cancelled', 1, '-', false, 'Height,Width,AcceptedUnits,Qty', NULL, true, 'installation,signage,custom,phoenix', '["-"]', '[]', '[]', NULL, NULL)
 ON CONFLICT (subcategory_id) DO NOTHING;
+
+-- ── 17) PAYMENT_PROOFS FK: ON DELETE SET NULL (migration 064). Editing a
+--      job order can remove a recorded payment (EditJOModal's handleSave
+--      deletes rows in removedPaymentIds via
+--      `delete from payments where payment_id = ...`). If that payment had
+--      a proof screenshot attached, payment_proofs.linked_payment_id still
+--      pointed at it, and the FK (added with no ON DELETE behavior) blocked
+--      the delete outright:
+--        update or delete on table "payments" violates foreign key
+--        constraint "payment_proofs_linked_payment_id_fkey" on table
+--        "payment_proofs"
+--      Reported 2026-08-18. The proof screenshot itself should survive the
+--      payment being removed/corrected (kept for the audit trail), it just
+--      shouldn't keep blocking the delete. ──
+alter table payment_proofs
+  drop constraint if exists payment_proofs_linked_payment_id_fkey;
+
+alter table payment_proofs
+  add constraint payment_proofs_linked_payment_id_fkey
+  foreign key (linked_payment_id) references payments(payment_id) on delete set null;

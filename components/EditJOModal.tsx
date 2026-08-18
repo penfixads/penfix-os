@@ -9,7 +9,8 @@ import type { AppUser } from '@/lib/user'
 import JOItemForm from '@/app/(app)/jos/today/JOItemForm'
 import JOReceiptModal from '@/components/JOReceiptModal'
 import BillingStatementModal from '@/components/BillingStatementModal'
-import { IconPlus, IconCirclePlus, IconEdit, IconX, IconCheck } from '@/components/icons'
+import { getOriginalFileUrl } from '@/app/(app)/jos/today/actions'
+import { IconPlus, IconCirclePlus, IconEdit, IconX, IconCheck, IconDownload } from '@/components/icons'
 
 // Same budget PaymentProofUpload.tsx uses for client-submitted proofs — these need to stay
 // legible (reference numbers, amounts) when reviewed on /jos/payment-proofs.
@@ -45,6 +46,20 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
   const [error, setError] = useState('')
   const [removedItemIds, setRemovedItemIds] = useState<string[]>([])
   const [removedPaymentIds, setRemovedPaymentIds] = useState<string[]>([])
+  const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null)
+
+  async function handleDownloadOriginalFile(itemId: string) {
+    setDownloadingFileId(itemId)
+    try {
+      const result = await getOriginalFileUrl(itemId)
+      if (!result.success) { alert(result.message); return }
+      window.open(result.url, '_blank')
+    } catch (e: any) {
+      alert(e.message || 'Failed to download file.')
+    } finally {
+      setDownloadingFileId(null)
+    }
+  }
   const [showItemForm, setShowItemForm] = useState(false)
   const [showPayForm, setShowPayForm] = useState(false)
   const [payAmount, setPayAmount] = useState('')
@@ -542,6 +557,13 @@ export default function EditJOModal({ jo, categories, subcategories, currentUser
                                 <span style={{ color: '#E8B9C6' }}>{item._existing ? status : 'New'}</span>
                               </td>
                               <td style={{ ...td, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                {item.original_file_path && (
+                                  <button onClick={() => handleDownloadOriginalFile(item.item_id)} disabled={downloadingFileId === item.item_id}
+                                    style={{ background: 'none', border: 'none', color: '#E8B9C6', cursor: 'pointer', padding: 0, marginRight: 8, display: 'inline-flex' }}
+                                    title="Download the client's original uploaded file (from shop.penfixads.com)">
+                                    <IconDownload style={{ width: 14, height: 14, opacity: downloadingFileId === item.item_id ? 0.5 : 1 }} />
+                                  </button>
+                                )}
                                 <button onClick={() => setEditingItem({ ...item, category_id: item.subcategories?.category_id || item.category_id })}
                                   style={{ background: 'none', border: 'none', color: '#E8B9C6', cursor: 'pointer', padding: 0, marginRight: 8, display: 'inline-flex' }} title="Edit item">
                                   <IconEdit style={{ width: 14, height: 14 }} />
