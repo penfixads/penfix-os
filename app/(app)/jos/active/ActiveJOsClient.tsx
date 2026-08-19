@@ -7,6 +7,7 @@ import { syncJobOrderDoneStatus } from '@/lib/jo-completion'
 import type { AppUser } from '@/lib/user'
 import EditJOModal from '@/components/EditJOModal'
 import JOReceiptModal from '@/components/JOReceiptModal'
+import BillingStatementModal from '@/components/BillingStatementModal'
 import JOThumb from '@/components/JOThumb'
 import Pagination from '@/components/Pagination'
 import JOItemForm from '../today/JOItemForm'
@@ -42,6 +43,7 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
   const [editingJO, setEditingJO] = useState<any | null>(null)
   const [addingItemToJO, setAddingItemToJO] = useState<string | null>(null)
   const [receiptJOId, setReceiptJOId] = useState<string | null>(null)
+  const [billingClient, setBillingClient] = useState<{ id: string; name: string } | null>(null)
   const [page, setPage] = useState(1)
   const [deletingJO, setDeletingJO] = useState<string | null>(null)
   const [markingJOUnclaimed, setMarkingJOUnclaimed] = useState<string | null>(null)
@@ -343,6 +345,10 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e44ad', padding: 2, display: 'flex', alignItems: 'center' }}>
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
                       </button>
+                      <button title="Send billing statement — every open job order for this client" onClick={() => setBillingClient({ id: jo.client_id, name: clientName })}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#16a085', padding: 2, display: 'flex', alignItems: 'center' }}>
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="7" y1="13" x2="17" y2="13"/><line x1="7" y1="17" x2="13" y2="17"/></svg>
+                      </button>
                       <button title="Delete JO" onClick={() => handleDelete(jo)} disabled={deletingJO === jo.job_order_id}
                         style={{ background: 'none', border: 'none', cursor: deletingJO === jo.job_order_id ? 'not-allowed' : 'pointer', color: '#c0392b', padding: 2, display: 'flex', alignItems: 'center', opacity: deletingJO === jo.job_order_id ? 0.5 : 1 }}>
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
@@ -391,6 +397,14 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
 
       {receiptJOId && (
         <JOReceiptModal jobOrderId={receiptJOId} onClose={() => setReceiptJOId(null)} />
+      )}
+
+      {billingClient && (
+        <BillingStatementModal
+          clientId={billingClient.id}
+          clientName={billingClient.name}
+          onClose={() => setBillingClient(null)}
+        />
       )}
     </div>
   )
