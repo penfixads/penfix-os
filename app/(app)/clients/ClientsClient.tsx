@@ -11,7 +11,7 @@ import Pagination from '@/components/Pagination'
 import ClientQrButton from '@/components/ClientQrButton'
 import DuplicateClientPrompt from '@/components/DuplicateClientPrompt'
 import MergeClientsModal from '@/components/MergeClientsModal'
-import { setClientPassword } from './actions'
+import { setClientPassword, syncReferralCredit } from './actions'
 
 const PAGE_SIZE = 10
 
@@ -46,6 +46,16 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
   const [mergeSelection, setMergeSelection] = useState<string[]>([])
   const [showMerge, setShowMerge] = useState(false)
 
+  // "Referred by" — free-text search over the already-loaded clients list rather than an
+  // auto-match, because names (especially Messenger display names) are not unique — typing
+  // "Rob" should show every Rob so staff, who know which one actually referred this
+  // customer, pick the right one instead of the system silently guessing. referredByClientId
+  // is only set once staff click a specific match; until then it's just a note
+  // (referred_by_raw) so nothing is lost if no one links it yet.
+  const [referredByQuery, setReferredByQuery] = useState('')
+  const [referredByClientId, setReferredByClientId] = useState<string | null>(null)
+  const [referredByOpen, setReferredByOpen] = useState(false)
+
   function toggleMergeSelection(clientId: string) {
     setMergeSelection(prev => {
       if (prev.includes(clientId)) return prev.filter(id => id !== clientId)
@@ -78,6 +88,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
     setContact(''); setEmail(''); setMessenger(''); setViber(''); setWhatsapp('')
     setAddress(''); setCreditLine(false); setError(''); setShowForm(true)
     setNewPassword(''); setPasswordMsg(null)
+    setReferredByQuery(''); setReferredByClientId(null); setReferredByOpen(false)
   }
 
   function openEdit(c: any) {
@@ -95,7 +106,30 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
     setError('')
     setShowForm(true)
     setNewPassword(''); setPasswordMsg(null)
+    if (c.referred_by_client_id) {
+      const referrer = clients.find(x => x.client_id === c.referred_by_client_id)
+      setReferredByClientId(c.referred_by_client_id)
+      setReferredByQuery(referrer?.client_name || referrer?.company_name || c.referred_by_client_id)
+    } else {
+      setReferredByClientId(null)
+      setReferredByQuery(c.referred_by_raw || '')
+    }
+    setReferredByOpen(false)
   }
+
+  const referralMatches = referredByQuery.trim().length >= 2 && !referredByClientId
+    ? clients
+        .filter(c => c.client_id !== editing?.client_id)
+        .filter(c => {
+          const q = referredByQuery.toLowerCase()
+          return (c.client_name || '').toLowerCase().includes(q)
+            || (c.company_name || '').toLowerCase().includes(q)
+            || (c.messenger || '').toLowerCase().includes(q)
+            || (c.viber || '').toLowerCase().includes(q)
+            || (c.contact_number || '').includes(referredByQuery)
+        })
+        .slice(0, 6)
+    : []
 
   // Separate from handleSave — this hashes server-side via a Server Action (bcryptjs
   // isn't something we want in the browser bundle) and writes only password_hash,
@@ -134,6 +168,11 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
         viber: viber || null,
         whatsapp: whatsapp || null,
         address: address || null,
+        // Linked only once staff pick a specific match (referralMatches above); otherwise
+        // whatever's typed is kept as a note (referred_by_raw) rather than discarded, so an
+        // unresolved referral stays visible instead of silently going to waste.
+        referred_by_client_id: referredByClientId,
+        referred_by_raw: referredByClientId ? null : (referredByQuery.trim() || null),
       }
       // Only Admin can set credit line / for-billing status directly. GA/Treasury checking
       // the box just files a request for Admin to approve on the Pending Approval page —
@@ -149,6 +188,11 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
       if (editing) {
         const { data } = await supabase.from('clients').update(payload).eq('client_id', editing.client_id).select('*, job_orders(job_order_id, grand_total, payment_status)').single()
         setClients(prev => prev.map(c => c.client_id === editing.client_id ? data : c))
+        // Newly linking (or correcting) a referral can happen well after the referred
+        // client already ordered — e.g. resolving a Messenger-name referral from shop
+        // registration — so check now whether their first qualifying JO already exists
+        // and credit the referrer retroactively instead of that bonus being missed.
+        if (referredByClientId) await syncReferralCredit(editing.client_id)
       } else {
         const { data } = await supabase.from('clients').insert({ ...payload, client_id: generateClientId(), earned_rewards: 0, claimed_rewards: 0 }).select('*, job_orders(job_order_id, grand_total, payment_status)').single()
         setClients(prev => [data, ...prev])
@@ -231,6 +275,7 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
                   {c.company_name && c.client_name && (
                     <span style={{ color: '#7A1828', fontWeight: 600, fontSize: '0.78rem' }}>· {c.company_name}</span>
                   )}
+                  {!c.referred_by_client_id && c.referred_by_raw && <span title={`Referred by "${c.referred_by_raw}" — not yet linked`} style={{ background: '#3a2a1a', color: '#e8b04c', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>🎁 REFERRAL UNLINKED</span>}
                   {c.credit_line_status && <span style={{ background: '#1a2a4a', color: '#3498db', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>CREDIT</span>}
                   {!c.credit_line_status && c.credit_line_request_status === 'Pending' && <span style={{ background: '#4a3a1a', color: '#f39c12', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>CREDIT PENDING</span>}
                   {c.client_type === 'Company' && <span style={{ background: '#2a2a1a', color: '#f1c40f', fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, fontWeight: 700 }}>CO.</span>}
@@ -316,6 +361,40 @@ export default function ClientsClient({ clients: initClients, currentUser }: Pro
             <div className="pf-field">
               <label className="pf-label">Address</label>
               <input type="text" value={address} onChange={e => setAddress(e.target.value)} className="pf-input" />
+            </div>
+
+            <div className="pf-field" style={{ position: 'relative' }}>
+              <label className="pf-label">Referred By</label>
+              <input
+                type="text"
+                value={referredByQuery}
+                onChange={e => { setReferredByQuery(e.target.value); setReferredByClientId(null); setReferredByOpen(true) }}
+                onFocus={() => setReferredByOpen(true)}
+                onBlur={() => setTimeout(() => setReferredByOpen(false), 150)}
+                placeholder="Search by name, Messenger, or mobile number"
+                className="pf-input"
+              />
+              {referredByClientId && (
+                <div style={{ color: '#2ecc71', fontSize: '0.72rem', marginTop: 4 }}>✓ Linked — referrer gets +20 once this client's first paid JO is Done.</div>
+              )}
+              {!referredByClientId && referredByQuery.trim() && (
+                <div style={{ color: '#f39c12', fontSize: '0.72rem', marginTop: 4 }}>Not linked yet — saved as a note only until matched to a client below.</div>
+              )}
+              {referredByOpen && referralMatches.length > 0 && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: '#fff', border: '1px solid #d0d0d0', borderRadius: 8, marginTop: 2, maxHeight: 180, overflowY: 'auto', boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }}>
+                  {referralMatches.map(m => (
+                    <button
+                      key={m.client_id}
+                      type="button"
+                      onClick={() => { setReferredByClientId(m.client_id); setReferredByQuery(m.client_name || m.company_name || m.client_id); setReferredByOpen(false) }}
+                      style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.5rem 0.75rem', background: 'none', border: 'none', borderBottom: '1px solid #f0f0f0', cursor: 'pointer', fontSize: '0.8rem', color: '#1a1a1a' }}
+                    >
+                      {m.client_name || m.company_name}
+                      <span style={{ color: '#999' }}> · {m.messenger || m.contact_number || m.client_id}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {editing && currentUser.role === 'Admin' && (

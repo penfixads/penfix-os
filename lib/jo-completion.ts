@@ -1,4 +1,5 @@
 import { REWARDS_START_DATE } from './jo-helpers'
+import { creditReferralIfEligible } from './referral-rewards'
 
 // Call after any job_order_item's job_status changes. Rolls the parent job_order up to
 // 'Done' (so it drops off Active JOs) once every item is Done/Cancelled AND the JO is
@@ -53,5 +54,10 @@ export async function syncJobOrderDoneStatus(supabase: any, joId: string) {
         notes: `Rewards for JO ${joId}`,
       })
     }
+
+    // If this client was referred by someone and this turns out to be their first
+    // qualifying JO, credit the referrer's +20 bonus now — no-ops if they weren't
+    // referred, already got credited, or this isn't actually their first one.
+    await creditReferralIfEligible(supabase, jo.client_id)
   }
 }

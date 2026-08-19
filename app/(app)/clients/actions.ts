@@ -3,6 +3,7 @@
 import bcrypt from 'bcryptjs'
 import { getCurrentUser } from '@/lib/user'
 import { createSupabaseAdminClient } from '@/lib/supabase-admin'
+import { creditReferralIfEligible } from '@/lib/referral-rewards'
 
 // Admin-only, same as the Credit Line toggle in this same Edit Client form — this sets
 // what the client types into shop.penfixads.com's login (see shop's app/actions.ts
@@ -16,6 +17,20 @@ export async function setClientPassword(clientId: string, newPassword: string) {
   const supabase = createSupabaseAdminClient()
   const { error } = await supabase.from('clients').update({ password_hash }).eq('client_id', clientId)
   if (error) return { success: false, message: error.message || 'Failed to set password.' }
+  return { success: true }
+}
+
+// Called after the Edit Client form saves a referred_by_client_id (newly linked, or
+// corrected from an unresolved Messenger/Viber name typed at shop registration) — checks
+// whether the referred client already completed their first qualifying JO before the
+// link existed, and if so credits the referrer's +20 now instead of it being missed.
+// Safe to call unconditionally on every save that has a referred_by_client_id; the
+// ledger_id inside creditReferralIfEligible makes repeat calls a no-op once paid.
+export async function syncReferralCredit(clientId: string) {
+  const user = await getCurrentUser()
+  if (!user) return { success: false, message: 'Unauthorized' }
+  const supabase = createSupabaseAdminClient()
+  await creditReferralIfEligible(supabase, clientId)
   return { success: true }
 }
 

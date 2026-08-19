@@ -33,6 +33,18 @@ declare
   keep_id text := 'KEEP_ID_HERE';
   remove_ids text[] := array['REMOVE_ID_HERE']; -- add more elements for 3+ duplicates
 begin
+  -- Catch the two easy typo mistakes before anything is touched -- a wrong/misspelled
+  -- keep_id would otherwise silently reassign every duplicate's history to nothing (the
+  -- UPDATEs below just match zero rows) and then delete the real duplicates anyway; a
+  -- keep_id accidentally left in remove_ids would delete the very client you meant to keep.
+  if not exists (select 1 from clients where client_id = keep_id) then
+    raise exception 'keep_id % does not exist in clients -- check for a typo.', keep_id;
+  end if;
+
+  if keep_id = any(remove_ids) then
+    raise exception 'keep_id % also appears in remove_ids -- that would delete the client you meant to keep.', keep_id;
+  end if;
+
   update job_orders set client_id = keep_id where client_id = any(remove_ids);
   update payments set client_id = keep_id where client_id = any(remove_ids);
   update rewards_redemptions set client_id = keep_id where client_id = any(remove_ids);

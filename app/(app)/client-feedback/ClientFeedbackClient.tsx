@@ -257,10 +257,7 @@ export default function ClientFeedbackClient({
       </div>
 
       <div style={{ background: '#FDF5EC', borderRadius: 12, padding: '1rem 1.15rem', border: '1px solid #EDE0CC', marginBottom: '1.25rem' }}>
-        <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.9rem' }}>Submissions</div>
-        <div style={{ color: '#999', fontSize: '0.7rem', marginTop: 2, marginBottom: '0.85rem' }}>
-          Every reply received in {label}, with the date it was rated
-        </div>
+        <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.85rem' }}>Submissions</div>
         {feedback.length === 0 ? (
           <div style={{ color: '#aaa', fontSize: '0.78rem' }}>No feedback was submitted this {unit}.</div>
         ) : (
@@ -296,11 +293,7 @@ export default function ClientFeedbackClient({
         )}
       </div>
 
-      <p style={{ color: '#999', fontSize: '0.72rem', marginBottom: '1rem', lineHeight: 1.5 }}>
-        Averages reflect only the clients who chose to reply, and feedback is signed with the
-        client&apos;s name and job order — read a high average with few replies accordingly. Links sent
-        is the fairer measure of a GA&apos;s work, since whether a client answers isn&apos;t theirs to control.
-      </p>
+      <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.85rem' }}>GA Ratings Per Client Served</div>
 
       {ranked.length === 0 ? (
         <div style={{ color: '#aaa', textAlign: 'center', marginTop: '2rem', fontSize: '0.9rem' }}>
