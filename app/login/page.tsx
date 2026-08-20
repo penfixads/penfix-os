@@ -13,7 +13,7 @@ function LoginForm() {
   const next = searchParams.get('next') ?? '/'
   const urlError = searchParams.get('error')
   const urlErrorMessage =
-    urlError === 'idle' ? 'You were signed out after 30 minutes of inactivity.' :
+    urlError === 'idle' ? 'You were signed out after 1 hour of inactivity.' :
     urlError === 'inactive' ? 'Your account has been deactivated. Contact an admin.' :
     urlError === 'no-access' ? 'This account does not have access to Penfix OS.' :
     ''
