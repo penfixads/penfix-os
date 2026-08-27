@@ -265,8 +265,8 @@ export default function SubcategorySopsClient({ subcategories, categories, sopSt
                               {isExpanded ? '▼' : '▶'} {stepProcedures.length} SOP item(s)
                             </button>
                           </div>
-                          <button onClick={() => openEditStep(step)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7A1828', padding: 2 }}><IconEdit /></button>
-                          <button onClick={() => deleteStep(step.sop_id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c', padding: 2, fontSize: '0.9rem' }}>✕</button>
+                          <button onClick={() => openEditStep(step)} title="Edit step" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7A1828', padding: 2, display: 'inline-flex' }}><IconEdit width={16} height={16} /></button>
+                          <button onClick={() => deleteStep(step.sop_id)} title="Delete step" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c', padding: 2, fontSize: '0.9rem' }}>✕</button>
                         </div>
 
                         {isExpanded && (
