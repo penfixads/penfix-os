@@ -212,11 +212,16 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
       // sequence number from stale local state, so retry against a fresh DB read
       // on a duplicate-key conflict instead of failing the whole save.
       let joId = ''
+      // Captured from the insert itself (public_token defaults to gen_random_uuid() in the DB,
+      // see migration 034) so the row handed to onCreated below carries it. Without it, the
+      // freshly-created JO sits in the list with public_token undefined and the "copy tracking
+      // link" button produces /track/undefined until the page is reloaded.
+      let publicToken = ''
       for (let attempt = 0; attempt < 5; attempt++) {
         const { data: existing } = await supabase.from('job_orders').select('job_order_id').like('job_order_id', `JO-${dateStr}-%`)
         const seq = getNextJOSequence((existing || []).map(j => j.job_order_id), dateStr)
         joId = generateJobOrderId(seq, receivedAt)
-        const { error: joErr } = await supabase.from('job_orders').insert({
+        const { data: insertedJO, error: joErr } = await supabase.from('job_orders').insert({
           job_order_id: joId,
           user_email: currentUser.email,
           client_id: selectedClientId,
@@ -233,8 +238,8 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
           is_fully_paid: paymentStatus === 'Fully Paid',
           date_override_authorized_by: unlockedByName,
           source_channel: sourceChannel,
-        })
-        if (!joErr) break
+        }).select('public_token')
+        if (!joErr) { publicToken = insertedJO?.[0]?.public_token || ''; break }
         if (joErr.code !== '23505' || attempt === 4) throw joErr
       }
 
@@ -292,6 +297,7 @@ export default function NewJOModal({ clients: initialClients, categories, subcat
 
       const newJO = {
         job_order_id: joId,
+        public_token: publicToken,
         clients: { client_name: selectedClient?.client_name, company_name: selectedClient?.company_name },
         job_order_items: items.map((item, i) => ({
           item_id: generateItemId(joId, i + 1),

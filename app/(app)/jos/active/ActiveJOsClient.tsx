@@ -123,7 +123,11 @@ export default function ActiveJOsClient({ jobOrders: initialJOs, categories, sub
     }
   }
 
-  function copyTrackLink(publicToken: string) {
+  // Guarded because a JO row can reach this list without its public_token (an optimistic
+  // insert that didn't read the column back, say) -- copying /track/undefined hands the
+  // client a dead link that looks fine until they open it.
+  function copyTrackLink(publicToken?: string) {
+    if (!publicToken) { alert('This job order has no tracking link yet. Refresh the page and try again.'); return }
     const url = `${window.location.origin}/track/${publicToken}`
     navigator.clipboard.writeText(url)
   }
